@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R2 Doll</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="panel panel-sidebar">
+      <div class="sidebar-tabs" role="tablist" aria-label="Левая панель">
+        <button class="sidebar-tab-button is-active" type="button" data-tab="equip">Экипировка</button>
+        <button class="sidebar-tab-button" type="button" data-tab="stats">Параметры</button>
+        <button class="sidebar-tab-button" type="button" data-tab="class">Класс</button>
+      </div>
+
+      <div class="sidebar-panels">
+        <section class="sidebar-panel is-active" data-tab-panel="equip">
+          <h1>Кукла экипировки</h1>
+
+          <section class="summary-card">
+            <div>
+              <p class="summary-label">Собрано предметов</p>
+              <strong id="total-items">0</strong>
+            </div>
+            <div>
+              <p class="summary-label">Надето сейчас</p>
+              <strong id="equipped-count">0</strong>
+            </div>
+            <button id="clear-all-button" class="ghost-button" type="button">Снять все</button>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title-row">
+              <h2>Надето</h2>
+              <span id="last-action" class="section-note" aria-live="polite">Выберите слот на кукле</span>
+            </div>
+            <div id="equipped-list" class="equipped-list"></div>
+          </section>
+        </section>
+
+        <section class="sidebar-panel" data-tab-panel="stats">
+          <div class="section-title-row">
+            <h2>Параметры</h2>
+            <span class="section-note">Сумма с экипировки</span>
+          </div>
+
+          <section class="stats-section">
+            <div id="stats-main-list" class="stat-list"></div>
+          </section>
+
+          <section class="stats-section">
+            <div class="stats-subtitle-row">
+              <h3>Дополнительно</h3>
+            </div>
+            <div id="stats-extra-list" class="stat-list stat-list-secondary"></div>
+          </section>
+
+          <section class="stats-section">
+            <div class="stats-subtitle-row">
+              <h3>Особые эффекты</h3>
+            </div>
+            <div id="stats-effects-list" class="effects-list"></div>
+          </section>
+        </section>
+
+        <section class="sidebar-panel" data-tab-panel="class">
+          <div class="section-title-row">
+            <h2>Класс</h2>
+            <span class="section-note">Базовые данные</span>
+          </div>
+
+          <section class="class-controls">
+            <label class="class-field">
+              <span class="summary-label">Класс</span>
+              <select id="class-select" class="class-control">
+                <option value="knight">Рыцарь</option>
+                <option value="ranger">Рейнджер</option>
+                <option value="mage">Маг</option>
+                <option value="summoner">Призыватель</option>
+                <option value="assassin">Ассасин</option>
+              </select>
+            </label>
+
+            <label class="class-field">
+              <span class="summary-label">Уровень</span>
+              <input id="class-level-input" class="class-control" type="number" min="1" max="200" step="1" value="1">
+            </label>
+          </section>
+
+          <section class="stats-section">
+            <div class="stats-subtitle-row">
+              <h3>Параметры от уровня</h3>
+            </div>
+            <div id="class-base-stats" class="stat-list"></div>
+          </section>
+
+          <section class="stats-section">
+            <div class="stats-subtitle-row">
+              <h3>Характеристики от параметров</h3>
+            </div>
+            <div id="class-derived-stats" class="stat-list stat-list-secondary"></div>
+          </section>
+        </section>
+
+      </div>
+    </aside>
+
+    <main class="doll-stage">
+      <section class="doll-card">
+        <div class="doll-board" aria-label="Кукла экипировки">
+          <section class="stats-frame" aria-label="Итоговые параметры">
+            <section class="board-stats-panel">
+              <div class="board-nickname-row">
+                <input id="board-nickname-input" class="board-nickname-input" type="text" maxlength="24" placeholder="Введите ник" autofocus>
+              </div>
+              <div class="board-stats-columns">
+                <div id="board-main-stats" class="board-stats-list board-stats-list-main"></div>
+                <div id="board-extra-stats" class="board-stats-list board-stats-list-extra"></div>
+              </div>
+            </section>
+          </section>
+          <section class="equipment-stage" aria-label="Слоты экипировки">
+            <div id="slot-grid" class="slot-grid" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <aside class="panel panel-right">
+      <div class="section-title-row">
+        <h2>Каталог</h2>
+        <span id="chooser-count" class="section-note">0 предметов</span>
+      </div>
+
+      <div id="category-list" class="category-list"></div>
+    </aside>
+  </div>
+
+  <template id="equipped-empty-template">
+    <article class="equipped-empty">
+      Пока ничего не надето. Открой слот на кукле и выбери предмет.
+    </article>
+  </template>
+
+  <script src="equipment-items-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
