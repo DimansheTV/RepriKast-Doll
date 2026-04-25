@@ -4,28 +4,126 @@ const SLOT_CONFIG = [
   { key: "cloak", label: "Плащи", sourceSlot: "cloak", col: 3, row: 1 },
   { key: "necklace", label: "Ожерелья", sourceSlot: "necklace", col: 1, row: 2 },
   { key: "armor", label: "Доспехи", sourceSlot: "armor", col: 2, row: 2 },
-  { key: "shield", label: "Щиты", sourceSlot: "shield", col: 3, row: 2 },
+  { key: "shield", label: "Снаряжение", sourceSlot: "shield", col: 3, row: 2 },
   { key: "weapon", label: "Оружие", sourceSlot: "weapon", col: 1, row: 3 },
   { key: "belt", label: "Ремни", sourceSlot: "belt", col: 2, row: 3 },
   { key: "gloves", label: "Перчатки", sourceSlot: "gloves", col: 3, row: 3 },
-  { key: "ring_left", label: "Кольцо I", sourceSlot: "ring", col: 1, row: 4 },
+  { key: "ring_left", label: "Кольцо 1-й слот", sourceSlot: "ring", col: 1, row: 4, matches: (item) => !isMorphRingItem(item) },
   { key: "boots", label: "Сапоги", sourceSlot: "boots", col: 2, row: 4 },
-  { key: "ring_right", label: "Кольцо II", sourceSlot: "ring", col: 3, row: 4 },
+  { key: "ring_right", label: "Кольцо 2-й слот", sourceSlot: "ring", col: 3, row: 4, matches: (item) => !isMorphRingItem(item) },
+  {
+    key: "ring_morph_passive",
+    label: "Кольцо перевоплощения",
+    catalogLabel: "Кольца перевоплощения",
+    sourceSlot: "ring",
+    renderOnDoll: false,
+    isPassive: true,
+    matches: (item) => isMorphRingItem(item),
+  },
+];
+
+const SPHERE_SLOT_CONFIG = [
+  {
+    key: "sphere_life",
+    label: "Сфера жизни",
+    categoryKey: "sphere_type_1",
+    positionClass: "sphere-pos-top-left",
+    matches: (item) => item.category === "Сферы жизни",
+  },
+  {
+    key: "sphere_mastery",
+    label: "Сфера мастерства",
+    categoryKey: "sphere_type_1",
+    positionClass: "sphere-pos-top-center",
+    matches: (item) => item.category === "Сферы мастерства",
+  },
+  {
+    key: "sphere_soul",
+    label: "Сфера души",
+    categoryKey: "sphere_type_1",
+    positionClass: "sphere-pos-top-right",
+    matches: (item) => item.category === "Сферы души",
+  },
+  {
+    key: "sphere_destruction",
+    label: "Сфера разрушения",
+    categoryKey: "sphere_type_1",
+    positionClass: "sphere-pos-bottom-left-upper",
+    matches: (item) => item.category === "Сферы разрушения",
+  },
+  {
+    key: "sphere_protection",
+    label: "Сфера защиты",
+    categoryKey: "sphere_type_1",
+    positionClass: "sphere-pos-bottom-right-upper",
+    matches: (item) => item.category === "Сферы защиты",
+  },
+  {
+    key: "sphere_harvest",
+    label: "Сфера добычи",
+    categoryKey: "sphere_type_2",
+    positionClass: "sphere-pos-bottom-left",
+    matches: (item) =>
+      item.category === "Особые сферы" && /(алчност|гармони)/i.test(item.name || ""),
+  },
+  {
+    key: "sphere_class",
+    label: "Классовая сфера",
+    categoryKey: "sphere_type_3",
+    positionClass: "sphere-pos-bottom-center",
+    matches: (item) =>
+      item.category === "Особые сферы" && !/(алчност|гармони)/i.test(item.name || ""),
+  },
+  {
+    key: "sphere_morph",
+    label: "Сфера перевоплощения",
+    categoryKey: "sphere_type_4",
+    positionClass: "sphere-pos-bottom-right",
+    matches: (item) => item.category === "Сферы перевоплощения",
+  },
+];
+
+const SPHERE_CATEGORY_CONFIG = [
+  { key: "sphere_type_1", label: "Сферы 1-го типа" },
+  { key: "sphere_type_2", label: "Сферы 2-го типа" },
+  { key: "sphere_type_3", label: "Сферы 3-го типа" },
+  { key: "sphere_type_4", label: "Сферы 4-го типа" },
+];
+
+const SPHERE_TYPE_ONE_TABS = [
+  { category: "Сферы разрушения", label: "Разрушения", slotKey: "sphere_destruction" },
+  { category: "Сферы жизни", label: "Жизни", slotKey: "sphere_life" },
+  { category: "Сферы мастерства", label: "Мастерства", slotKey: "sphere_mastery" },
+  { category: "Сферы души", label: "Души", slotKey: "sphere_soul" },
+  { category: "Сферы защиты", label: "Защиты", slotKey: "sphere_protection" },
+];
+
+const TROPHY_SLOT_CONFIG = [
+  { key: "trophy_top_left", label: "Корона", statLabel: "HP", positionClass: "trophy-pos-top-left" },
+  { key: "trophy_top_right", label: "Маска", statLabel: "Защита", positionClass: "trophy-pos-top-right" },
+  { key: "trophy_middle_left", label: "Браслет", statLabel: "Сила", positionClass: "trophy-pos-middle-left" },
+  { key: "trophy_middle_right", label: "Амулет", statLabel: "Ловкость", positionClass: "trophy-pos-middle-right" },
+  { key: "trophy_bottom_left", label: "Чаша", statLabel: "Скорость бега", positionClass: "trophy-pos-bottom-left" },
+  { key: "trophy_bottom_right", label: "Горн", statLabel: "Скорость атаки", positionClass: "trophy-pos-bottom-right" },
 ];
 
 const STORAGE_KEY = "r2-doll-equip-v3";
+const SPHERE_STORAGE_KEY = "r2-doll-sphere-v1";
+const TROPHY_STORAGE_KEY = "r2-doll-trophy-v1";
 const CLASS_STORAGE_KEY = "r2-doll-class-v1";
-const SIDEBAR_TAB_STORAGE_KEY = "r2-doll-sidebar-tab-v1";
-const NICKNAME_STORAGE_KEY = "r2-doll-board-nickname-v1";
+const SIDEBAR_TAB_STORAGE_KEY = "r2-doll-sidebar-tab-v2";
+const WORKSPACE_TAB_STORAGE_KEY = "r2-doll-workspace-tab-v1";
+const PROFILE_STORAGE_KEY = "r2-doll-profiles-v1";
+const ACTIVE_PROFILE_STORAGE_KEY = "r2-doll-active-profile-v1";
+const PASSIVE_MORPH_RING_SLOT_KEY = "ring_morph_passive";
 const MAIN_STATS = ["HP", "MP", "Сила", "Ловкость", "Интеллект", "Защита"];
+const CLASS_PRIMARY_ATTRIBUTES = new Set(["Сила", "Ловкость", "Интеллект"]);
 const SECONDARY_STAT_PRIORITY = [
   "Скорость атаки",
   "Скорость бега",
-  "Уровень всех атак",
   "Уровень ближних атак",
   "Уровень дальних атак",
   "Уровень магических атак",
-  "Точность всех атак",
   "Точность ближних атак",
   "Точность дальних атак",
   "Точность магических атак",
@@ -33,6 +131,7 @@ const SECONDARY_STAT_PRIORITY = [
   "Шанс получить крит. удар",
   "Доп. урон при крит. ударе",
   "Получаемый крит. урон",
+  "Получаемый урон",
   "Поглощение",
   "Уклонение",
   "Восстановление HP",
@@ -45,13 +144,20 @@ const SECONDARY_STAT_PRIORITY = [
 ];
 const STAT_LABEL_ALIASES = new Map([
   ["hp", "HP"],
+  ["максимум hp", "HP"],
+  ["макс. hp", "HP"],
+  ["макс. hp от силы", "HP"],
   ["mp", "MP"],
+  ["максимум mp", "MP"],
+  ["макс. mp", "MP"],
+  ["макс. mp от интеллекта", "MP"],
   ["сила", "Сила"],
   ["ловкость", "Ловкость"],
   ["интеллект", "Интеллект"],
   ["защита", "Защита"],
   ["скорость атаки", "Скорость атаки"],
   ["скорость бега", "Скорость бега"],
+  ["скорость передвижения", "Скорость бега"],
   ["уровень всех атак", "Уровень всех атак"],
   ["уровень ближних атак", "Уровень ближних атак"],
   ["уровень дальних атак", "Уровень дальних атак"],
@@ -61,20 +167,178 @@ const STAT_LABEL_ALIASES = new Map([
   ["точность дальних атак", "Точность дальних атак"],
   ["точность магических атак", "Точность магических атак"],
   ["шанс нанести крит. удар", "Шанс нанести крит. удар"],
+  ["шанс крит. удара", "Шанс нанести крит. удар"],
   ["шанс получить крит. удар", "Шанс получить крит. удар"],
   ["доп. урон при крит. ударе", "Доп. урон при крит. ударе"],
+  ["дополнительный урон при крит. ударе", "Доп. урон при крит. ударе"],
   ["получаемый крит. урон", "Получаемый крит. урон"],
+  ["получаемый урон", "Получаемый урон"],
+  ["весь получаемый урон", "Получаемый урон"],
   ["поглощение", "Поглощение"],
   ["уклонение", "Уклонение"],
   ["восстановление hp", "Восстановление HP"],
+  ["регенерация hp", "Восстановление HP"],
   ["восстановление mp", "Восстановление MP"],
+  ["регенерация mp", "Восстановление MP"],
   ["особое восстановление hp", "Особое восстановление HP"],
-  ["особое восстановление mp", "Особое восстановление MP"],
+  ["особое восстановление mp", "Восстановление MP"],
   ["эффект зелий здоровья", "Эффект зелий здоровья"],
   ["уровень зелий здоровья", "Уровень зелий здоровья"],
   ["вес", "Вес"],
+  ["максимальный вес", "Вес"],
+  ["макс. вес", "Вес"],
+  ["макс. вес от силы", "Вес"],
+  ["увеличение уровня переносимого веса", "Вес"],
   ["все параметры", "Все параметры"],
 ]);
+let profileSyncLocked = false;
+const GROUPED_ATTACK_STAT_TARGETS = new Map([
+  ["Уровень всех атак", ["Уровень ближних атак", "Уровень дальних атак", "Уровень магических атак"]],
+  ["Точность всех атак", ["Точность ближних атак", "Точность дальних атак", "Точность магических атак"]],
+]);
+const BAPHOMET_SET_BONUSES = {
+  4: {
+    3: [{ label: "Уровень всех атак", value: 1, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 1, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 2, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 1, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 2, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 4, unit: "" },
+    ],
+  },
+  5: {
+    3: [{ label: "Уровень всех атак", value: 2, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 2, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 3, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 2, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 3, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 6, unit: "" },
+    ],
+  },
+  6: {
+    3: [{ label: "Уровень всех атак", value: 3, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 3, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 4, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 3, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 4, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 8, unit: "" },
+    ],
+  },
+  7: {
+    3: [{ label: "Уровень всех атак", value: 4, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 4, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 5, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 4, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 5, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 10, unit: "" },
+    ],
+  },
+  8: {
+    3: [{ label: "Уровень всех атак", value: 5, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 5, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 6, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 5, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 6, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 12, unit: "" },
+    ],
+  },
+  9: {
+    3: [{ label: "Уровень всех атак", value: 6, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 6, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 7, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 6, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 7, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 14, unit: "" },
+    ],
+  },
+  10: {
+    3: [{ label: "Уровень всех атак", value: 6, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 6, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 7, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 6, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 7, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 14, unit: "" },
+    ],
+  },
+  11: {
+    3: [{ label: "Уровень всех атак", value: 7, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 7, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 8, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 7, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 8, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 16, unit: "" },
+    ],
+  },
+  12: {
+    3: [{ label: "Уровень всех атак", value: 7, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 7, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 8, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 7, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 8, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 16, unit: "" },
+    ],
+  },
+  13: {
+    3: [{ label: "Уровень всех атак", value: 8, unit: "" }],
+    4: [
+      { label: "Уровень всех атак", value: 8, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 9, unit: "" },
+    ],
+    5: [
+      { label: "Уровень всех атак", value: 8, unit: "" },
+      { label: "Шанс нанести крит. удар", value: 9, unit: "" },
+      { label: "Доп. урон при крит. ударе", value: 18, unit: "" },
+    ],
+  },
+};
+const IFRIT_SET_BONUSES = Object.fromEntries(
+  Array.from({ length: 10 }, (_, index) => {
+    const level = index + 4;
+    const hp = (level - 2) * 50;
+    const defense = level - 3;
+    const damageReduction = -(level - 3);
+
+    return [level, {
+      3: [{ label: "HP", value: hp, unit: "" }],
+      4: [
+        { label: "HP", value: hp, unit: "" },
+        { label: "Защита", value: defense, unit: "" },
+      ],
+      5: [
+        { label: "HP", value: hp, unit: "" },
+        { label: "Защита", value: defense, unit: "" },
+        { label: "Получаемый урон", value: damageReduction, unit: "%" },
+      ],
+    }];
+  })
+);
 const CLASS_CONFIGS = {
   knight: {
     label: "Рыцарь",
@@ -95,13 +359,13 @@ const CLASS_CONFIGS = {
         { label: "Уровень ближних атак", value: Math.floor(strength / 3), unit: "" },
         { label: "Точность ближних атак", value: Math.floor(strength / 2), unit: "" },
         { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 12), unit: "" },
-        { label: "Макс. HP от силы", value: strength * 2, unit: "" },
+        { label: "HP", value: strength * 2, unit: "" },
         { label: "Регенерация HP", value: Math.floor(strength / 12) * 0.1, unit: "" },
-        { label: "Макс. вес от силы", value: strength * 30, unit: "" },
+        { label: "Вес", value: strength * 30, unit: "" },
         { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 9), unit: "" },
         { label: "Скорость атаки", value: Math.floor(dexterity / 12), unit: "%" },
         { label: "Скорость передвижения", value: Math.floor(dexterity / 6), unit: "" },
-        { label: "Макс. MP от интеллекта", value: intelligence * 2, unit: "" },
+        { label: "MP", value: intelligence * 2, unit: "" },
         { label: "Регенерация MP", value: Math.floor(intelligence / 6) * 0.1, unit: "" },
       ];
     },
@@ -123,16 +387,16 @@ const CLASS_CONFIGS = {
 
       return [
         { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 9), unit: "" },
-        { label: "Макс. HP от силы", value: strength * 2, unit: "" },
+        { label: "HP", value: strength * 2, unit: "" },
         { label: "Регенерация HP", value: Math.floor(strength / 9) * 0.1, unit: "" },
-        { label: "Макс. вес от силы", value: strength * 30, unit: "" },
+        { label: "Вес", value: strength * 30, unit: "" },
         { label: "Уровень дальних атак", value: Math.floor(dexterity / 3), unit: "" },
         { label: "Точность дальних атак", value: Math.floor(dexterity / 2), unit: "" },
         { label: "Защита", value: Math.floor(dexterity / 6), unit: "" },
         { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 9), unit: "" },
         { label: "Скорость атаки", value: Math.floor(dexterity / 17), unit: "%" },
         { label: "Скорость передвижения", value: Math.floor(dexterity / 7), unit: "" },
-        { label: "Макс. MP от интеллекта", value: intelligence * 2, unit: "" },
+        { label: "MP", value: intelligence * 2, unit: "" },
         { label: "Регенерация MP", value: Math.floor(intelligence / 4) * 0.1, unit: "" },
       ];
     },
@@ -156,15 +420,15 @@ const CLASS_CONFIGS = {
         { label: "Уровень ближних атак", value: Math.floor(strength / 3), unit: "" },
         { label: "Точность ближних атак", value: Math.floor(strength / 2), unit: "" },
         { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 12), unit: "" },
-        { label: "Макс. HP от силы", value: strength * 2, unit: "" },
+        { label: "HP", value: strength * 2, unit: "" },
         { label: "Регенерация HP", value: Math.floor(strength / 9) * 0.1, unit: "" },
-        { label: "Макс. вес от силы", value: strength * 30, unit: "" },
+        { label: "Вес", value: strength * 30, unit: "" },
         { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 9), unit: "" },
         { label: "Скорость атаки", value: Math.floor(dexterity / 12), unit: "%" },
         { label: "Скорость передвижения", value: Math.floor(dexterity / 6), unit: "" },
         { label: "Уровень магических атак", value: Math.floor(intelligence / 3), unit: "" },
         { label: "Точность магических атак", value: Math.floor(intelligence / 2), unit: "" },
-        { label: "Макс. MP от интеллекта", value: intelligence * 3, unit: "" },
+        { label: "MP", value: intelligence * 3, unit: "" },
         { label: "Регенерация MP", value: Math.floor(intelligence / 4) * 0.1, unit: "" },
       ];
     },
@@ -188,9 +452,9 @@ const CLASS_CONFIGS = {
         { label: "Уровень ближних атак", value: Math.floor(strength / 3), unit: "" },
         { label: "Точность ближних атак", value: Math.floor(strength / 2), unit: "" },
         { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 15), unit: "" },
-        { label: "Макс. HP от силы", value: strength * 2, unit: "" },
+        { label: "HP", value: strength * 2, unit: "" },
         { label: "Регенерация HP", value: Math.floor(strength / 12) * 0.1, unit: "" },
-        { label: "Макс. вес от силы", value: strength * 30, unit: "" },
+        { label: "Вес", value: strength * 30, unit: "" },
         { label: "Уровень дальних атак", value: Math.floor(dexterity / 3), unit: "" },
         { label: "Точность дальних атак", value: Math.floor(dexterity / 2), unit: "" },
         { label: "Защита", value: Math.floor(dexterity / 5), unit: "" },
@@ -199,7 +463,7 @@ const CLASS_CONFIGS = {
         { label: "Скорость передвижения", value: Math.floor(dexterity / 8), unit: "" },
         { label: "Уровень магических атак", value: Math.floor(intelligence / 6), unit: "" },
         { label: "Точность магических атак", value: Math.floor(intelligence / 6), unit: "" },
-        { label: "Макс. MP от интеллекта", value: intelligence * 2, unit: "" },
+        { label: "MP", value: intelligence * 2, unit: "" },
         { label: "Регенерация MP", value: Math.floor(intelligence / 4) * 0.1, unit: "" },
       ];
     },
@@ -223,14 +487,14 @@ const CLASS_CONFIGS = {
         { label: "Уровень ближних атак", value: Math.floor(strength / 3), unit: "" },
         { label: "Точность ближних атак", value: Math.floor(strength / 2), unit: "" },
         { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 7), unit: "" },
-        { label: "Макс. HP от силы", value: strength * 2, unit: "" },
+        { label: "HP", value: strength * 2, unit: "" },
         { label: "Регенерация HP", value: Math.floor(strength / 9) * 0.1, unit: "" },
-        { label: "Макс. вес от силы", value: strength * 30, unit: "" },
+        { label: "Вес", value: strength * 30, unit: "" },
         { label: "Защита", value: Math.floor(dexterity / 4), unit: "" },
         { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 10), unit: "" },
         { label: "Скорость атаки", value: Math.floor(dexterity / 12), unit: "%" },
         { label: "Скорость передвижения", value: Math.floor(dexterity / 9), unit: "" },
-        { label: "Макс. MP от интеллекта", value: intelligence * 2, unit: "" },
+        { label: "MP", value: intelligence * 2, unit: "" },
         { label: "Регенерация MP", value: Math.floor(intelligence / 4) * 0.1, unit: "" },
       ];
     },
@@ -239,20 +503,78 @@ const CLASS_CONFIGS = {
 
 const state = {
   items: [],
+  sphereItems: [],
+  trophyItems: [],
   itemsById: new Map(),
+  sphereItemsById: new Map(),
+  trophyItemsById: new Map(),
   equipped: loadEquippedState(),
+  sphereEquipped: loadSphereEquippedState(),
+  trophyEquipped: loadTrophyEquippedState(),
   expandedCategories: new Set(),
+  expandedSphereCategories: new Set(),
+  expandedTrophySlots: new Set(),
   activeSlot: null,
+  activeSphereSlot: SPHERE_SLOT_CONFIG[0]?.key || null,
+  activeTrophySlot: TROPHY_SLOT_CONFIG[0]?.key || null,
+  activeSphereTypeOneTab: "Сферы разрушения",
   lastAction: "Выберите слот на кукле или откройте категорию справа.",
   classConfig: loadClassState(),
   activeSidebarTab: loadSidebarTabState(),
-  nickname: loadNicknameState(),
+  activeStatsTab: "inventory",
+  activeWorkspaceTab: loadWorkspaceTabState(),
+  profiles: [],
+  activeProfileId: null,
 };
 
-function getItemsForSlot(slotCode) {
-  return state.items
-    .filter((item) => item.slot_code === slotCode)
+function getSphereSlotConfig(slotKey) {
+  return SPHERE_SLOT_CONFIG.find((slot) => slot.key === slotKey);
+}
+
+function getTrophySlotConfig(slotKey) {
+  return TROPHY_SLOT_CONFIG.find((slot) => slot.key === slotKey);
+}
+
+function getCompatibleSphereSlots(item) {
+  return SPHERE_SLOT_CONFIG.filter((slot) => slot.matches(item));
+}
+
+function getPrimarySphereSlot(item) {
+  return getCompatibleSphereSlots(item)[0] || null;
+}
+
+function shouldShowSphereUpgrade(item, slot = getPrimarySphereSlot(item)) {
+  return slot?.categoryKey === "sphere_type_1";
+}
+
+function getSphereItemsForSlot(slotKey) {
+  const slot = getSphereSlotConfig(slotKey);
+  if (!slot) {
+    return [];
+  }
+
+  return state.sphereItems
+    .filter((item) => slot.matches(item))
     .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+function getTrophyItemsForSlot(slotKey) {
+  return state.trophyItems
+    .filter((item) => item.slot_code === slotKey)
+    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+function getSphereCategoryGroups() {
+  return SPHERE_CATEGORY_CONFIG.map((group) => {
+    const items = state.sphereItems
+      .filter((item) => getCompatibleSphereSlots(item).some((slot) => slot.categoryKey === group.key))
+      .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+
+    return {
+      ...group,
+      items,
+    };
+  });
 }
 
 function getLevelKeys(item) {
@@ -278,20 +600,147 @@ function getSlotConfig(slotKey) {
   return SLOT_CONFIG.find((slot) => slot.key === slotKey);
 }
 
+function matchesEquipmentSlot(slot, item) {
+  return Boolean(slot && item && item.slot_code === slot.sourceSlot && (!slot.matches || slot.matches(item)));
+}
+
+function getItemsForEquipmentSlot(slotKeyOrConfig) {
+  const slot = typeof slotKeyOrConfig === "string" ? getSlotConfig(slotKeyOrConfig) : slotKeyOrConfig;
+  if (!slot) {
+    return [];
+  }
+
+  return state.items
+    .filter((item) => matchesEquipmentSlot(slot, item))
+    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
 function getFirstAvailableSlotKey() {
-  return SLOT_CONFIG.find((slot) => getItemsForSlot(slot.sourceSlot).length)?.key || SLOT_CONFIG[0]?.key || null;
+  return SLOT_CONFIG.find((slot) => getItemsForEquipmentSlot(slot).length)?.key || SLOT_CONFIG[0]?.key || null;
+}
+
+function getFirstAvailableSphereSlotKey() {
+  return SPHERE_SLOT_CONFIG.find((slot) => getSphereItemsForSlot(slot.key).length)?.key || SPHERE_SLOT_CONFIG[0]?.key || null;
+}
+
+function getSphereTypeOneTabForSlot(slotKey) {
+  return SPHERE_TYPE_ONE_TABS.find((tab) => tab.slotKey === slotKey)?.category || "Сферы разрушения";
 }
 
 function getEquippedSlots() {
   return SLOT_CONFIG.filter((slot) => state.equipped[slot.key]);
 }
 
+function getEquippedSphereSlots() {
+  return SPHERE_SLOT_CONFIG.filter((slot) => state.sphereEquipped[slot.key]);
+}
+
+function getEquippedTrophySlots() {
+  return TROPHY_SLOT_CONFIG.filter((slot) => state.trophyEquipped[slot.key]);
+}
+
 function normalizeText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function isMorphRingItem(item) {
+  return item?.slot_code === "ring" && /перевоплощени/i.test(normalizeText(item?.name));
+}
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function createProfileId() {
+  return `profile-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function getProfileFallbackName(index = state.profiles.length) {
+  return `Профиль ${index + 1}`;
+}
+
+function sanitizeProfileName(name, fallbackName = getProfileFallbackName()) {
+  const normalized = normalizeText(name).slice(0, 40);
+  return normalized || fallbackName;
+}
+
+function sanitizeWorkspaceTab(tabKey) {
+  return ["inventory", "spheres", "trophies"].includes(tabKey) ? tabKey : "inventory";
+}
+
+function normalizeProfileRecord(profile, index = 0) {
+  const fallbackName = getProfileFallbackName(index);
+  const classConfig = profile?.classConfig && typeof profile.classConfig === "object"
+    ? profile.classConfig
+    : {};
+
+  return {
+    id: String(profile?.id || createProfileId()),
+    name: sanitizeProfileName(profile?.name, fallbackName),
+    classConfig: {
+      classKey: CLASS_CONFIGS[classConfig.classKey] ? classConfig.classKey : "knight",
+      level: sanitizeClassLevel(classConfig.level ?? 1),
+    },
+    equipped: profile?.equipped && typeof profile.equipped === "object" ? deepClone(profile.equipped) : {},
+    sphereEquipped: profile?.sphereEquipped && typeof profile.sphereEquipped === "object" ? deepClone(profile.sphereEquipped) : {},
+    trophyEquipped: profile?.trophyEquipped && typeof profile.trophyEquipped === "object" ? deepClone(profile.trophyEquipped) : {},
+    activeWorkspaceTab: sanitizeWorkspaceTab(profile?.activeWorkspaceTab),
+    createdAt: Number(profile?.createdAt) || Date.now(),
+    updatedAt: Number(profile?.updatedAt) || Date.now(),
+  };
+}
+
+function createProfileSnapshot(overrides = {}) {
+  const fallbackName = getProfileFallbackName();
+
+  return normalizeProfileRecord({
+    id: overrides.id || createProfileId(),
+    name: overrides.name || fallbackName,
+    classConfig: overrides.classConfig ?? state.classConfig,
+    equipped: overrides.equipped ?? state.equipped,
+    sphereEquipped: overrides.sphereEquipped ?? state.sphereEquipped,
+    trophyEquipped: overrides.trophyEquipped ?? state.trophyEquipped,
+    activeWorkspaceTab: overrides.activeWorkspaceTab ?? state.activeWorkspaceTab,
+    createdAt: overrides.createdAt ?? Date.now(),
+    updatedAt: Date.now(),
+  }, state.profiles.length);
+}
+
+function createEmptyProfile(name = getProfileFallbackName()) {
+  return normalizeProfileRecord({
+    id: createProfileId(),
+    name,
+    classConfig: { classKey: "knight", level: 1 },
+    equipped: {},
+    sphereEquipped: {},
+    trophyEquipped: {},
+    activeWorkspaceTab: "inventory",
+  }, state.profiles.length);
+}
+
+function getNextProfileName() {
+  const names = new Set(state.profiles.map((profile) => profile.name));
+  let index = 1;
+  while (names.has(`Профиль ${index}`)) {
+    index += 1;
+  }
+  return `Профиль ${index}`;
+}
+
+function getActiveProfile() {
+  return state.profiles.find((profile) => profile.id === state.activeProfileId) || null;
+}
+
 function createItemUid(item, index) {
   return `${item.slot_code}:${item.name}:${index}`;
+}
+
+function createSphereUid(item, index) {
+  return `sphere:${item.category || "unknown"}:${item.id ?? index}`;
+}
+
+function createTrophyUid(item, index) {
+  return `trophy:${item.slot_code || "unknown"}:${item.id ?? index}`;
 }
 
 function sanitizeClassLevel(level) {
@@ -328,15 +777,54 @@ function loadClassState() {
 function loadSidebarTabState() {
   try {
     const raw = localStorage.getItem(SIDEBAR_TAB_STORAGE_KEY);
-    return ["equip", "stats", "class"].includes(raw) ? raw : "equip";
+    return ["class", "stats"].includes(raw) ? raw : "class";
   } catch {
-    return "equip";
+    return "class";
   }
 }
 
-function loadNicknameState() {
+function loadSphereEquippedState() {
   try {
-    return normalizeText(localStorage.getItem(NICKNAME_STORAGE_KEY) || "");
+    const raw = localStorage.getItem(SPHERE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function loadTrophyEquippedState() {
+  try {
+    const raw = localStorage.getItem(TROPHY_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function loadWorkspaceTabState() {
+  try {
+    const raw = localStorage.getItem(WORKSPACE_TAB_STORAGE_KEY);
+    return ["inventory", "spheres", "trophies"].includes(raw) ? raw : "inventory";
+  } catch {
+    return "inventory";
+  }
+}
+
+function loadProfilesState() {
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadActiveProfileIdState() {
+  try {
+    return normalizeText(localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY) || "");
   } catch {
     return "";
   }
@@ -348,6 +836,7 @@ function saveEquippedState() {
   } catch {
     // Ignore storage errors to keep the page usable in private/file contexts.
   }
+  syncActiveProfileFromState();
 }
 
 function saveClassState() {
@@ -356,6 +845,7 @@ function saveClassState() {
   } catch {
     // Ignore storage errors to keep the page usable in private/file contexts.
   }
+  syncActiveProfileFromState();
 }
 
 function saveSidebarTabState() {
@@ -366,12 +856,179 @@ function saveSidebarTabState() {
   }
 }
 
-function saveNicknameState() {
+function saveSphereEquippedState() {
   try {
-    localStorage.setItem(NICKNAME_STORAGE_KEY, state.nickname);
+    localStorage.setItem(SPHERE_STORAGE_KEY, JSON.stringify(state.sphereEquipped));
   } catch {
     // Ignore storage errors to keep the page usable in private/file contexts.
   }
+  syncActiveProfileFromState();
+}
+
+function saveTrophyEquippedState() {
+  try {
+    localStorage.setItem(TROPHY_STORAGE_KEY, JSON.stringify(state.trophyEquipped));
+  } catch {
+    // Ignore storage errors to keep the page usable in private/file contexts.
+  }
+  syncActiveProfileFromState();
+}
+
+function saveWorkspaceTabState() {
+  try {
+    localStorage.setItem(WORKSPACE_TAB_STORAGE_KEY, state.activeWorkspaceTab);
+  } catch {
+    // Ignore storage errors to keep the page usable in private/file contexts.
+  }
+  syncActiveProfileFromState();
+}
+
+function saveProfilesState() {
+  try {
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profiles));
+  } catch {
+    // Ignore storage errors to keep the page usable in private/file contexts.
+  }
+}
+
+function saveActiveProfileIdState() {
+  try {
+    localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, state.activeProfileId || "");
+  } catch {
+    // Ignore storage errors to keep the page usable in private/file contexts.
+  }
+}
+
+function syncActiveProfileFromState() {
+  if (profileSyncLocked || !state.activeProfileId || !state.profiles.length) {
+    return;
+  }
+
+  const index = state.profiles.findIndex((profile) => profile.id === state.activeProfileId);
+  if (index === -1) {
+    return;
+  }
+
+  const currentProfile = state.profiles[index];
+  state.profiles[index] = createProfileSnapshot({
+    id: currentProfile.id,
+    name: currentProfile.name,
+    createdAt: currentProfile.createdAt,
+  });
+  saveProfilesState();
+  saveActiveProfileIdState();
+}
+
+function persistLegacyStateSnapshot() {
+  profileSyncLocked = true;
+  saveActiveProfileIdState();
+  saveClassState();
+  saveEquippedState();
+  saveSphereEquippedState();
+  saveTrophyEquippedState();
+  saveWorkspaceTabState();
+  profileSyncLocked = false;
+}
+
+function applyProfileToState(profile) {
+  const normalized = normalizeProfileRecord(profile);
+  state.activeProfileId = normalized.id;
+  state.classConfig = deepClone(normalized.classConfig);
+  state.equipped = deepClone(normalized.equipped);
+  state.sphereEquipped = deepClone(normalized.sphereEquipped);
+  state.trophyEquipped = deepClone(normalized.trophyEquipped);
+  state.activeWorkspaceTab = sanitizeWorkspaceTab(normalized.activeWorkspaceTab);
+  persistLegacyStateSnapshot();
+}
+
+function initializeProfilesState() {
+  const loadedProfiles = loadProfilesState().map((profile, index) => normalizeProfileRecord(profile, index));
+  const activeProfileId = loadActiveProfileIdState();
+
+  if (!loadedProfiles.length) {
+    const migratedProfile = createProfileSnapshot({
+      id: createProfileId(),
+      name: getNextProfileName(),
+      classConfig: state.classConfig,
+      equipped: state.equipped,
+      sphereEquipped: state.sphereEquipped,
+      trophyEquipped: state.trophyEquipped,
+      activeWorkspaceTab: state.activeWorkspaceTab,
+    });
+    state.profiles = [migratedProfile];
+    state.activeProfileId = migratedProfile.id;
+    saveProfilesState();
+    saveActiveProfileIdState();
+    return;
+  }
+
+  state.profiles = loadedProfiles;
+  state.activeProfileId = loadedProfiles.some((profile) => profile.id === activeProfileId)
+    ? activeProfileId
+    : loadedProfiles[0].id;
+
+  const activeProfile = getActiveProfile() || loadedProfiles[0];
+  if (activeProfile) {
+    applyProfileToState(activeProfile);
+  }
+}
+
+function setActiveProfile(profileId, { persistCurrent = true } = {}) {
+  const nextProfile = state.profiles.find((profile) => profile.id === profileId);
+  if (!nextProfile) {
+    return;
+  }
+
+  if (persistCurrent) {
+    syncActiveProfileFromState();
+  }
+
+  applyProfileToState(nextProfile);
+  sanitizeEquippedState();
+  sanitizeSphereEquippedState();
+  sanitizeTrophyEquippedState();
+  initializeUiState();
+  syncActiveProfileFromState();
+  renderAll();
+  setLastAction(`Активирован профиль "${nextProfile.name}".`);
+}
+
+function renameActiveProfile(name) {
+  const profile = getActiveProfile();
+  if (!profile) {
+    return;
+  }
+
+  profile.name = sanitizeProfileName(name, profile.name);
+  profile.updatedAt = Date.now();
+  saveProfilesState();
+  renderProfileBar();
+  setLastAction(`Профиль переименован в "${profile.name}".`);
+}
+
+function createNewProfile() {
+  syncActiveProfileFromState();
+  const profile = createEmptyProfile(getNextProfileName());
+  state.profiles.push(profile);
+  saveProfilesState();
+  setActiveProfile(profile.id, { persistCurrent: false });
+  setLastAction(`Создан профиль "${profile.name}".`);
+}
+
+function deleteActiveProfile() {
+  if (state.profiles.length <= 1) {
+    return;
+  }
+
+  const profile = getActiveProfile();
+  if (!profile) {
+    return;
+  }
+
+  state.profiles = state.profiles.filter((entry) => entry.id !== profile.id);
+  saveProfilesState();
+  setActiveProfile(state.profiles[0].id, { persistCurrent: false });
+  setLastAction(`Профиль "${profile.name}" удалён.`);
 }
 
 function escapeHtml(value) {
@@ -381,6 +1038,18 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function renderItemIcon(item) {
+  if (!item?.image) {
+    return '<span class="item-icon-frame is-empty" aria-hidden="true"></span>';
+  }
+
+  return `
+    <span class="item-icon-frame">
+      <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">
+    </span>
+  `;
 }
 
 function canonicalizeStatLabel(label) {
@@ -410,8 +1079,9 @@ function parseNumericStat(line) {
 }
 
 function addNumericStat(target, stat) {
-  const key = `${stat.label}::${stat.unit}`;
-  const current = target.get(key) || { label: stat.label, unit: stat.unit, value: 0 };
+  const label = canonicalizeStatLabel(stat.label);
+  const key = `${label}::${stat.unit}`;
+  const current = target.get(key) || { label, unit: stat.unit, value: 0 };
   current.value += stat.value;
   target.set(key, current);
 }
@@ -420,9 +1090,101 @@ function addStatCollection(target, stats) {
   stats.forEach((stat) => addNumericStat(target, stat));
 }
 
+function addStatWithRules(target, stat) {
+  if (stat.label === "Все параметры") {
+    applyAllStatsBonus(target, stat);
+    return;
+  }
+  if (applyGroupedAttackStat(target, stat)) {
+    return;
+  }
+  addNumericStat(target, stat);
+}
+
 function applyAllStatsBonus(target, stat) {
   ["Сила", "Ловкость", "Интеллект"].forEach((label) => {
     addNumericStat(target, { label, value: stat.value, unit: stat.unit });
+  });
+}
+
+function applyGroupedAttackStat(target, stat) {
+  const labels = GROUPED_ATTACK_STAT_TARGETS.get(stat.label);
+  if (!labels) {
+    return false;
+  }
+
+  labels.forEach((label) => {
+    addNumericStat(target, { label, value: stat.value, unit: stat.unit });
+  });
+  return true;
+}
+
+function getUpgradeNumber(level) {
+  const match = String(level || "").match(/\+(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function isBaphometSetItem(item) {
+  return /Бафомет[а]?/u.test(item?.name || "");
+}
+
+function isIfritSetItem(item) {
+  return /Ифрит[а]?/u.test(item?.name || "");
+}
+
+function collectEquipmentSetBonus({ name, bonuses, isSetItem }) {
+  const setItems = getEquippedSlots()
+    .map((slot) => {
+      const selected = state.equipped[slot.key];
+      const item = selected ? state.itemsById.get(selected.itemId) : null;
+      if (!isSetItem(item)) {
+        return null;
+      }
+
+      return {
+        item,
+        level: getUpgradeNumber(getValidUpgradeLevel(item, selected.upgradeLevel)),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.level - a.level);
+
+  if (setItems.length < 3) {
+    return null;
+  }
+
+  const setSize = Math.min(5, setItems.length);
+  const activeItems = setItems.slice(0, setSize);
+  const setLevel = Math.min(...activeItems.map((entry) => entry.level));
+  const sourceStats = bonuses[setLevel]?.[setSize] || [];
+  if (!sourceStats.length) {
+    return null;
+  }
+
+  const displayStats = new Map();
+  sourceStats.forEach((stat) => addStatWithRules(displayStats, stat));
+
+  return {
+    name,
+    itemCount: setSize,
+    setLevel,
+    stats: [...displayStats.values()],
+  };
+}
+
+function collectBaphometSetBonus() {
+  return collectEquipmentSetBonus({
+    name: "Бафомета",
+    bonuses: BAPHOMET_SET_BONUSES,
+    isSetItem: isBaphometSetItem,
+  });
+}
+
+function collectIfritSetBonus() {
+  return collectEquipmentSetBonus({
+    name: "Ифрита",
+    bonuses: IFRIT_SET_BONUSES,
+    isSetItem: isIfritSetItem,
   });
 }
 
@@ -454,9 +1216,66 @@ function formatBoardPrimaryValue(stat) {
   return formatStatNumber(Math.max(0, stat.value));
 }
 
+function createCollectedStatsBucket() {
+  return {
+    numericStats: new Map(),
+    effects: new Map(),
+  };
+}
+
+function collectItemParamsIntoBucket(item, selected, bucket) {
+  const level = getValidUpgradeLevel(item, selected.upgradeLevel);
+  const params = getParamsForLevel(item, level);
+  params.forEach((line) => {
+    const cleanLine = normalizeText(line);
+    if (!cleanLine) {
+      return;
+    }
+
+    const numericStat = parseNumericStat(cleanLine);
+    if (numericStat) {
+      addStatWithRules(bucket.numericStats, numericStat);
+      return;
+    }
+
+    bucket.effects.set(cleanLine.toLowerCase(), cleanLine);
+  });
+}
+
+function getDisplayStatsFromMap(statsMap, { includeMainZeros = false } = {}) {
+  const mainStats = MAIN_STATS.map((label) => {
+    const exact = statsMap.get(`${label}::`) || statsMap.get(`${label}::%`);
+    return {
+      label,
+      unit: exact?.unit || "",
+      value: exact?.value || 0,
+    };
+  }).filter((stat) => includeMainZeros || stat.value !== 0);
+
+  const secondaryStats = [...statsMap.values()]
+    .filter((stat) => !MAIN_STATS.includes(stat.label))
+    .sort((a, b) => {
+      const priorityDiff = getStatPriority(a.label) - getStatPriority(b.label);
+      if (priorityDiff !== 0) {
+        return priorityDiff;
+      }
+      return a.label.localeCompare(b.label, "ru");
+    });
+
+  return {
+    mainStats,
+    secondaryStats,
+    allStats: [...mainStats, ...secondaryStats],
+  };
+}
+
 function collectEquippedStats() {
+  const inventoryBucket = createCollectedStatsBucket();
+  const sphereBucket = createCollectedStatsBucket();
+  const trophyBucket = createCollectedStatsBucket();
   const numericStats = new Map();
   const effects = new Map();
+  const setBonuses = [];
 
   getEquippedSlots().forEach((slot) => {
     const selected = state.equipped[slot.key];
@@ -464,32 +1283,51 @@ function collectEquippedStats() {
     if (!item) {
       return;
     }
+    collectItemParamsIntoBucket(item, selected, inventoryBucket);
+  });
 
-    const level = getValidUpgradeLevel(item, selected.upgradeLevel);
-    const params = getParamsForLevel(item, level);
+  getEquippedSphereSlots().forEach((slot) => {
+    const selected = state.sphereEquipped[slot.key];
+    const item = state.sphereItemsById.get(selected.itemId);
+    if (!item) {
+      return;
+    }
+    collectItemParamsIntoBucket(item, selected, sphereBucket);
+  });
 
-    params.forEach((line) => {
-      const cleanLine = normalizeText(line);
-      if (!cleanLine) {
-        return;
-      }
+  getEquippedTrophySlots().forEach((slot) => {
+    const selected = state.trophyEquipped[slot.key];
+    const item = state.trophyItemsById.get(selected.itemId);
+    if (!item) {
+      return;
+    }
+    collectItemParamsIntoBucket(item, selected, trophyBucket);
+  });
 
-      const numericStat = parseNumericStat(cleanLine);
-      if (numericStat) {
-        if (numericStat.label === "Все параметры") {
-          applyAllStatsBonus(numericStats, numericStat);
-          return;
-        }
-        addNumericStat(numericStats, numericStat);
-        return;
-      }
-
-      effects.set(cleanLine.toLowerCase(), cleanLine);
+  [inventoryBucket, sphereBucket, trophyBucket].forEach((bucket) => {
+    addStatCollection(numericStats, [...bucket.numericStats.values()]);
+    bucket.effects.forEach((effect, key) => {
+      effects.set(key, effect);
     });
+  });
+
+  [collectBaphometSetBonus(), collectIfritSetBonus()].forEach((setBonus) => {
+    if (!setBonus) {
+      return;
+    }
+
+    setBonus.stats.forEach((stat) => addNumericStat(numericStats, stat));
+    setBonuses.push(setBonus);
   });
 
   return {
     numericStats,
+    setBonuses,
+    sourceBreakdown: {
+      inventory: inventoryBucket,
+      spheres: sphereBucket,
+      trophies: trophyBucket,
+    },
     effects: [...effects.values()].sort((a, b) => a.localeCompare(b, "ru")),
   };
 }
@@ -506,59 +1344,158 @@ function renderStatRows(stats) {
   }).join("");
 }
 
+function renderSetBonusRows(setBonuses) {
+  if (!setBonuses.length) {
+    return '<div class="empty-note">Сетовые бонусы не активны.</div>';
+  }
+
+  return setBonuses.map((bonus) => `
+    <div class="set-bonus-card">
+      <div class="set-bonus-title">${escapeHtml(bonus.name)}</div>
+      <div class="set-bonus-meta">${bonus.itemCount} предметов · минимальная заточка +${bonus.setLevel}</div>
+      <div class="stat-list stat-list-secondary">${renderStatRows(bonus.stats)}</div>
+    </div>
+  `).join("");
+}
+
+function renderEquipmentDescription(slot, item, level) {
+  if (!item) {
+    return "";
+  }
+
+  const params = getParamsForLevel(item, level);
+  const descriptionLines = Array.isArray(item.description_lines)
+    ? item.description_lines.filter((line) => normalizeText(line))
+    : [];
+  const currentParamLabels = new Set(
+    params
+      .map((line) => parseNumericStat(line))
+      .filter(Boolean)
+      .map((stat) => stat.label),
+  );
+  const mergedLines = [
+    ...params,
+    ...descriptionLines.filter((line) => {
+      const parsed = parseNumericStat(line);
+      if (!parsed) {
+        return !params.includes(line);
+      }
+      return !currentParamLabels.has(parsed.label);
+    }),
+  ];
+  const paramsHtml = mergedLines.length
+    ? mergedLines.map((param) => `<li>${escapeHtml(param)}</li>`).join("")
+    : "<li>Без параметров</li>";
+
+  return `
+    <div class="equipment-description-card">
+      <div class="equipment-description-content">
+        <div class="equipment-description-name">${escapeHtml(item.name)} ${escapeHtml(level)}</div>
+        <ul class="equipment-description-params">${paramsHtml}</ul>
+      </div>
+    </div>
+  `;
+}
+
+function renderSphereDescription(slot, item, level) {
+  if (!item) {
+    return "";
+  }
+
+  const params = getParamsForLevel(item, level);
+  const descriptionLines = Array.isArray(item.description_lines)
+    ? item.description_lines.filter((line) => normalizeText(line))
+    : [];
+  const currentParamLabels = new Set(
+    params
+      .map((line) => parseNumericStat(line))
+      .filter(Boolean)
+      .map((stat) => stat.label),
+  );
+  const mergedLines = [
+    ...params,
+    ...descriptionLines.filter((line) => {
+      const parsed = parseNumericStat(line);
+      if (!parsed) {
+        return !params.includes(line);
+      }
+      return !currentParamLabels.has(parsed.label);
+    }),
+  ];
+  const paramsHtml = mergedLines.length
+    ? mergedLines.map((param) => `<li>${escapeHtml(param)}</li>`).join("")
+    : "<li>Без параметров</li>";
+  const displayLevel = shouldShowSphereUpgrade(item, slot) && getLevelKeys(item).length > 1 ? ` ${level}` : "";
+
+  return `
+    <div class="equipment-description-card">
+      <div class="equipment-description-content">
+        <div class="equipment-description-name">${escapeHtml(item.name)}${escapeHtml(displayLevel)}</div>
+        <ul class="equipment-description-params">${paramsHtml}</ul>
+      </div>
+    </div>
+  `;
+}
+
+function renderTrophyDescription(slot, item, level) {
+  if (!item) {
+    return "";
+  }
+
+  const params = getParamsForLevel(item, level);
+  const paramsHtml = params.length
+    ? params.map((param) => `<li>${escapeHtml(param)}</li>`).join("")
+    : "<li>Без параметров</li>";
+  return `
+    <div class="equipment-description-card">
+      <div class="equipment-description-content">
+        <div class="equipment-description-name">${escapeHtml(item.name)} ${escapeHtml(level)}</div>
+        <ul class="equipment-description-params">${paramsHtml}</ul>
+      </div>
+    </div>
+  `;
+}
+
 function computeBaseClassStat(statConfig, level) {
   if (statConfig.growthType === "per_level") {
     return statConfig.base + Math.max(0, level - 1) * statConfig.amount;
   }
 
   if (statConfig.growthType === "interval") {
-    return statConfig.base + Math.floor(Math.max(0, level - 1) / statConfig.interval) * statConfig.amount;
+    const normalizedLevel = CLASS_PRIMARY_ATTRIBUTES.has(statConfig.label)
+      ? Math.max(0, level)
+      : Math.max(0, level - 1);
+    return statConfig.base + Math.floor(normalizedLevel / statConfig.interval) * statConfig.amount;
   }
 
   return statConfig.base;
 }
 
 function renderStatsPanel() {
-  const mainContainer = document.getElementById("stats-main-list");
-  const extraContainer = document.getElementById("stats-extra-list");
+  const inventoryContainer = document.getElementById("stats-inventory-list");
+  const spheresContainer = document.getElementById("stats-spheres-list");
+  const trophiesContainer = document.getElementById("stats-trophies-list");
+  const setContainer = document.getElementById("stats-set-list");
   const effectsContainer = document.getElementById("stats-effects-list");
-  if (!mainContainer || !extraContainer || !effectsContainer) {
+  if (!inventoryContainer || !spheresContainer || !trophiesContainer || !setContainer || !effectsContainer) {
     return;
   }
 
-  const equippedSlots = getEquippedSlots();
-  if (!equippedSlots.length) {
-    const emptyHtml = '<div class="empty-note">Наденьте предметы, чтобы увидеть суммарные параметры.</div>';
-    mainContainer.innerHTML = emptyHtml;
-    extraContainer.innerHTML = emptyHtml;
-    effectsContainer.innerHTML = emptyHtml;
-    return;
-  }
+  const { sourceBreakdown, setBonuses, effects } = collectEquippedStats();
+  const inventoryStats = getDisplayStatsFromMap(sourceBreakdown.inventory.numericStats).allStats;
+  const sphereStats = getDisplayStatsFromMap(sourceBreakdown.spheres.numericStats).allStats;
+  const trophyStats = getDisplayStatsFromMap(sourceBreakdown.trophies.numericStats).allStats;
 
-  const { numericStats, effects } = collectEquippedStats();
-  const mainStats = MAIN_STATS.map((label) => {
-    const exact = numericStats.get(`${label}::`) || numericStats.get(`${label}::%`);
-    return {
-      label,
-      unit: exact?.unit || "",
-      value: exact?.value || 0,
-    };
-  });
-
-  const secondaryStats = [...numericStats.values()]
-    .filter((stat) => !MAIN_STATS.includes(stat.label))
-    .sort((a, b) => {
-      const priorityDiff = getStatPriority(a.label) - getStatPriority(b.label);
-      if (priorityDiff !== 0) {
-        return priorityDiff;
-      }
-      return a.label.localeCompare(b.label, "ru");
-    });
-
-  mainContainer.innerHTML = renderStatRows(mainStats);
-  extraContainer.innerHTML = secondaryStats.length
-    ? renderStatRows(secondaryStats)
-    : '<div class="empty-note">Дополнительных числовых параметров пока нет.</div>';
+  inventoryContainer.innerHTML = inventoryStats.length
+    ? renderStatRows(inventoryStats)
+    : '<div class="empty-note">Инвентарь пока не даёт числовых параметров.</div>';
+  spheresContainer.innerHTML = sphereStats.length
+    ? renderStatRows(sphereStats)
+    : '<div class="empty-note">Сферы пока не дают числовых параметров.</div>';
+  trophiesContainer.innerHTML = trophyStats.length
+    ? renderStatRows(trophyStats)
+    : '<div class="empty-note">Трофеи пока не дают числовых параметров.</div>';
+  setContainer.innerHTML = renderSetBonusRows(setBonuses);
   effectsContainer.innerHTML = effects.length
     ? effects.map((effect) => `<div class="effect-pill">${escapeHtml(effect)}</div>`).join("")
     : '<div class="empty-note">Особые эффекты не найдены.</div>';
@@ -607,30 +1544,26 @@ function renderClassPanel() {
 function getTotalStatsData() {
   const totalStats = new Map();
   const { numericStats, effects } = collectEquippedStats();
-  const { baseStats, derivedStats } = getClassPanelData();
+  const { config, baseStats, baseStatMap } = getClassPanelData();
+  const effectiveAttributeMap = {
+    ...baseStatMap,
+  };
+
+  ["Сила", "Ловкость", "Интеллект"].forEach((label) => {
+    const bonus = numericStats.get(`${label}::`);
+    if (!bonus) {
+      return;
+    }
+
+    effectiveAttributeMap[label] = (effectiveAttributeMap[label] || 0) + bonus.value;
+  });
+
+  const derivedStats = config.derivedStats(effectiveAttributeMap);
 
   addStatCollection(totalStats, baseStats);
   addStatCollection(totalStats, derivedStats);
   addStatCollection(totalStats, [...numericStats.values()]);
-
-  const mainStats = MAIN_STATS.map((label) => {
-    const exact = totalStats.get(`${label}::`) || totalStats.get(`${label}::%`);
-    return {
-      label,
-      unit: exact?.unit || "",
-      value: exact?.value || 0,
-    };
-  });
-
-  const secondaryStats = [...totalStats.values()]
-    .filter((stat) => !MAIN_STATS.includes(stat.label))
-    .sort((a, b) => {
-      const priorityDiff = getStatPriority(a.label) - getStatPriority(b.label);
-      if (priorityDiff !== 0) {
-        return priorityDiff;
-      }
-      return a.label.localeCompare(b.label, "ru");
-    });
+  const { mainStats, secondaryStats } = getDisplayStatsFromMap(totalStats, { includeMainZeros: true });
 
   return {
     mainStats,
@@ -642,12 +1575,9 @@ function getTotalStatsData() {
 function renderBoardTotalStats() {
   const mainContainer = document.getElementById("board-main-stats");
   const extraContainer = document.getElementById("board-extra-stats");
-  const nicknameInput = document.getElementById("board-nickname-input");
-  if (!mainContainer || !extraContainer || !nicknameInput) {
+  if (!mainContainer || !extraContainer) {
     return;
   }
-
-  nicknameInput.value = state.nickname;
 
   const { mainStats, secondaryStats } = getTotalStatsData();
   const visibleMainStats = mainStats.filter((stat) => stat.value !== 0);
@@ -678,25 +1608,6 @@ function renderBoardTotalStats() {
     : '<div class="board-stats-empty">Дополнительных параметров нет.</div>';
 }
 
-function renderTotalPanel() {
-  const mainContainer = document.getElementById("total-main-stats");
-  const extraContainer = document.getElementById("total-extra-stats");
-  const effectsContainer = document.getElementById("total-effects-list");
-  if (!mainContainer || !extraContainer || !effectsContainer) {
-    return;
-  }
-
-  const { mainStats, secondaryStats, effects } = getTotalStatsData();
-
-  mainContainer.innerHTML = renderStatRows(mainStats);
-  extraContainer.innerHTML = secondaryStats.length
-    ? renderStatRows(secondaryStats)
-    : '<div class="empty-note">Дополнительных суммарных параметров пока нет.</div>';
-  effectsContainer.innerHTML = effects.length
-    ? effects.map((effect) => `<div class="effect-pill">${escapeHtml(effect)}</div>`).join("")
-    : '<div class="empty-note">Эффектов экипировки пока нет.</div>';
-}
-
 function bindClassControls() {
   const select = document.getElementById("class-select");
   const levelInput = document.getElementById("class-level-input");
@@ -709,7 +1620,6 @@ function bindClassControls() {
     saveClassState();
     renderClassPanel();
     renderBoardTotalStats();
-    renderTotalPanel();
   });
 
   levelInput.addEventListener("input", () => {
@@ -717,21 +1627,72 @@ function bindClassControls() {
     saveClassState();
     renderClassPanel();
     renderBoardTotalStats();
-    renderTotalPanel();
   });
 }
 
-function bindBoardNicknameControl() {
-  const input = document.getElementById("board-nickname-input");
-  if (!input || input.dataset.bound === "1") {
+function renderProfileBar() {
+  const select = document.getElementById("profile-select");
+  const nameInput = document.getElementById("profile-name-input");
+  const deleteButton = document.getElementById("profile-delete-button");
+  if (!select || !nameInput || !deleteButton) {
     return;
   }
 
-  input.dataset.bound = "1";
-  input.addEventListener("input", () => {
-    state.nickname = normalizeText(input.value);
-    saveNicknameState();
-  });
+  const activeProfile = getActiveProfile();
+  select.innerHTML = state.profiles.map((profile) => `
+    <option value="${escapeHtml(profile.id)}" ${profile.id === state.activeProfileId ? "selected" : ""}>
+      ${escapeHtml(profile.name)}
+    </option>
+  `).join("");
+
+  nameInput.value = activeProfile?.name || "";
+  deleteButton.disabled = state.profiles.length <= 1;
+}
+
+function bindProfileControls() {
+  const select = document.getElementById("profile-select");
+  const nameInput = document.getElementById("profile-name-input");
+  const newButton = document.getElementById("profile-new-button");
+  const deleteButton = document.getElementById("profile-delete-button");
+
+  if (!select || !nameInput || !newButton || !deleteButton) {
+    return;
+  }
+
+  if (select.dataset.bound !== "1") {
+    select.dataset.bound = "1";
+    select.addEventListener("change", () => setActiveProfile(select.value));
+  }
+
+  if (nameInput.dataset.bound !== "1") {
+    nameInput.dataset.bound = "1";
+    nameInput.addEventListener("input", () => {
+      const profile = getActiveProfile();
+      if (!profile) {
+        return;
+      }
+
+      profile.name = sanitizeProfileName(nameInput.value, profile.name);
+      profile.updatedAt = Date.now();
+      saveProfilesState();
+      const option = select.selectedOptions[0];
+      if (option) {
+        option.textContent = profile.name;
+      }
+    });
+    nameInput.addEventListener("change", () => renameActiveProfile(nameInput.value));
+    nameInput.addEventListener("blur", () => renameActiveProfile(nameInput.value));
+  }
+
+  if (newButton.dataset.bound !== "1") {
+    newButton.dataset.bound = "1";
+    newButton.addEventListener("click", createNewProfile);
+  }
+
+  if (deleteButton.dataset.bound !== "1") {
+    deleteButton.dataset.bound = "1";
+    deleteButton.addEventListener("click", deleteActiveProfile);
+  }
 }
 
 function setLastAction(message) {
@@ -752,8 +1713,42 @@ function renderSidebarTabs() {
   });
 }
 
+function renderWorkspaceTabs() {
+  document.querySelectorAll(".workspace-tab").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.workspaceTab === state.activeWorkspaceTab);
+  });
+
+  document.querySelectorAll(".workspace-panel").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.workspacePanel === state.activeWorkspaceTab);
+  });
+
+  document.querySelectorAll(".catalog-context-item").forEach((item) => {
+    item.classList.toggle("is-active", item.dataset.catalogContext === state.activeWorkspaceTab);
+  });
+}
+
+function renderStatsSourceTabs() {
+  document.querySelectorAll(".stats-source-tab").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.statsTab === state.activeStatsTab);
+  });
+
+  document.querySelectorAll(".stats-source-panel").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.statsPanel === state.activeStatsTab);
+  });
+}
+
+function setWorkspaceTab(tabKey) {
+  if (!["inventory", "spheres", "trophies"].includes(tabKey)) {
+    return;
+  }
+
+  state.activeWorkspaceTab = tabKey;
+  saveWorkspaceTabState();
+  renderAll();
+}
+
 function setSidebarTab(tabKey) {
-  if (!["equip", "stats", "class"].includes(tabKey)) {
+  if (!["class", "stats"].includes(tabKey)) {
     return;
   }
 
@@ -762,9 +1757,35 @@ function setSidebarTab(tabKey) {
   renderSidebarTabs();
 }
 
+function setStatsSourceTab(tabKey) {
+  if (!["inventory", "spheres", "trophies", "sets", "effects"].includes(tabKey)) {
+    return;
+  }
+
+  state.activeStatsTab = tabKey;
+  renderStatsSourceTabs();
+}
+
 function bindSidebarTabs() {
   document.querySelectorAll(".sidebar-tab-button").forEach((button) => {
     button.addEventListener("click", () => setSidebarTab(button.dataset.tab));
+  });
+}
+
+function bindStatsSourceTabs() {
+  document.querySelectorAll(".stats-source-tab").forEach((button) => {
+    if (button.dataset.bound === "1") {
+      return;
+    }
+
+    button.dataset.bound = "1";
+    button.addEventListener("click", () => setStatsSourceTab(button.dataset.statsTab));
+  });
+}
+
+function bindWorkspaceTabs() {
+  document.querySelectorAll(".workspace-tab:not(:disabled)").forEach((button) => {
+    button.addEventListener("click", () => setWorkspaceTab(button.dataset.workspaceTab));
   });
 }
 
@@ -772,11 +1793,64 @@ function sanitizeEquippedState() {
   const previous = state.equipped && typeof state.equipped === "object" ? state.equipped : {};
   const next = {};
   let changed = false;
+  const passiveSlot = getSlotConfig(PASSIVE_MORPH_RING_SLOT_KEY);
 
   Object.entries(previous).forEach(([slotKey, selection]) => {
     const slot = getSlotConfig(slotKey);
     const item = state.itemsById.get(String(selection?.itemId));
-    if (!slot || !item || item.slot_code !== slot.sourceSlot) {
+    const normalized = item
+      ? {
+          itemId: String(item.uid),
+          upgradeLevel: getValidUpgradeLevel(item, selection?.upgradeLevel),
+        }
+      : null;
+
+    if (
+      normalized &&
+      passiveSlot &&
+      slotKey !== PASSIVE_MORPH_RING_SLOT_KEY &&
+      matchesEquipmentSlot(passiveSlot, item) &&
+      !next[PASSIVE_MORPH_RING_SLOT_KEY]
+    ) {
+      next[PASSIVE_MORPH_RING_SLOT_KEY] = normalized;
+      changed = true;
+    }
+
+    if (!slot || !item || !matchesEquipmentSlot(slot, item)) {
+      changed = true;
+      return;
+    }
+
+    if (
+      String(selection?.itemId) !== normalized.itemId ||
+      selection?.upgradeLevel !== normalized.upgradeLevel
+    ) {
+      changed = true;
+    }
+
+    next[slotKey] = normalized;
+  });
+
+  if (Object.keys(next).length !== Object.keys(previous).length) {
+    changed = true;
+  }
+
+  state.equipped = next;
+
+  if (changed) {
+    saveEquippedState();
+  }
+}
+
+function sanitizeSphereEquippedState() {
+  const previous = state.sphereEquipped && typeof state.sphereEquipped === "object" ? state.sphereEquipped : {};
+  const next = {};
+  let changed = false;
+
+  Object.entries(previous).forEach(([slotKey, selection]) => {
+    const slot = getSphereSlotConfig(slotKey);
+    const item = state.sphereItemsById.get(String(selection?.itemId));
+    if (!slot || !item || !slot.matches(item)) {
       changed = true;
       return;
     }
@@ -800,19 +1874,67 @@ function sanitizeEquippedState() {
     changed = true;
   }
 
-  state.equipped = next;
+  state.sphereEquipped = next;
 
   if (changed) {
-    saveEquippedState();
+    saveSphereEquippedState();
+  }
+}
+
+function sanitizeTrophyEquippedState() {
+  const previous = state.trophyEquipped && typeof state.trophyEquipped === "object" ? state.trophyEquipped : {};
+  const next = {};
+  let changed = false;
+
+  Object.entries(previous).forEach(([slotKey, selection]) => {
+    const slot = getTrophySlotConfig(slotKey);
+    const item = state.trophyItemsById.get(String(selection?.itemId));
+    if (!slot || !item || item.slot_code !== slot.key) {
+      changed = true;
+      return;
+    }
+
+    const normalized = {
+      itemId: String(item.uid),
+      upgradeLevel: getValidUpgradeLevel(item, selection?.upgradeLevel),
+    };
+
+    if (
+      String(selection?.itemId) !== normalized.itemId ||
+      selection?.upgradeLevel !== normalized.upgradeLevel
+    ) {
+      changed = true;
+    }
+
+    next[slotKey] = normalized;
+  });
+
+  if (Object.keys(next).length !== Object.keys(previous).length) {
+    changed = true;
+  }
+
+  state.trophyEquipped = next;
+
+  if (changed) {
+    saveTrophyEquippedState();
   }
 }
 
 function initializeUiState() {
   const equippedSlotKeys = getEquippedSlots().map((slot) => slot.key);
   const initialSlot = equippedSlotKeys[0] || getFirstAvailableSlotKey();
+  const equippedSphereSlotKeys = getEquippedSphereSlots().map((slot) => slot.key);
+  const initialSphereSlot = equippedSphereSlotKeys[0] || getFirstAvailableSphereSlotKey();
+  const initialSphereCategory = getSphereSlotConfig(initialSphereSlot)?.categoryKey || null;
+  const equippedTrophySlotKeys = getEquippedTrophySlots().map((slot) => slot.key);
 
   state.activeSlot = initialSlot;
-  state.expandedCategories = new Set([...equippedSlotKeys, initialSlot].filter(Boolean));
+  state.expandedCategories = new Set(initialSlot ? [initialSlot] : []);
+  state.activeSphereSlot = initialSphereSlot;
+  state.expandedSphereCategories = new Set(initialSphereCategory ? [initialSphereCategory] : []);
+  state.activeSphereTypeOneTab = getSphereTypeOneTabForSlot(initialSphereSlot);
+  state.activeTrophySlot = equippedTrophySlotKeys[0] || TROPHY_SLOT_CONFIG[0]?.key || null;
+  state.expandedTrophySlots = new Set(state.activeTrophySlot ? [state.activeTrophySlot] : []);
 
   if (equippedSlotKeys.length) {
     setLastAction("Сборка загружена. Выберите слот, чтобы сменить предмет или уровень заточки.");
@@ -827,27 +1949,31 @@ function scrollCategoryIntoView(slotKey) {
 }
 
 function renderAll() {
+  renderProfileBar();
   renderSidebarTabs();
+  renderStatsSourceTabs();
+  renderWorkspaceTabs();
   renderDollSlots();
+  renderPassiveMorphRingSlot();
+  renderSphereSlots();
+  renderTrophySlots();
   renderBoardTotalStats();
-  renderEquippedList();
   renderStatsPanel();
   renderClassPanel();
-  renderTotalPanel();
   renderCategoryList();
 }
 
 function equipItem(slotKey, itemId) {
   const slot = getSlotConfig(slotKey);
   const item = state.itemsById.get(String(itemId));
-  if (!slot || !item || item.slot_code !== slot.sourceSlot) return;
+  if (!slot || !item || !matchesEquipmentSlot(slot, item)) return;
 
   state.equipped[slotKey] = {
     itemId: String(item.uid),
     upgradeLevel: getDefaultUpgradeLevel(item),
   };
   state.activeSlot = slotKey;
-  state.expandedCategories.add(slotKey);
+  state.expandedCategories = new Set([slotKey]);
   saveEquippedState();
   renderAll();
   setLastAction(`${slot.label}: надет предмет "${item.name}".`);
@@ -879,19 +2005,56 @@ function setUpgradeLevel(slotKey, level) {
   }
 }
 
+function handleSlotPress(event, slotKey) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  handleDollSlotClick(slotKey);
+}
+
+function handleSlotRemove(event, slotKey) {
+  if (event.key !== "Delete" && event.key !== "Backspace") {
+    return;
+  }
+
+  if (!state.equipped[slotKey]) {
+    return;
+  }
+
+  event.preventDefault();
+  clearSlot(slotKey);
+}
+
+function handleDollSlotClick(slotKey) {
+  const slot = getSlotConfig(slotKey);
+  const isEquipped = Boolean(state.equipped[slotKey]);
+
+  if (isEquipped) {
+    selectSlot(slotKey, { scroll: false });
+    if (slot) {
+      setLastAction(`${slot.label}: выберите проточку справа сверху или снимите предмет правой кнопкой.`);
+    }
+    return;
+  }
+
+  selectSlot(slotKey, { scroll: true });
+}
+
 function selectSlot(slotKey, { scroll = false } = {}) {
   const slot = getSlotConfig(slotKey);
   if (!slot) return;
 
   state.activeSlot = slotKey;
-  state.expandedCategories.add(slotKey);
+  state.expandedCategories = new Set([slotKey]);
   renderAll();
 
   if (scroll) {
     scrollCategoryIntoView(slotKey);
   }
 
-  const count = getItemsForSlot(slot.sourceSlot).length;
+  const count = getItemsForEquipmentSlot(slot).length;
   if (count) {
     setLastAction(`${slot.label}: доступно ${count} предметов.`);
   } else {
@@ -903,57 +2066,482 @@ function renderDollSlots() {
   const container = document.getElementById("slot-grid");
   if (!container) return;
 
-  container.innerHTML = SLOT_CONFIG.map((slot) => {
-    const items = getItemsForSlot(slot.sourceSlot);
+  const visibleSlots = SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
+
+  container.innerHTML = visibleSlots.map((slot) => {
+    const items = getItemsForEquipmentSlot(slot);
     const selected = state.equipped[slot.key];
     const item = selected ? state.itemsById.get(selected.itemId) : null;
     const level = item ? getValidUpgradeLevel(item, selected.upgradeLevel) : null;
+    const levels = item ? getLevelKeys(item) : [];
 
-    const classes = ["slot-pin"];
+    const classes = ["slot-cell"];
     if (state.activeSlot === slot.key) classes.push("is-active");
     if (item) classes.push("is-filled");
     if (!items.length) classes.push("is-unavailable");
 
-    const metaText = item ? level : items.length ? `${items.length} шт.` : "нет";
-    const titleText = item
+    const ariaText = item
       ? `${slot.label}: ${item.name} (${level})`
       : items.length
         ? `${slot.label}: ${items.length} предметов`
         : `${slot.label}: данных нет`;
+    const imageHtml = item?.image
+      ? `<img class="slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">`
+      : "";
+    const upgradeControl = item && levels.length > 1
+      ? `
+        <select class="slot-upgrade-select" data-slot="${slot.key}" aria-label="Уровень заточки ${escapeHtml(slot.label)}">
+          ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
+        </select>
+      `
+      : item
+        ? `<span class="slot-upgrade-select is-static">${escapeHtml(level)}</span>`
+        : "";
+    const descriptionHtml = item
+      ? `<div class="equipment-description">${renderEquipmentDescription(slot, item, level)}</div>`
+      : "";
 
     return `
-      <button
-        type="button"
+      <div
         class="${classes.join(" ")}"
         data-slot="${slot.key}"
         style="grid-column: ${slot.col}; grid-row: ${slot.row};"
-        title="${escapeHtml(titleText)}"
-        aria-label="${escapeHtml(titleText)}"
       >
-        <span class="slot-pin-label">${escapeHtml(slot.label)}</span>
-        <span class="slot-pin-meta">${escapeHtml(metaText)}</span>
-      </button>
+        <button
+          type="button"
+          class="slot-pin"
+          data-slot="${slot.key}"
+          aria-label="${escapeHtml(ariaText)}"
+        >
+          <span class="slot-item-visual" aria-hidden="true">${imageHtml}</span>
+        </button>
+        ${upgradeControl}
+        ${descriptionHtml}
+      </div>
     `;
   }).join("");
 
   container.querySelectorAll(".slot-pin").forEach((button) => {
-    button.addEventListener("click", () => selectSlot(button.dataset.slot, { scroll: true }));
+    button.addEventListener("click", () => handleDollSlotClick(button.dataset.slot));
+    button.addEventListener("keydown", (event) => {
+      handleSlotPress(event, button.dataset.slot);
+      handleSlotRemove(event, button.dataset.slot);
+    });
+    button.addEventListener("contextmenu", (event) => {
+      const slotKey = button.dataset.slot;
+      if (!state.equipped[slotKey]) {
+        return;
+      }
+
+      event.preventDefault();
+      clearSlot(slotKey);
+    });
+  });
+
+  container.querySelectorAll(".slot-upgrade-select").forEach((control) => {
+    control.addEventListener("click", (event) => event.stopPropagation());
+    control.addEventListener("keydown", (event) => event.stopPropagation());
+    if (control.tagName === "SELECT") {
+      control.addEventListener("change", () => setUpgradeLevel(control.dataset.slot, control.value));
+    }
   });
 }
 
-function clearAll() {
-  state.equipped = {};
-  saveEquippedState();
+function renderPassiveMorphRingSlot() {
+  const container = document.getElementById("passive-ring-slot");
+  if (!container) {
+    return;
+  }
+
+  const slot = getSlotConfig(PASSIVE_MORPH_RING_SLOT_KEY);
+  if (!slot) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const items = getItemsForEquipmentSlot(slot);
+  const selected = state.equipped[slot.key];
+  const item = selected ? state.itemsById.get(selected.itemId) : null;
+  const level = item ? getValidUpgradeLevel(item, selected.upgradeLevel) : null;
+  const levels = item ? getLevelKeys(item) : [];
+  const classes = ["slot-cell", "passive-slot-cell"];
+
+  if (state.activeSlot === slot.key) {
+    classes.push("is-active");
+  }
+  if (item) {
+    classes.push("is-filled");
+  }
+  if (!items.length) {
+    classes.push("is-unavailable");
+  }
+
+  const titleText = item
+    ? `${slot.label}: ${item.name} (${level})`
+    : items.length
+      ? `${slot.label}: ${items.length} колец`
+      : `${slot.label}: данных нет`;
+  const imageHtml = item?.image
+    ? `<img class="slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">`
+    : "";
+  const upgradeControl = item && levels.length > 1
+    ? `
+      <select class="slot-upgrade-select" data-slot="${slot.key}" aria-label="Уровень заточки ${escapeHtml(slot.label)}">
+        ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
+      </select>
+    `
+    : item
+      ? `<span class="slot-upgrade-select is-static">${escapeHtml(level)}</span>`
+      : "";
+  const descriptionHtml = item
+    ? `<div class="equipment-description">${renderEquipmentDescription(slot, item, level)}</div>`
+    : "";
+
+  container.innerHTML = `
+    <div class="passive-slot-card ${state.activeSlot === slot.key ? "is-active" : ""}">
+      <div class="passive-slot-copy">
+        <div class="passive-slot-title">${escapeHtml(slot.label)}</div>
+        <div class="passive-slot-note">Наденьте кольцо для пасивного эфекта.</div>
+      </div>
+      <div class="${classes.join(" ")}" data-slot="${slot.key}">
+        <button
+          type="button"
+          class="slot-pin"
+          data-slot="${slot.key}"
+          aria-label="${escapeHtml(titleText)}"
+          title="${escapeHtml(titleText)}"
+        >
+          <span class="slot-item-visual" aria-hidden="true">${imageHtml}</span>
+        </button>
+        ${upgradeControl}
+        ${descriptionHtml}
+      </div>
+    </div>
+  `;
+
+  container.querySelectorAll(".slot-pin").forEach((button) => {
+    button.addEventListener("click", () => handleDollSlotClick(button.dataset.slot));
+    button.addEventListener("keydown", (event) => {
+      handleSlotPress(event, button.dataset.slot);
+      handleSlotRemove(event, button.dataset.slot);
+    });
+    button.addEventListener("contextmenu", (event) => {
+      const slotKey = button.dataset.slot;
+      if (!state.equipped[slotKey]) {
+        return;
+      }
+
+      event.preventDefault();
+      clearSlot(slotKey);
+    });
+  });
+
+  container.querySelectorAll(".slot-upgrade-select").forEach((control) => {
+    control.addEventListener("click", (event) => event.stopPropagation());
+    control.addEventListener("keydown", (event) => event.stopPropagation());
+    if (control.tagName === "SELECT") {
+      control.addEventListener("change", () => setUpgradeLevel(control.dataset.slot, control.value));
+    }
+  });
+}
+
+function selectSphereSlot(slotKey) {
+  const slot = getSphereSlotConfig(slotKey);
+  if (!slot) {
+    return;
+  }
+
+  state.activeSphereSlot = slotKey;
+  state.expandedSphereCategories = new Set([slot.categoryKey]);
+  if (slot.categoryKey === "sphere_type_1") {
+    state.activeSphereTypeOneTab = getSphereTypeOneTabForSlot(slotKey);
+  }
   renderAll();
-  setLastAction("Все предметы сняты.");
+
+  const count = getSphereItemsForSlot(slotKey).length;
+  if (count) {
+    setLastAction(`${slot.label}: доступно ${count} сфер.`);
+  } else {
+    setLastAction(`${slot.label}: для этого слота пока нет сфер.`);
+  }
+}
+
+function equipSphere(slotKey, itemId) {
+  const slot = getSphereSlotConfig(slotKey);
+  const item = state.sphereItemsById.get(String(itemId));
+  if (!slot || !item || !slot.matches(item)) {
+    return;
+  }
+
+  state.sphereEquipped[slotKey] = {
+    itemId: String(item.uid),
+    upgradeLevel: getDefaultUpgradeLevel(item),
+  };
+  state.activeSphereSlot = slotKey;
+  state.expandedSphereCategories = new Set([slot.categoryKey]);
+  if (slot.categoryKey === "sphere_type_1") {
+    state.activeSphereTypeOneTab = getSphereTypeOneTabForSlot(slotKey);
+  }
+  saveSphereEquippedState();
+  renderAll();
+  setLastAction(`${slot.label}: вставлена "${item.name}".`);
+}
+
+function clearSphereSlot(slotKey) {
+  const slot = getSphereSlotConfig(slotKey);
+  delete state.sphereEquipped[slotKey];
+  saveSphereEquippedState();
+  renderAll();
+  if (slot) {
+    setLastAction(`${slot.label}: сфера снята.`);
+  }
+}
+
+function setSphereUpgradeLevel(slotKey, level) {
+  const slot = getSphereSlotConfig(slotKey);
+  const selected = state.sphereEquipped[slotKey];
+  if (!selected) {
+    return;
+  }
+
+  const item = state.sphereItemsById.get(selected.itemId);
+  if (!item) {
+    return;
+  }
+
+  selected.upgradeLevel = getValidUpgradeLevel(item, level);
+  saveSphereEquippedState();
+  renderAll();
+  if (slot) {
+    setLastAction(`${slot.label}: уровень сферы переключён на ${selected.upgradeLevel}.`);
+  }
+}
+
+function renderSphereSlots() {
+  const container = document.getElementById("sphere-slot-grid");
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = SPHERE_SLOT_CONFIG.map((slot) => {
+    const items = getSphereItemsForSlot(slot.key);
+    const selected = state.sphereEquipped[slot.key];
+    const item = selected ? state.sphereItemsById.get(selected.itemId) : null;
+    const level = item ? getValidUpgradeLevel(item, selected.upgradeLevel) : null;
+    const levels = item ? getLevelKeys(item) : [];
+    const showUpgrade = item ? shouldShowSphereUpgrade(item, slot) : false;
+
+    const classes = ["sphere-slot-cell", slot.positionClass];
+    if (state.activeSphereSlot === slot.key) {
+      classes.push("is-active");
+    }
+    if (item) {
+      classes.push("is-filled");
+    }
+    if (!items.length) {
+      classes.push("is-unavailable");
+    }
+
+    const imageHtml = item?.image
+      ? `<img class="sphere-slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">`
+      : "";
+    const titleText = item
+      ? `${slot.label}: ${item.name}${showUpgrade ? ` (${level})` : ""}`
+      : items.length
+        ? `${slot.label}: ${items.length} сфер`
+        : `${slot.label}: данных нет`;
+    const descriptionHtml = item
+      ? `<div class="equipment-description sphere-description">${renderSphereDescription(slot, item, level)}</div>`
+      : "";
+    const upgradeControl = item && showUpgrade && levels.length > 1
+      ? `
+        <select class="sphere-upgrade-select" data-sphere-slot="${slot.key}" aria-label="Уровень сферы ${escapeHtml(slot.label)}">
+          ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
+        </select>
+      `
+      : item && showUpgrade
+        ? `<span class="sphere-upgrade-select is-static">${escapeHtml(level)}</span>`
+        : "";
+
+    return `
+      <div class="${classes.join(" ")}" data-sphere-slot="${slot.key}">
+        <button
+          type="button"
+          class="sphere-slot-button"
+          data-sphere-slot="${slot.key}"
+          aria-label="${escapeHtml(titleText)}"
+          title="${escapeHtml(titleText)}"
+        >
+          <span class="sphere-slot-item-visual" aria-hidden="true">${imageHtml}</span>
+        </button>
+        ${upgradeControl}
+        ${descriptionHtml}
+      </div>
+    `;
+  }).join("");
+
+  container.querySelectorAll(".sphere-slot-button").forEach((button) => {
+    button.addEventListener("click", () => selectSphereSlot(button.dataset.sphereSlot));
+    button.addEventListener("contextmenu", (event) => {
+      const slotKey = button.dataset.sphereSlot;
+      if (!state.sphereEquipped[slotKey]) {
+        return;
+      }
+
+      event.preventDefault();
+      clearSphereSlot(slotKey);
+    });
+  });
+
+  container.querySelectorAll(".sphere-upgrade-select").forEach((control) => {
+    control.addEventListener("click", (event) => event.stopPropagation());
+    control.addEventListener("keydown", (event) => event.stopPropagation());
+    if (control.tagName === "SELECT") {
+      control.addEventListener("change", () => setSphereUpgradeLevel(control.dataset.sphereSlot, control.value));
+    }
+  });
+}
+
+function selectTrophySlot(slotKey) {
+  const slot = getTrophySlotConfig(slotKey);
+  if (!slot) {
+    return;
+  }
+
+  state.activeTrophySlot = slotKey;
+  renderAll();
+  setLastAction(`${slot.label}: слот выбран.`);
+}
+
+function equipTrophy(slotKey, itemId) {
+  const slot = getTrophySlotConfig(slotKey);
+  const item = state.trophyItemsById.get(String(itemId));
+  if (!slot || !item || item.slot_code !== slot.key) {
+    return;
+  }
+
+  state.trophyEquipped[slotKey] = {
+    itemId: String(item.uid),
+    upgradeLevel: getDefaultUpgradeLevel(item),
+  };
+  state.activeTrophySlot = slotKey;
+  saveTrophyEquippedState();
+  renderAll();
+  setLastAction(`${slot.label}: установлен "${item.name}".`);
+}
+
+function clearTrophySlot(slotKey) {
+  const slot = getTrophySlotConfig(slotKey);
+  delete state.trophyEquipped[slotKey];
+  saveTrophyEquippedState();
+  renderAll();
+  if (slot) {
+    setLastAction(`${slot.label}: трофей снят.`);
+  }
+}
+
+function setTrophyUpgradeLevel(slotKey, level) {
+  const slot = getTrophySlotConfig(slotKey);
+  const selected = state.trophyEquipped[slotKey];
+  if (!selected) {
+    return;
+  }
+
+  const item = state.trophyItemsById.get(selected.itemId);
+  if (!item) {
+    return;
+  }
+
+  selected.upgradeLevel = getValidUpgradeLevel(item, level);
+  saveTrophyEquippedState();
+  renderAll();
+  if (slot) {
+    setLastAction(`${slot.label}: усиление трофея переключено на ${selected.upgradeLevel}.`);
+  }
+}
+
+function renderTrophySlots() {
+  const container = document.getElementById("trophy-slot-grid");
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = TROPHY_SLOT_CONFIG.map((slot) => {
+    const items = getTrophyItemsForSlot(slot.key);
+    const selected = state.trophyEquipped[slot.key];
+    const item = selected ? state.trophyItemsById.get(selected.itemId) : null;
+    const level = item ? getValidUpgradeLevel(item, selected.upgradeLevel) : null;
+    const levels = item ? getLevelKeys(item) : [];
+    const classes = ["trophy-slot-cell", slot.positionClass];
+    if (state.activeTrophySlot === slot.key) {
+      classes.push("is-active");
+    }
+    if (item) {
+      classes.push("is-filled");
+    }
+
+    const imageHtml = item?.image
+      ? `<img class="trophy-slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">`
+      : "";
+    const titleText = item
+      ? `${slot.label}: ${item.name} (${level})`
+      : items.length
+        ? `${slot.label}: ${items.length} трофей`
+        : `${slot.label}: данных нет`;
+    const descriptionHtml = item
+      ? `<div class="equipment-description trophy-description">${renderTrophyDescription(slot, item, level)}</div>`
+      : "";
+    const upgradeControl = item && levels.length > 1
+      ? `
+        <select class="trophy-upgrade-select" data-trophy-slot="${slot.key}" aria-label="Усиление трофея ${escapeHtml(slot.label)}">
+          ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
+        </select>
+      `
+      : "";
+
+    return `
+      <div class="${classes.join(" ")}" data-trophy-slot="${slot.key}">
+        <button
+          type="button"
+          class="trophy-slot-button"
+          data-trophy-slot="${slot.key}"
+          aria-label="${escapeHtml(titleText)}"
+          title="${escapeHtml(titleText)}"
+        >
+          <span class="trophy-slot-item-visual" aria-hidden="true">${imageHtml}</span>
+        </button>
+        ${upgradeControl}
+        ${descriptionHtml}
+      </div>
+    `;
+  }).join("");
+
+  container.querySelectorAll(".trophy-slot-button").forEach((button) => {
+    button.addEventListener("click", () => selectTrophySlot(button.dataset.trophySlot));
+    button.addEventListener("contextmenu", (event) => {
+      const slotKey = button.dataset.trophySlot;
+      if (!state.trophyEquipped[slotKey]) {
+        return;
+      }
+
+      event.preventDefault();
+      clearTrophySlot(slotKey);
+    });
+  });
+
+  container.querySelectorAll(".trophy-upgrade-select").forEach((control) => {
+    control.addEventListener("click", (event) => event.stopPropagation());
+    control.addEventListener("keydown", (event) => event.stopPropagation());
+    control.addEventListener("change", () => setTrophyUpgradeLevel(control.dataset.trophySlot, control.value));
+  });
 }
 
 function toggleCategory(slotKey) {
   const slot = getSlotConfig(slotKey);
   if (state.expandedCategories.has(slotKey)) {
-    state.expandedCategories.delete(slotKey);
+    state.expandedCategories = new Set();
   } else {
-    state.expandedCategories.add(slotKey);
+    state.expandedCategories = new Set([slotKey]);
   }
 
   state.activeSlot = slotKey;
@@ -965,68 +2553,243 @@ function toggleCategory(slotKey) {
   }
 }
 
-function renderEquippedList() {
-  const list = document.getElementById("equipped-list");
-  const countEl = document.getElementById("equipped-count");
-  const entries = getEquippedSlots();
-  countEl.textContent = entries.length;
+function toggleSphereCategory(categoryKey) {
+  if (state.expandedSphereCategories.has(categoryKey)) {
+    state.expandedSphereCategories = new Set();
+  } else {
+    state.expandedSphereCategories = new Set([categoryKey]);
+  }
 
-  if (!entries.length) {
-    const template = document.getElementById("equipped-empty-template");
-    list.innerHTML = template ? template.innerHTML.trim() : '<div class="empty-note">Пока ничего не надето</div>';
+  const firstSlot = SPHERE_SLOT_CONFIG.find((slot) => slot.categoryKey === categoryKey)?.key || null;
+  if (firstSlot) {
+    state.activeSphereSlot = firstSlot;
+  }
+  renderAll();
+  const categoryLabel = SPHERE_CATEGORY_CONFIG.find((entry) => entry.key === categoryKey)?.label || categoryKey;
+  setLastAction(`${categoryLabel}: список ${state.expandedSphereCategories.has(categoryKey) ? "открыт" : "свёрнут"}.`);
+}
+
+function toggleTrophyCategory(slotKey) {
+  const slot = getTrophySlotConfig(slotKey);
+  if (state.expandedTrophySlots.has(slotKey)) {
+    state.expandedTrophySlots = new Set();
+  } else {
+    state.expandedTrophySlots = new Set([slotKey]);
+  }
+
+  state.activeTrophySlot = slotKey;
+  renderAll();
+  if (slot) {
+    setLastAction(`${slot.label}: список ${state.expandedTrophySlots.has(slotKey) ? "открыт" : "свёрнут"}.`);
+  }
+}
+
+function setSphereTypeOneTab(categoryName) {
+  const tab = SPHERE_TYPE_ONE_TABS.find((entry) => entry.category === categoryName);
+  if (!tab) {
     return;
   }
 
-  list.innerHTML = entries.map((slot) => {
-    const selected = state.equipped[slot.key];
-    const item = state.itemsById.get(selected.itemId);
-    if (!item) return "";
-
-    const levels = getLevelKeys(item);
-    const level = getValidUpgradeLevel(item, selected.upgradeLevel);
-    const params = getParamsForLevel(item, level);
-    const levelControl = levels.length > 1
-      ? `
-        <select class="upgrade-select" data-slot="${slot.key}" aria-label="Уровень заточки ${escapeHtml(slot.label)}">
-          ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
-        </select>
-      `
-      : `<span class="level-badge">${escapeHtml(level)}</span>`;
-
-    return `
-      <div class="equipped-card">
-        <div class="equipped-header">
-          <span class="slot-label">${escapeHtml(slot.label)}</span>
-          ${levelControl}
-          <button class="remove-btn" type="button" data-slot="${slot.key}">Снять</button>
-        </div>
-        <div class="item-name">${escapeHtml(item.name)}</div>
-        ${params.length ? `<ul class="params-list">${params.map((param) => `<li>${escapeHtml(param)}</li>`).join("")}</ul>` : ""}
-      </div>
-    `;
-  }).join("");
-
-  list.querySelectorAll(".upgrade-select").forEach((select) => {
-    select.addEventListener("change", () => setUpgradeLevel(select.dataset.slot, select.value));
-  });
-
-  list.querySelectorAll(".remove-btn").forEach((button) => {
-    button.addEventListener("click", () => clearSlot(button.dataset.slot));
-  });
+  state.activeSphereTypeOneTab = tab.category;
+  state.activeSphereSlot = tab.slotKey;
+  state.expandedSphereCategories = new Set(["sphere_type_1"]);
+  renderAll();
+  setLastAction(`Сферы 1-го типа: выбрана вкладка "${tab.label}".`);
 }
 
 function renderCategoryList() {
   const container = document.getElementById("category-list");
-  const totalEl = document.getElementById("chooser-count");
-  const totalItems = state.items.length;
-  const activeSlot = getSlotConfig(state.activeSlot);
+  if (!container) {
+    return;
+  }
 
-  totalEl.textContent = activeSlot
-    ? `${totalItems} предметов · ${activeSlot.label}: ${getItemsForSlot(activeSlot.sourceSlot).length}`
-    : `${totalItems} предметов`;
+  if (state.activeWorkspaceTab === "spheres") {
+    const groups = getSphereCategoryGroups();
+
+    container.innerHTML = groups.map((group) => {
+      const isExpanded = state.expandedSphereCategories.has(group.key);
+
+      let itemsHtml = "";
+      if (isExpanded && group.items.length) {
+        const renderSphereCatalogItem = (item, showCategory = true) => {
+          const previewLevel = getDefaultUpgradeLevel(item);
+          const params = getParamsForLevel(item, previewLevel);
+          const previewText = params[0] || item.description || "Без параметров";
+          const targetSlot = getPrimarySphereSlot(item);
+          const selectedItemId = targetSlot ? state.sphereEquipped[targetSlot.key]?.itemId : null;
+          const isEquipped = String(item.uid) === String(selectedItemId || "");
+          const metaParts = [];
+          if (showCategory) {
+            metaParts.push(item.category);
+          }
+          if (shouldShowSphereUpgrade(item, targetSlot)) {
+            metaParts.push(previewLevel);
+          }
+          metaParts.push(previewText);
+
+          return `
+            <div class="catalog-item catalog-item-sphere ${isEquipped ? "is-selected" : ""}">
+              <div class="item-row">
+                ${renderItemIcon(item)}
+                <div class="item-info">
+                  <div class="item-name">${escapeHtml(item.name)}</div>
+                  <div class="item-meta">${escapeHtml(metaParts.join(" · "))}</div>
+                </div>
+                <button
+                  class="equip-btn ${isEquipped ? "is-selected" : ""}"
+                  type="button"
+                  data-sphere-slot="${escapeHtml(targetSlot?.key || "")}"
+                  data-sphere-id="${escapeHtml(item.uid)}"
+                  data-action="${isEquipped ? "remove" : "equip"}"
+                  ${targetSlot ? "" : "disabled"}
+                >
+                  ${isEquipped ? "Снять" : "Надеть"}
+                </button>
+              </div>
+            </div>
+          `;
+        };
+
+        if (group.key === "sphere_type_1") {
+          const activeTab = SPHERE_TYPE_ONE_TABS.find((tab) => tab.category === state.activeSphereTypeOneTab) || SPHERE_TYPE_ONE_TABS[0];
+          const categoryItems = group.items.filter((item) => item.category === activeTab.category);
+          const tabsHtml = `
+            <div class="sphere-type-tabs" role="tablist" aria-label="Подтипы сфер 1-го типа">
+              ${SPHERE_TYPE_ONE_TABS.map((tab) => `
+                <button
+                  class="sphere-type-tab ${tab.category === activeTab.category ? "is-active" : ""}"
+                  type="button"
+                  role="tab"
+                  aria-selected="${tab.category === activeTab.category ? "true" : "false"}"
+                  data-sphere-type-one-tab="${escapeHtml(tab.category)}"
+                >
+                  ${escapeHtml(tab.label)}
+                </button>
+              `).join("")}
+            </div>
+          `;
+          const bodyHtml = categoryItems.length
+            ? categoryItems.map((item) => renderSphereCatalogItem(item, false)).join("")
+            : '<div class="category-empty">Для этой подкатегории сфер пока нет данных.</div>';
+          itemsHtml = `
+            ${tabsHtml}
+            <div class="sphere-tab-panel">
+              ${bodyHtml}
+            </div>
+          `;
+        } else {
+          itemsHtml = group.items.map((item) => renderSphereCatalogItem(item)).join("");
+        }
+      } else if (isExpanded) {
+        itemsHtml = '<div class="category-empty">Для этой категории сфер пока нет данных.</div>';
+      }
+
+      return `
+        <div class="category-block ${state.activeSphereSlot && getSphereSlotConfig(state.activeSphereSlot)?.categoryKey === group.key ? "active" : ""}" data-sphere-category="${escapeHtml(group.key)}">
+          <button class="category-header" type="button" data-sphere-category="${escapeHtml(group.key)}">
+            <span class="cat-name">${escapeHtml(group.label)}</span>
+            <span class="cat-count">${group.items.length}</span>
+            <span class="cat-arrow" aria-hidden="true">›</span>
+          </button>
+          <div class="category-items ${isExpanded ? "expanded" : "collapsed"}">
+            ${itemsHtml}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+      container.querySelectorAll("[data-sphere-category]").forEach((button) => {
+        if (button.classList.contains("category-header")) {
+          button.addEventListener("click", () => toggleSphereCategory(button.dataset.sphereCategory));
+        }
+      });
+      container.querySelectorAll("[data-sphere-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.dataset.action === "remove") {
+            clearSphereSlot(button.dataset.sphereSlot);
+            return;
+          }
+          equipSphere(button.dataset.sphereSlot, button.dataset.sphereId);
+        });
+      });
+      container.querySelectorAll("[data-sphere-type-one-tab]").forEach((button) => {
+        button.addEventListener("click", () => setSphereTypeOneTab(button.dataset.sphereTypeOneTab));
+      });
+      return;
+    }
+
+  if (state.activeWorkspaceTab === "trophies") {
+    container.innerHTML = TROPHY_SLOT_CONFIG.map((slot) => {
+      const items = getTrophyItemsForSlot(slot.key);
+      const isExpanded = state.expandedTrophySlots.has(slot.key);
+      const selectedItemId = state.trophyEquipped[slot.key]?.itemId;
+      let itemsHtml = "";
+
+      if (isExpanded && items.length) {
+        itemsHtml = items.map((item) => {
+          const previewLevel = getDefaultUpgradeLevel(item);
+          const params = getParamsForLevel(item, previewLevel);
+          const previewText = params[0] || "Без параметров";
+          const isEquipped = String(item.uid) === String(selectedItemId || "");
+
+          return `
+            <div class="catalog-item catalog-item-trophy ${isEquipped ? "is-selected" : ""}">
+              <div class="item-row">
+                ${renderItemIcon(item)}
+                <div class="item-info">
+                  <div class="item-name">${escapeHtml(item.name)}</div>
+                  <div class="item-meta">${escapeHtml(previewLevel)} · ${escapeHtml(previewText)}</div>
+                </div>
+                <button
+                  class="equip-btn ${isEquipped ? "is-selected" : ""}"
+                  type="button"
+                  data-trophy-slot="${escapeHtml(slot.key)}"
+                  data-trophy-id="${escapeHtml(item.uid)}"
+                  data-action="${isEquipped ? "remove" : "equip"}"
+                >
+                  ${isEquipped ? "Снять" : "Надеть"}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      } else if (isExpanded) {
+        itemsHtml = '<div class="category-empty">Для этого слота пока нет трофеев.</div>';
+      }
+
+      return `
+        <div class="category-block ${state.activeTrophySlot === slot.key ? "active" : ""}" data-trophy-category="${escapeHtml(slot.key)}">
+          <button class="category-header" type="button" data-trophy-category="${escapeHtml(slot.key)}">
+            <span class="cat-name">${escapeHtml(slot.label)} — ${escapeHtml(slot.statLabel)}</span>
+            <span class="cat-count">${items.length}</span>
+            <span class="cat-arrow" aria-hidden="true">›</span>
+          </button>
+          <div class="category-items ${isExpanded ? "expanded" : "collapsed"}">
+            ${itemsHtml}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    container.querySelectorAll("[data-trophy-category]").forEach((button) => {
+      if (button.classList.contains("category-header")) {
+        button.addEventListener("click", () => toggleTrophyCategory(button.dataset.trophyCategory));
+      }
+    });
+    container.querySelectorAll("[data-trophy-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.dataset.action === "remove") {
+          clearTrophySlot(button.dataset.trophySlot);
+          return;
+        }
+        equipTrophy(button.dataset.trophySlot, button.dataset.trophyId);
+      });
+    });
+    return;
+  }
 
   container.innerHTML = SLOT_CONFIG.map((slot) => {
-    const items = getItemsForSlot(slot.sourceSlot);
+    const items = getItemsForEquipmentSlot(slot);
     const isExpanded = state.expandedCategories.has(slot.key);
     const selectedItemId = state.equipped[slot.key]?.itemId;
 
@@ -1041,12 +2804,13 @@ function renderCategoryList() {
         return `
           <div class="catalog-item ${isEquipped ? "is-selected" : ""}" data-id="${escapeHtml(item.uid)}">
             <div class="item-row">
+              ${renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${escapeHtml(item.name)}</div>
                 <div class="item-meta">${escapeHtml(previewLevel)} · ${escapeHtml(previewText)}</div>
               </div>
-              <button class="equip-btn ${isEquipped ? "is-selected" : ""}" type="button" data-slot="${slot.key}" data-id="${escapeHtml(item.uid)}">
-                ${isEquipped ? "Надето" : "Надеть"}
+              <button class="equip-btn ${isEquipped ? "is-selected" : ""}" type="button" data-slot="${slot.key}" data-id="${escapeHtml(item.uid)}" data-action="${isEquipped ? "remove" : "equip"}">
+                ${isEquipped ? "Снять" : "Надеть"}
               </button>
             </div>
           </div>
@@ -1059,9 +2823,9 @@ function renderCategoryList() {
     return `
       <div class="category-block ${state.activeSlot === slot.key ? "active" : ""}" data-slot="${slot.key}">
         <button class="category-header" type="button" data-slot="${slot.key}">
-          <span class="cat-name">${escapeHtml(slot.label)}</span>
+          <span class="cat-name">${escapeHtml(slot.catalogLabel || slot.label)}</span>
           <span class="cat-count">${items.length}</span>
-          <span class="cat-arrow">${isExpanded ? "▼" : "▶"}</span>
+          <span class="cat-arrow" aria-hidden="true">›</span>
         </button>
         <div class="category-items ${isExpanded ? "expanded" : "collapsed"}">
           ${itemsHtml}
@@ -1075,16 +2839,36 @@ function renderCategoryList() {
   });
 
   container.querySelectorAll(".equip-btn").forEach((button) => {
-    button.addEventListener("click", () => equipItem(button.dataset.slot, button.dataset.id));
+    button.addEventListener("click", () => {
+      if (button.dataset.action === "remove") {
+        clearSlot(button.dataset.slot);
+        return;
+      }
+      equipItem(button.dataset.slot, button.dataset.id);
+    });
   });
 }
 
 async function loadItems() {
-  if (Array.isArray(window.__EQUIPMENT_ITEMS__)) {
-    return window.__EQUIPMENT_ITEMS__;
+  const response = await fetch("./equipment-items.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
   }
 
-  const response = await fetch("./equipment-items.json", { cache: "no-store" });
+  return response.json();
+}
+
+async function loadSphereItems() {
+  const response = await fetch("./sphere-items.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function loadTrophyItems() {
+  const response = await fetch("./trophy-items.json", { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
@@ -1095,24 +2879,104 @@ async function loadItems() {
 async function init() {
   try {
     const rawItems = await loadItems();
+    const rawSphereItems = await loadSphereItems();
+    const rawTrophyItems = await loadTrophyItems();
     state.items = rawItems.map((item, index) => ({
       ...item,
       uid: createItemUid(item, index),
     }));
+    state.sphereItems = rawSphereItems.map((item, index) => ({
+      ...item,
+      uid: createSphereUid(item, index),
+    }));
+    state.trophyItems = rawTrophyItems.map((item, index) => ({
+      ...item,
+      uid: createTrophyUid(item, index),
+    }));
     state.itemsById = new Map(state.items.map((item) => [item.uid, item]));
+    state.sphereItemsById = new Map(state.sphereItems.map((item) => [item.uid, item]));
+    state.trophyItemsById = new Map(state.trophyItems.map((item) => [item.uid, item]));
+    initializeProfilesState();
     sanitizeEquippedState();
+    sanitizeSphereEquippedState();
+    sanitizeTrophyEquippedState();
     initializeUiState();
-    document.getElementById("total-items").textContent = state.items.length;
     renderAll();
+    bindProfileControls();
     bindSidebarTabs();
+    bindStatsSourceTabs();
+    bindWorkspaceTabs();
     bindClassControls();
-    bindBoardNicknameControl();
   } catch (err) {
-    document.getElementById("category-list").innerHTML = `<div class="error-note">Ошибка загрузки данных: ${escapeHtml(err.message)}</div>`;
-    document.getElementById("slot-grid").innerHTML = "";
+    const categoryList = document.getElementById("category-list");
+    if (categoryList) {
+      categoryList.innerHTML = `<div class="error-note">Ошибка загрузки данных: ${escapeHtml(err.message)}</div>`;
+    }
+    const slotGrid = document.getElementById("slot-grid");
+    if (slotGrid) {
+      slotGrid.innerHTML = "";
+    }
+    const sphereGrid = document.getElementById("sphere-slot-grid");
+    if (sphereGrid) {
+      sphereGrid.innerHTML = "";
+    }
+    const trophyGrid = document.getElementById("trophy-slot-grid");
+    if (trophyGrid) {
+      trophyGrid.innerHTML = "";
+    }
     setLastAction("Каталог не загрузился.");
   }
 }
-
-document.getElementById("clear-all-button").addEventListener("click", clearAll);
-init();
+window.r2App = {
+  SLOT_CONFIG,
+  SPHERE_SLOT_CONFIG,
+  TROPHY_SLOT_CONFIG,
+  SPHERE_TYPE_ONE_TABS,
+  CLASS_CONFIGS,
+  MAIN_STATS,
+  SECONDARY_STAT_PRIORITY,
+  BAPHOMET_SET_BONUSES,
+  IFRIT_SET_BONUSES,
+  PASSIVE_MORPH_RING_SLOT_KEY,
+  state,
+  getActiveProfile,
+  getSlotConfig,
+  getSphereSlotConfig,
+  getTrophySlotConfig,
+  getItemsForEquipmentSlot,
+  getSphereItemsForSlot,
+  getTrophyItemsForSlot,
+  getLevelKeys,
+  getDefaultUpgradeLevel,
+  getValidUpgradeLevel,
+  getParamsForLevel,
+  getSphereTypeOneTabForSlot,
+  matchesEquipmentSlot,
+  normalizeText,
+  sanitizeClassLevel,
+  normalizeProfileRecord,
+  renderItemIcon,
+  escapeHtml,
+  addNumericStat,
+  addStatCollection,
+  addStatWithRules,
+  createCollectedStatsBucket,
+  collectItemParamsIntoBucket,
+  getDisplayStatsFromMap,
+  computeBaseClassStat,
+  formatStatNumber,
+  formatStatValue,
+  formatBoardPrimaryValue,
+  saveProfilesState,
+  saveActiveProfileIdState,
+  saveClassState,
+  saveEquippedState,
+  saveSphereEquippedState,
+  saveTrophyEquippedState,
+  saveWorkspaceTabState,
+  applyProfileToState,
+  setActiveProfile,
+  createNewProfile,
+  deleteActiveProfile,
+};
+window.__R2_APP_READY__ = init();
