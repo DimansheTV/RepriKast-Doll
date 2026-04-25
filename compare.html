@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R2 Doll Compare</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="compare">
+  <header class="app-header">
+    <section class="panel panel-topbar" aria-label="Панель сравнения профилей">
+      <div class="compare-topbar">
+        <a href="index.html" class="ghost-button profile-link-button">Обычная страница</a>
+
+        <div class="compare-topbar-fields">
+          <label class="compare-topbar-field">
+            <span class="summary-label">Профиль 1</span>
+            <select id="compare-primary-select" class="class-control" aria-label="Основной профиль"></select>
+          </label>
+
+          <label class="compare-topbar-field">
+            <span class="summary-label">Профиль 2</span>
+            <select id="compare-secondary-select" class="class-control" aria-label="Второй профиль"></select>
+          </label>
+        </div>
+
+        <div class="compare-topbar-actions">
+          <button id="compare-new-profile-button" class="ghost-button" type="button">Новый профиль</button>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <main class="compare-page-shell">
+    <section class="panel compare-profile-panel" aria-label="Профиль 1">
+      <div id="compare-primary-editor"></div>
+    </section>
+
+    <section class="panel compare-profile-panel" aria-label="Профиль 2">
+      <div id="compare-secondary-editor"></div>
+    </section>
+
+    <section class="panel compare-summary-panel" aria-label="Сравнение параметров">
+      <div id="compare-summary"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="compare.js"></script>
+</body>
+</html>

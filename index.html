@@ -7,65 +7,35 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <header class="app-header">
+    <section class="panel panel-topbar" aria-label="Панель профиля">
+      <div class="profile-toolbar">
+        <div class="profile-field">
+          <select id="profile-select" class="class-control" aria-label="Выбор профиля"></select>
+        </div>
+
+        <div class="profile-field profile-field-name">
+          <input id="profile-name-input" class="class-control" type="text" maxlength="40" placeholder="Название профиля" aria-label="Название профиля">
+        </div>
+
+        <div class="profile-actions">
+          <a href="compare.html" class="ghost-button profile-link-button">Сравнение</a>
+          <button id="profile-new-button" class="ghost-button" type="button">Новый профиль</button>
+          <button id="profile-delete-button" class="ghost-button" type="button">Удалить профиль</button>
+        </div>
+      </div>
+    </section>
+  </header>
+
   <div class="app-shell">
     <aside class="panel panel-sidebar">
       <div class="sidebar-tabs" role="tablist" aria-label="Левая панель">
-        <button class="sidebar-tab-button is-active" type="button" data-tab="equip">Шмотки</button>
-        <button class="sidebar-tab-button" type="button" data-tab="stats">Параметры</button>
-        <button class="sidebar-tab-button" type="button" data-tab="class">Класс</button>
+        <button class="sidebar-tab-button is-active" type="button" data-tab="class">Класс</button>
+        <button class="sidebar-tab-button" type="button" data-tab="stats">Параметры экипировки</button>
       </div>
 
       <div class="sidebar-panels">
-        <section class="sidebar-panel is-active" data-tab-panel="equip">
-          <h1>Кукла экипировки</h1>
-
-          <section class="summary-card">
-            <div>
-              <p class="summary-label">Собрано предметов</p>
-              <strong id="total-items">0</strong>
-            </div>
-            <div>
-              <p class="summary-label">Надето сейчас</p>
-              <strong id="equipped-count">0</strong>
-            </div>
-            <button id="clear-all-button" class="ghost-button" type="button">Снять все</button>
-          </section>
-
-          <section class="panel-section">
-            <div class="section-title-row">
-              <h2>Надето</h2>
-              <span id="last-action" class="section-note" aria-live="polite">Выберите слот на кукле</span>
-            </div>
-            <div id="equipped-list" class="equipped-list"></div>
-          </section>
-        </section>
-
-        <section class="sidebar-panel" data-tab-panel="stats">
-          <div class="section-title-row">
-            <h2>Параметры</h2>
-            <span class="section-note">Сумма с экипировки</span>
-          </div>
-
-          <section class="stats-section">
-            <div id="stats-main-list" class="stat-list"></div>
-          </section>
-
-          <section class="stats-section">
-            <div class="stats-subtitle-row">
-              <h3>Дополнительно</h3>
-            </div>
-            <div id="stats-extra-list" class="stat-list stat-list-secondary"></div>
-          </section>
-
-          <section class="stats-section">
-            <div class="stats-subtitle-row">
-              <h3>Особые эффекты</h3>
-            </div>
-            <div id="stats-effects-list" class="effects-list"></div>
-          </section>
-        </section>
-
-        <section class="sidebar-panel" data-tab-panel="class">
+        <section class="sidebar-panel is-active" data-tab-panel="class">
           <div class="section-title-row">
             <h2>Класс</h2>
             <span class="section-note">Базовые данные</span>
@@ -98,53 +68,139 @@
 
           <section class="stats-section">
             <div class="stats-subtitle-row">
-              <h3>Характеристики от параметров</h3>
+              <h3>Характеристики от уровня</h3>
             </div>
             <div id="class-derived-stats" class="stat-list stat-list-secondary"></div>
+          </section>
+        </section>
+
+        <section class="sidebar-panel" data-tab-panel="stats">
+          <div class="section-title-row">
+            <h2>Параметры экипировки</h2>
+            <span class="section-note">Переключение по источникам</span>
+          </div>
+
+          <nav class="stats-source-tabs" aria-label="Источники параметров">
+            <button class="stats-source-tab is-active" type="button" data-stats-tab="inventory">Инвентарь</button>
+            <button class="stats-source-tab" type="button" data-stats-tab="spheres">Сферы</button>
+            <button class="stats-source-tab" type="button" data-stats-tab="trophies">Трофеи</button>
+            <button class="stats-source-tab" type="button" data-stats-tab="sets">Сеты</button>
+            <button class="stats-source-tab" type="button" data-stats-tab="effects">Эффекты</button>
+          </nav>
+
+          <section class="stats-source-panel is-active" data-stats-panel="inventory">
+            <section class="stats-section">
+              <div class="stats-subtitle-row">
+                <h3>Параметры инвентаря</h3>
+              </div>
+              <div id="stats-inventory-list" class="stat-list"></div>
+            </section>
+          </section>
+
+          <section class="stats-source-panel" data-stats-panel="spheres">
+            <section class="stats-section">
+              <div class="stats-subtitle-row">
+                <h3>Параметры сфер</h3>
+              </div>
+              <div id="stats-spheres-list" class="stat-list stat-list-secondary"></div>
+            </section>
+          </section>
+
+          <section class="stats-source-panel" data-stats-panel="trophies">
+            <section class="stats-section">
+              <div class="stats-subtitle-row">
+                <h3>Параметры трофеев</h3>
+              </div>
+              <div id="stats-trophies-list" class="stat-list stat-list-secondary"></div>
+            </section>
+          </section>
+
+          <section class="stats-source-panel" data-stats-panel="sets">
+            <section class="stats-section">
+              <div class="stats-subtitle-row">
+                <h3>Параметры от сета</h3>
+              </div>
+              <div id="stats-set-list" class="stat-list stat-list-secondary"></div>
+            </section>
+          </section>
+
+          <section class="stats-source-panel" data-stats-panel="effects">
+            <section class="stats-section">
+              <div class="stats-subtitle-row">
+                <h3>Особые эффекты</h3>
+              </div>
+              <div id="stats-effects-list" class="effects-list"></div>
+            </section>
           </section>
         </section>
 
       </div>
     </aside>
 
-    <main class="doll-stage">
-      <section class="doll-card">
-        <div class="doll-board" aria-label="Кукла экипировки">
-          <section class="stats-frame" aria-label="Итоговые параметры">
-            <section class="board-stats-panel">
-              <div class="board-nickname-row">
-                <input id="board-nickname-input" class="board-nickname-input" type="text" maxlength="24" placeholder="Введите ник" autofocus>
-              </div>
-              <div class="board-stats-columns">
-                <div id="board-main-stats" class="board-stats-list board-stats-list-main"></div>
-                <div id="board-extra-stats" class="board-stats-list board-stats-list-extra"></div>
-              </div>
+    <section class="panel panel-board" aria-label="Итоговые параметры">
+      <section class="stats-frame">
+        <section class="board-stats-panel">
+          <div class="board-stats-columns">
+            <div id="board-main-stats" class="board-stats-list board-stats-list-main"></div>
+            <div id="board-extra-stats" class="board-stats-list board-stats-list-extra"></div>
+          </div>
+        </section>
+      </section>
+    </section>
+
+    <main class="panel panel-workspace">
+      <section class="workspace-column" aria-label="Рабочая область куклы">
+        <nav class="workspace-tabs" aria-label="Рабочие области">
+          <button class="workspace-tab is-active" type="button" data-workspace-tab="inventory">Инвентарь</button>
+          <button class="workspace-tab" type="button" data-workspace-tab="pet" disabled>Питомец</button>
+          <button class="workspace-tab" type="button" data-workspace-tab="spheres">Сферы</button>
+          <button class="workspace-tab" type="button" data-workspace-tab="trophies">Трофеи</button>
+        </nav>
+
+        <section class="workspace-panel is-active" data-workspace-panel="inventory">
+          <section class="equipment-column">
+            <section class="equipment-stage" aria-label="Слоты экипировки">
+              <div id="slot-grid" class="slot-grid" aria-live="polite"></div>
+            </section>
+
+            <section class="passive-slot-panel" aria-label="Пассивное кольцо перевоплощения">
+              <div id="passive-ring-slot" class="passive-slot-grid" aria-live="polite"></div>
             </section>
           </section>
-          <section class="equipment-stage" aria-label="Слоты экипировки">
-            <div id="slot-grid" class="slot-grid" aria-live="polite"></div>
+        </section>
+
+        <section class="workspace-panel" data-workspace-panel="spheres">
+          <section class="sphere-column">
+            <section class="sphere-stage" aria-label="Слоты сфер">
+              <div id="sphere-slot-grid" class="sphere-slot-grid" aria-live="polite"></div>
+            </section>
           </section>
-        </div>
+        </section>
+
+        <section class="workspace-panel" data-workspace-panel="trophies">
+          <section class="trophy-column">
+            <section class="trophy-stage" aria-label="Слоты трофеев">
+              <div id="trophy-slot-grid" class="trophy-slot-grid" aria-live="polite"></div>
+            </section>
+          </section>
+        </section>
       </section>
     </main>
 
     <aside class="panel panel-right">
       <div class="section-title-row">
         <h2>Каталог</h2>
-        <span id="chooser-count" class="section-note">0 предметов</span>
+        <div class="catalog-context" aria-label="Контекст каталога">
+          <span class="catalog-context-item is-active" data-catalog-context="inventory">Экипировка</span>
+          <span class="catalog-context-item" data-catalog-context="spheres">Сферы</span>
+          <span class="catalog-context-item" data-catalog-context="trophies">Трофеи</span>
+        </div>
       </div>
 
       <div id="category-list" class="category-list"></div>
     </aside>
   </div>
 
-  <template id="equipped-empty-template">
-    <article class="equipped-empty">
-      Пока ничего не надето. Открой слот на кукле и выбери предмет.
-    </article>
-  </template>
-
-  <script src="equipment-items-data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
