@@ -82,6 +82,7 @@
 
           <nav class="stats-source-tabs" aria-label="Источники параметров">
             <button class="stats-source-tab is-active" type="button" data-stats-tab="inventory">Инвентарь</button>
+            <button class="stats-source-tab" type="button" data-stats-tab="pets">Питомцы</button>
             <button class="stats-source-tab" type="button" data-stats-tab="spheres">Сферы</button>
             <button class="stats-source-tab" type="button" data-stats-tab="trophies">Трофеи</button>
             <button class="stats-source-tab" type="button" data-stats-tab="sets">Сеты</button>
@@ -94,6 +95,15 @@
                 <h3>Параметры инвентаря</h3>
               </div>
               <div id="stats-inventory-list" class="stat-list"></div>
+            </section>
+          </section>
+
+          <section class="stats-source-panel" data-stats-panel="pets">
+            <section class="stats-section">
+              <div class="stats-subtitle-row">
+                <h3>Параметры питомца</h3>
+              </div>
+              <div id="stats-pets-list" class="stat-list stat-list-secondary"></div>
             </section>
           </section>
 
@@ -152,7 +162,7 @@
       <section class="workspace-column" aria-label="Рабочая область куклы">
         <nav class="workspace-tabs" aria-label="Рабочие области">
           <button class="workspace-tab is-active" type="button" data-workspace-tab="inventory">Инвентарь</button>
-          <button class="workspace-tab" type="button" data-workspace-tab="pet" disabled>Питомец</button>
+          <button class="workspace-tab" type="button" data-workspace-tab="pet">Питомцы</button>
           <button class="workspace-tab" type="button" data-workspace-tab="spheres">Сферы</button>
           <button class="workspace-tab" type="button" data-workspace-tab="trophies">Трофеи</button>
         </nav>
@@ -177,6 +187,14 @@
           </section>
         </section>
 
+        <section class="workspace-panel" data-workspace-panel="pet">
+          <section class="pet-column">
+            <section class="pet-stage" aria-label="Выбранный питомец">
+              <div id="pet-stage" class="pet-stage-grid" aria-live="polite"></div>
+            </section>
+          </section>
+        </section>
+
         <section class="workspace-panel" data-workspace-panel="trophies">
           <section class="trophy-column">
             <section class="trophy-stage" aria-label="Слоты трофеев">
@@ -192,6 +210,7 @@
         <h2>Каталог</h2>
         <div class="catalog-context" aria-label="Контекст каталога">
           <span class="catalog-context-item is-active" data-catalog-context="inventory">Экипировка</span>
+          <span class="catalog-context-item" data-catalog-context="pet">Питомцы</span>
           <span class="catalog-context-item" data-catalog-context="spheres">Сферы</span>
           <span class="catalog-context-item" data-catalog-context="trophies">Трофеи</span>
         </div>
