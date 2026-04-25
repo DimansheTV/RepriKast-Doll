@@ -507,7 +507,7 @@
             ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
           </select>
         `
-        : item
+        : item && app.shouldDisplayUpgradeLevel(level)
           ? `<span class="slot-upgrade-select is-static">${app.escapeHtml(level)}</span>`
           : "";
 
@@ -528,11 +528,48 @@
       `;
     }).join("");
 
+    const passiveSlot = app.getSlotConfig(app.PASSIVE_MORPH_RING_SLOT_KEY);
+    const passiveSelected = passiveSlot ? profile.equipped[passiveSlot.key] : null;
+    const passiveItem = passiveSelected ? app.state.itemsById.get(passiveSelected.itemId) : null;
+    const passiveLevel = passiveItem ? app.getValidUpgradeLevel(passiveItem, passiveSelected.upgradeLevel) : null;
+    const passiveClasses = ["slot-cell", "passive-slot-cell", "compare-passive-slot-cell"];
+
+    if (passiveItem) {
+      passiveClasses.push("is-filled");
+    }
+    if (editor.activeSlot === passiveSlot?.key) {
+      passiveClasses.push("is-active");
+    }
+
+    const passiveImageHtml = passiveItem?.image
+      ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(passiveItem.name)}" loading="lazy">`
+      : "";
+    const passiveSlotHtml = passiveItem && passiveSlot
+      ? `
+        <section class="compare-passive-slot-panel">
+          <div class="${passiveClasses.join(" ")}" data-slot="${passiveSlot.key}">
+            <button
+              type="button"
+              class="slot-pin"
+              data-compare-slot-pin="1"
+              data-compare-slot-type="inventory"
+              data-slot-key="${passiveSlot.key}"
+              aria-label="${app.escapeHtml(`${passiveSlot.label}: ${passiveItem.name}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              title="${app.escapeHtml(`${passiveSlot.label}: ${passiveItem.name}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+            >
+              <span class="slot-item-visual" aria-hidden="true">${passiveImageHtml}</span>
+            </button>
+          </div>
+        </section>
+      `
+      : "";
+
     return `
       <section class="equipment-column compare-stage-column">
         <section class="equipment-stage compare-equipment-stage" aria-label="Слоты экипировки">
           <div class="slot-grid">${slotsHtml}</div>
         </section>
+        ${passiveSlotHtml}
       </section>
     `;
   }
@@ -566,7 +603,7 @@
             ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
           </select>
         `
-        : item && showUpgrade
+        : item && showUpgrade && app.shouldDisplayUpgradeLevel(level)
           ? `<span class="sphere-upgrade-select is-static">${app.escapeHtml(level)}</span>`
           : "";
 
@@ -621,7 +658,7 @@
             ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
           </select>
         `
-        : item
+        : item && app.shouldDisplayUpgradeLevel(level)
           ? `<span class="trophy-upgrade-select is-static">${app.escapeHtml(level)}</span>`
           : "";
 
@@ -676,7 +713,7 @@
               ${app.renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(previewLevel)} · ${app.escapeHtml(previewText)}</div>
+                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
               </div>
               <button
                 class="equip-btn ${isEquipped ? "is-selected" : ""}"
@@ -721,7 +758,7 @@
         const isEquipped = String(item.uid) === String(selectedItemId || "");
         const metaParts = [previewText];
 
-        if (showUpgrade) {
+        if (showUpgrade && app.shouldDisplayUpgradeLevel(previewLevel)) {
           metaParts.unshift(previewLevel);
         }
 
@@ -780,7 +817,7 @@
               ${app.renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(previewLevel)} · ${app.escapeHtml(previewText)}</div>
+                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
               </div>
               <button
                 class="equip-btn ${isEquipped ? "is-selected" : ""}"

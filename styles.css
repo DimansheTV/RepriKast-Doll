@@ -1692,6 +1692,9 @@ body[data-page="compare"] .panel {
 
 .compare-stage-column {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .compare-equipment-stage,
@@ -1699,6 +1702,25 @@ body[data-page="compare"] .panel {
 .compare-trophy-stage,
 .compare-passive-slot-panel {
   width: 100%;
+}
+
+.compare-passive-slot-panel {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.compare-passive-slot-cell {
+  width: 84px;
+  min-width: 84px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.compare-passive-slot-cell .slot-pin {
+  inset: 8%;
+  width: 84%;
+  height: 84%;
 }
 
 .compare-editor-catalog {
