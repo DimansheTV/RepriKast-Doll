@@ -346,7 +346,7 @@ const CLASS_CONFIGS = {
       { label: "Сила", base: 6, growthType: "interval", interval: 3, amount: 1 },
       { label: "Ловкость", base: 3, growthType: "interval", interval: 6, amount: 1 },
       { label: "Интеллект", base: 1, growthType: "interval", interval: 9, amount: 1 },
-      { label: "HP", base: 655, growthType: "per_level", amount: 5 },
+      { label: "HP", base: 707, growthType: "per_level", amount: 5 },
       { label: "MP", base: 33, growthType: "per_level", amount: 1 },
       { label: "Вес", base: 3205, growthType: "per_level", amount: 25 },
     ],

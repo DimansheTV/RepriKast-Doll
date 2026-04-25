@@ -95,6 +95,10 @@
     return candidates[0].id;
   }
 
+  function getVisibleCompareEquipmentSlots() {
+    return app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
+  }
+
   function ensureSecondaryProfileSelection() {
     const nextSecondaryId = getFirstOtherProfileId(app.state.activeProfileId, compareState.secondaryProfileId);
     if (compareState.secondaryProfileId !== nextSecondaryId) {
@@ -105,8 +109,9 @@
   }
 
   function getFirstAvailableEquipmentSlotKey() {
-    const slot = app.SLOT_CONFIG.find((entry) => app.getItemsForEquipmentSlot(entry).length);
-    return slot?.key || app.SLOT_CONFIG[0]?.key || null;
+    const visibleSlots = getVisibleCompareEquipmentSlots();
+    const slot = visibleSlots.find((entry) => app.getItemsForEquipmentSlot(entry).length);
+    return slot?.key || visibleSlots[0]?.key || null;
   }
 
   function getFirstAvailableSphereSlotKey() {
@@ -123,6 +128,11 @@
     return app.SLOT_CONFIG.filter((slot) => profile?.equipped?.[slot.key]);
   }
 
+  function getVisibleEquippedSlotsForProfile(profile) {
+    const visibleKeys = new Set(getVisibleCompareEquipmentSlots().map((slot) => slot.key));
+    return getEquippedSlotsForProfile(profile).filter((slot) => visibleKeys.has(slot.key));
+  }
+
   function getEquippedSphereSlotsForProfile(profile) {
     return app.SPHERE_SLOT_CONFIG.filter((slot) => profile?.sphereEquipped?.[slot.key]);
   }
@@ -137,7 +147,7 @@
       editor.activeWorkspaceTab = "inventory";
     }
 
-    const equippedSlots = getEquippedSlotsForProfile(profile);
+    const equippedSlots = getVisibleEquippedSlotsForProfile(profile);
     const equippedSphereSlots = getEquippedSphereSlotsForProfile(profile);
     const equippedTrophySlots = getEquippedTrophySlotsForProfile(profile);
 
@@ -154,7 +164,7 @@
     }
 
     if (!app.getSlotConfig(editor.activeSlot)) {
-      editor.activeSlot = getEquippedSlotsForProfile(profile)[0]?.key || getFirstAvailableEquipmentSlotKey();
+      editor.activeSlot = getVisibleEquippedSlotsForProfile(profile)[0]?.key || getFirstAvailableEquipmentSlotKey();
     }
 
     if (!app.getSphereSlotConfig(editor.activeSphereSlot)) {
@@ -518,65 +528,10 @@
       `;
     }).join("");
 
-    const passiveSlot = app.getSlotConfig(app.PASSIVE_MORPH_RING_SLOT_KEY);
-    const passiveSelected = profile.equipped[passiveSlot.key];
-    const passiveItem = passiveSelected ? app.state.itemsById.get(passiveSelected.itemId) : null;
-    const passiveLevel = passiveItem ? app.getValidUpgradeLevel(passiveItem, passiveSelected.upgradeLevel) : null;
-    const passiveLevels = passiveItem ? app.getLevelKeys(passiveItem) : [];
-    const passiveItems = app.getItemsForEquipmentSlot(passiveSlot);
-    const passiveClasses = ["slot-cell", "passive-slot-cell"];
-
-    if (editor.activeSlot === passiveSlot.key) {
-      passiveClasses.push("is-active");
-    }
-    if (passiveItem) {
-      passiveClasses.push("is-filled");
-    }
-    if (!passiveItems.length) {
-      passiveClasses.push("is-unavailable");
-    }
-
-    const passiveImageHtml = passiveItem?.image
-      ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(passiveItem.name)}" loading="lazy">`
-      : "";
-    const passiveUpgradeControl = passiveItem && passiveLevels.length > 1
-      ? `
-        <select class="slot-upgrade-select" data-compare-upgrade-type="inventory" data-slot-key="${passiveSlot.key}">
-          ${passiveLevels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === passiveLevel ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
-        </select>
-      `
-      : passiveItem
-        ? `<span class="slot-upgrade-select is-static">${app.escapeHtml(passiveLevel)}</span>`
-        : "";
-
     return `
       <section class="equipment-column compare-stage-column">
         <section class="equipment-stage compare-equipment-stage" aria-label="Слоты экипировки">
           <div class="slot-grid">${slotsHtml}</div>
-        </section>
-
-        <section class="passive-slot-panel compare-passive-slot-panel" aria-label="Пассивное кольцо перевоплощения">
-          <div class="passive-slot-grid">
-            <div class="passive-slot-card ${editor.activeSlot === passiveSlot.key ? "is-active" : ""}">
-              <div class="passive-slot-copy">
-                <div class="passive-slot-title">${app.escapeHtml(passiveSlot.label)}</div>
-                <div class="passive-slot-note">Наденьте кольцо для пасивного эфекта.</div>
-              </div>
-              <div class="${passiveClasses.join(" ")}">
-                <button
-                  type="button"
-                  class="slot-pin"
-                  data-compare-slot-pin="1"
-                  data-compare-slot-type="inventory"
-                  data-slot-key="${passiveSlot.key}"
-                  aria-label="${app.escapeHtml(passiveSlot.label)}"
-                >
-                  <span class="slot-item-visual" aria-hidden="true">${passiveImageHtml}</span>
-                </button>
-                ${passiveUpgradeControl}
-              </div>
-            </div>
-          </div>
         </section>
       </section>
     `;
@@ -869,7 +824,7 @@
 
     ensureEditorState(editorKey, profile);
     const editor = compareState.editors[editorKey];
-    const catalog = renderCompareCatalog(profile, editor);
+    const classLabel = app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || "Класс";
     let stageHtml = renderCompareInventoryStage(editorKey, profile, editor);
 
     if (editor.activeWorkspaceTab === "spheres") {
@@ -881,9 +836,10 @@
     container.innerHTML = `
       <section class="compare-editor-shell">
         <div class="section-title-row compare-editor-heading">
-          <div>
-            <h2>${app.escapeHtml(title)}</h2>
-            <span class="section-note">${app.escapeHtml(profile.name)}</span>
+          <div class="compare-editor-headline">
+            <span class="compare-editor-tag">${app.escapeHtml(title)}</span>
+            <h2>${app.escapeHtml(profile.name)}</h2>
+            <span class="section-note">${app.escapeHtml(classLabel)} · Ур. ${app.escapeHtml(profile.classConfig.level)}</span>
           </div>
         </div>
 
@@ -922,14 +878,6 @@
         <section class="compare-editor-stage">
           ${stageHtml}
         </section>
-
-        <section class="compare-editor-catalog">
-          <div class="section-title-row compare-editor-catalog-title">
-            <h3>${app.escapeHtml(catalog.title)}</h3>
-            <span class="section-note">${catalog.count}</span>
-          </div>
-          <div class="category-list compare-category-list">${catalog.body}</div>
-        </section>
       </section>
     `;
   }
@@ -946,28 +894,40 @@
     }
 
     const rows = buildComparisonRows(primaryProfile, secondaryProfile);
+    const betterCount = rows.filter((row) => row.classes.delta === "is-better").length;
+    const worseCount = rows.filter((row) => row.classes.delta === "is-worse").length;
+    const equalCount = rows.length - betterCount - worseCount;
 
     container.innerHTML = `
       <section class="compare-summary-shell">
         <div class="section-title-row compare-summary-heading">
-          <div>
+          <div class="compare-summary-headline">
+            <span class="compare-editor-tag compare-editor-tag-summary">Аналитика</span>
             <h2>Сравнение параметров</h2>
             <span class="section-note">${app.escapeHtml(primaryProfile.name)} vs ${app.escapeHtml(secondaryProfile.name)}</span>
           </div>
         </div>
 
-        <div class="compare-table">
-          <div class="compare-table-header">Параметр</div>
-          <div class="compare-table-header">${app.escapeHtml(primaryProfile.name)}</div>
-          <div class="compare-table-header">${app.escapeHtml(secondaryProfile.name)}</div>
-          <div class="compare-table-header">Δ</div>
+        <div class="compare-summary-strip">
+          <div class="compare-summary-chip is-better">Лучше: ${app.escapeHtml(betterCount)}</div>
+          <div class="compare-summary-chip is-worse">Хуже: ${app.escapeHtml(worseCount)}</div>
+          <div class="compare-summary-chip is-neutral">Равно: ${app.escapeHtml(equalCount)}</div>
+        </div>
 
-          ${rows.map((row) => `
-            <div class="compare-table-cell compare-table-label">${app.escapeHtml(row.label)}</div>
-            <div class="compare-table-cell compare-table-value ${row.classes.primary}">${app.escapeHtml(formatAbsoluteStat(row.primary))}</div>
-            <div class="compare-table-cell compare-table-value ${row.classes.secondary}">${app.escapeHtml(formatAbsoluteStat(row.secondary))}</div>
-            <div class="compare-table-cell compare-table-delta ${row.classes.delta}">${app.escapeHtml(app.formatStatValue(row.delta, row.unit))}</div>
-          `).join("")}
+        <div class="compare-table-wrap">
+          <div class="compare-table">
+            <div class="compare-table-header">Параметр</div>
+            <div class="compare-table-header">${app.escapeHtml(primaryProfile.name)}</div>
+            <div class="compare-table-header">${app.escapeHtml(secondaryProfile.name)}</div>
+            <div class="compare-table-header">Δ</div>
+
+            ${rows.map((row) => `
+              <div class="compare-table-cell compare-table-label">${app.escapeHtml(row.label)}</div>
+              <div class="compare-table-cell compare-table-value ${row.classes.primary}">${app.escapeHtml(formatAbsoluteStat(row.primary))}</div>
+              <div class="compare-table-cell compare-table-value ${row.classes.secondary}">${app.escapeHtml(formatAbsoluteStat(row.secondary))}</div>
+              <div class="compare-table-cell compare-table-delta ${row.classes.delta}">${app.escapeHtml(app.formatStatValue(row.delta, row.unit))}</div>
+            `).join("")}
+          </div>
         </div>
       </section>
     `;
@@ -1072,60 +1032,6 @@
       return;
     }
 
-    const actionButton = event.target.closest("[data-compare-list-action]");
-    if (!actionButton) {
-      return;
-    }
-
-    const action = actionButton.dataset.compareListAction;
-    const slotKey = actionButton.dataset.slotKey;
-    const itemId = actionButton.dataset.itemId;
-
-    mutateProfile(editorKey, (profile) => {
-      if (action === "inventory-remove") {
-        delete profile.equipped[slotKey];
-        return;
-      }
-      if (action === "inventory-equip") {
-        const item = app.state.itemsById.get(itemId);
-        if (item) {
-          profile.equipped[slotKey] = {
-            itemId: String(item.uid),
-            upgradeLevel: app.getDefaultUpgradeLevel(item),
-          };
-        }
-        return;
-      }
-      if (action === "sphere-remove") {
-        delete profile.sphereEquipped[slotKey];
-        return;
-      }
-      if (action === "sphere-equip") {
-        const item = app.state.sphereItemsById.get(itemId);
-        if (item) {
-          profile.sphereEquipped[slotKey] = {
-            itemId: String(item.uid),
-            upgradeLevel: app.getDefaultUpgradeLevel(item),
-          };
-        }
-        return;
-      }
-      if (action === "trophy-remove") {
-        delete profile.trophyEquipped[slotKey];
-        return;
-      }
-      if (action === "trophy-equip") {
-        const item = app.state.trophyItemsById.get(itemId);
-        if (item) {
-          profile.trophyEquipped[slotKey] = {
-            itemId: String(item.uid),
-            upgradeLevel: app.getDefaultUpgradeLevel(item),
-          };
-        }
-      }
-    });
-
-    renderComparePage();
   }
 
   function handleEditorChange(editorKey, event) {
@@ -1180,38 +1086,6 @@
     }
   }
 
-  function handleEditorContextMenu(editorKey, event) {
-    const slotButton = event.target.closest("[data-compare-slot-pin]");
-    if (!slotButton) {
-      return;
-    }
-
-    const slotType = slotButton.dataset.compareSlotType;
-    const slotKey = slotButton.dataset.slotKey;
-    const profile = editorKey === "primary" ? getPrimaryProfile() : getSecondaryProfile();
-    const isFilled = slotType === "sphere"
-      ? Boolean(profile?.sphereEquipped?.[slotKey])
-      : slotType === "trophy"
-        ? Boolean(profile?.trophyEquipped?.[slotKey])
-        : Boolean(profile?.equipped?.[slotKey]);
-
-    if (!isFilled) {
-      return;
-    }
-
-    event.preventDefault();
-    mutateProfile(editorKey, (draft) => {
-      if (slotType === "sphere") {
-        delete draft.sphereEquipped[slotKey];
-      } else if (slotType === "trophy") {
-        delete draft.trophyEquipped[slotKey];
-      } else {
-        delete draft.equipped[slotKey];
-      }
-    });
-    renderComparePage();
-  }
-
   function bindEditor(editorKey, containerId) {
     const container = document.getElementById(containerId);
     if (!container || container.dataset.bound === "1") {
@@ -1221,13 +1095,11 @@
     container.dataset.bound = "1";
     container.addEventListener("click", (event) => handleEditorClick(editorKey, event));
     container.addEventListener("change", (event) => handleEditorChange(editorKey, event));
-    container.addEventListener("contextmenu", (event) => handleEditorContextMenu(editorKey, event));
   }
 
   function bindTopbar() {
     const primarySelect = document.getElementById("compare-primary-select");
     const secondarySelect = document.getElementById("compare-secondary-select");
-    const newButton = document.getElementById("compare-new-profile-button");
 
     if (primarySelect && primarySelect.dataset.bound !== "1") {
       primarySelect.dataset.bound = "1";
@@ -1237,16 +1109,6 @@
     if (secondarySelect && secondarySelect.dataset.bound !== "1") {
       secondarySelect.dataset.bound = "1";
       secondarySelect.addEventListener("change", () => setSecondaryProfile(secondarySelect.value));
-    }
-
-    if (newButton && newButton.dataset.bound !== "1") {
-      newButton.dataset.bound = "1";
-      newButton.addEventListener("click", () => {
-        app.createNewProfile();
-        ensureSecondaryProfileSelection();
-        resetEditorState("primary", getPrimaryProfile(), true);
-        renderComparePage();
-      });
     }
   }
 
