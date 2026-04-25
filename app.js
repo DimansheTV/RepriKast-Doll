@@ -107,9 +107,25 @@ const TROPHY_SLOT_CONFIG = [
   { key: "trophy_bottom_right", label: "Горн", statLabel: "Скорость атаки", positionClass: "trophy-pos-bottom-right" },
 ];
 
+const PET_CATEGORY_CONFIG = [
+  { key: "I", label: "Тип I" },
+  { key: "II", label: "Тип II" },
+];
+const PET_MERGE_TOTAL_LIMIT = 5;
+const PET_MERGE_CONFIG = [
+  { key: "fire", label: "Огонь", statLabel: "Сила", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
+  { key: "earth", label: "Земля", statLabel: "Ловкость", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
+  { key: "energy", label: "Энергия", statLabel: "Интеллект", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
+  { key: "wind", label: "Ветер", statLabel: "Скорость атаки", unit: "%", bonusSteps: [8, 4, 2, 2, 2] },
+  { key: "moon", label: "Луна", statLabel: "Поглощение", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
+  { key: "sun", label: "Солнце", statLabel: "Уклонение", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
+  { key: "water", label: "Вода", statLabel: "Вероятность выпадения трофеев", unit: "%", bonusSteps: [10, 5, 1, 1, 1] },
+];
+
 const STORAGE_KEY = "r2-doll-equip-v3";
 const SPHERE_STORAGE_KEY = "r2-doll-sphere-v1";
 const TROPHY_STORAGE_KEY = "r2-doll-trophy-v1";
+const PET_STORAGE_KEY = "r2-doll-pet-v1";
 const CLASS_STORAGE_KEY = "r2-doll-class-v1";
 const SIDEBAR_TAB_STORAGE_KEY = "r2-doll-sidebar-tab-v2";
 const WORKSPACE_TAB_STORAGE_KEY = "r2-doll-workspace-tab-v1";
@@ -132,14 +148,16 @@ const SECONDARY_STAT_PRIORITY = [
   "Доп. урон при крит. ударе",
   "Получаемый крит. урон",
   "Получаемый урон",
+  "Периодический урон",
   "Поглощение",
   "Уклонение",
   "Восстановление HP",
   "Восстановление MP",
-  "Особое восстановление HP",
   "Особое восстановление MP",
   "Эффект зелий здоровья",
   "Уровень зелий здоровья",
+  "Вероятность выпадения трофеев",
+  "Количество получаемых очков опыта",
   "Вес",
 ];
 const STAT_LABEL_ALIASES = new Map([
@@ -174,16 +192,20 @@ const STAT_LABEL_ALIASES = new Map([
   ["получаемый крит. урон", "Получаемый крит. урон"],
   ["получаемый урон", "Получаемый урон"],
   ["весь получаемый урон", "Получаемый урон"],
+  ["периодический урон", "Периодический урон"],
   ["поглощение", "Поглощение"],
   ["уклонение", "Уклонение"],
   ["восстановление hp", "Восстановление HP"],
   ["регенерация hp", "Восстановление HP"],
   ["восстановление mp", "Восстановление MP"],
   ["регенерация mp", "Восстановление MP"],
-  ["особое восстановление hp", "Особое восстановление HP"],
+  ["особое восстановление hp", "Восстановление HP"],
   ["особое восстановление mp", "Восстановление MP"],
   ["эффект зелий здоровья", "Эффект зелий здоровья"],
   ["уровень зелий здоровья", "Уровень зелий здоровья"],
+  ["дроп", "Вероятность выпадения трофеев"],
+  ["опыт", "Количество получаемых очков опыта"],
+  ["параметры", "Все параметры"],
   ["вес", "Вес"],
   ["максимальный вес", "Вес"],
   ["макс. вес", "Вес"],
@@ -505,18 +527,23 @@ const state = {
   items: [],
   sphereItems: [],
   trophyItems: [],
+  petItems: [],
   itemsById: new Map(),
   sphereItemsById: new Map(),
   trophyItemsById: new Map(),
+  petItemsById: new Map(),
   equipped: loadEquippedState(),
   sphereEquipped: loadSphereEquippedState(),
   trophyEquipped: loadTrophyEquippedState(),
+  petEquipped: loadPetEquippedState(),
   expandedCategories: new Set(),
   expandedSphereCategories: new Set(),
   expandedTrophySlots: new Set(),
+  expandedPetCategories: new Set(),
   activeSlot: null,
   activeSphereSlot: SPHERE_SLOT_CONFIG[0]?.key || null,
   activeTrophySlot: TROPHY_SLOT_CONFIG[0]?.key || null,
+  activePetCategory: PET_CATEGORY_CONFIG[0]?.key || "I",
   activeSphereTypeOneTab: "Сферы разрушения",
   lastAction: "Выберите слот на кукле или откройте категорию справа.",
   classConfig: loadClassState(),
@@ -562,6 +589,17 @@ function getTrophyItemsForSlot(slotKey) {
   return state.trophyItems
     .filter((item) => item.slot_code === slotKey)
     .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+function getPetItemsForCategory(categoryKey) {
+  return state.petItems.filter((item) => item.variant === categoryKey);
+}
+
+function getPetCategoryGroups() {
+  return PET_CATEGORY_CONFIG.map((group) => ({
+    ...group,
+    items: getPetItemsForCategory(group.key),
+  }));
 }
 
 function getSphereCategoryGroups() {
@@ -636,6 +674,10 @@ function getFirstAvailableSphereSlotKey() {
   return SPHERE_SLOT_CONFIG.find((slot) => getSphereItemsForSlot(slot.key).length)?.key || SPHERE_SLOT_CONFIG[0]?.key || null;
 }
 
+function getFirstAvailablePetCategoryKey() {
+  return PET_CATEGORY_CONFIG.find((group) => getPetItemsForCategory(group.key).length)?.key || PET_CATEGORY_CONFIG[0]?.key || "I";
+}
+
 function getSphereTypeOneTabForSlot(slotKey) {
   return SPHERE_TYPE_ONE_TABS.find((tab) => tab.slotKey === slotKey)?.category || "Сферы разрушения";
 }
@@ -652,8 +694,70 @@ function getEquippedTrophySlots() {
   return TROPHY_SLOT_CONFIG.filter((slot) => state.trophyEquipped[slot.key]);
 }
 
+function getEquippedPet() {
+  return state.petEquipped ? state.petItemsById.get(state.petEquipped.itemId) || null : null;
+}
+
 function normalizeText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function sanitizePetMergeCounts(rawCounts) {
+  const source = rawCounts && typeof rawCounts === "object" ? rawCounts : {};
+  const normalized = {};
+
+  PET_MERGE_CONFIG.forEach((entry) => {
+    const numeric = Number(source[entry.key] ?? 0);
+    if (!Number.isFinite(numeric)) {
+      return;
+    }
+
+    const value = Math.min(PET_MERGE_TOTAL_LIMIT, Math.max(0, Math.floor(numeric)));
+    if (value > 0) {
+      normalized[entry.key] = value;
+    }
+  });
+
+  return normalized;
+}
+
+function getPetMergeCounts(selection = state.petEquipped) {
+  return sanitizePetMergeCounts(selection?.mergeCounts);
+}
+
+function getPetMergeTotal(mergeCounts = state.petEquipped?.mergeCounts) {
+  const normalized = sanitizePetMergeCounts(mergeCounts);
+  return PET_MERGE_CONFIG.reduce((total, entry) => total + (normalized[entry.key] || 0), 0);
+}
+
+function getPetMergeBonusValue(mergeConfig, count) {
+  const safeCount = Math.min(PET_MERGE_TOTAL_LIMIT, Math.max(0, Math.floor(Number(count) || 0)));
+  return mergeConfig.bonusSteps.slice(0, safeCount).reduce((sum, value) => sum + value, 0);
+}
+
+function createPetSelection(itemId, mergeCounts = {}) {
+  const normalizedCounts = sanitizePetMergeCounts(mergeCounts);
+  return {
+    itemId: String(itemId),
+    ...(Object.keys(normalizedCounts).length ? { mergeCounts: normalizedCounts } : {}),
+  };
+}
+
+function getPetMergeStats(mergeCounts = state.petEquipped?.mergeCounts) {
+  const normalized = sanitizePetMergeCounts(mergeCounts);
+
+  return PET_MERGE_CONFIG.flatMap((entry) => {
+    const count = normalized[entry.key] || 0;
+    if (!count) {
+      return [];
+    }
+
+    return [{
+      label: entry.statLabel,
+      value: getPetMergeBonusValue(entry, count),
+      unit: entry.unit,
+    }];
+  });
 }
 
 function isMorphRingItem(item) {
@@ -678,7 +782,7 @@ function sanitizeProfileName(name, fallbackName = getProfileFallbackName()) {
 }
 
 function sanitizeWorkspaceTab(tabKey) {
-  return ["inventory", "spheres", "trophies"].includes(tabKey) ? tabKey : "inventory";
+  return ["inventory", "pet", "spheres", "trophies"].includes(tabKey) ? tabKey : "inventory";
 }
 
 function normalizeProfileRecord(profile, index = 0) {
@@ -697,6 +801,7 @@ function normalizeProfileRecord(profile, index = 0) {
     equipped: profile?.equipped && typeof profile.equipped === "object" ? deepClone(profile.equipped) : {},
     sphereEquipped: profile?.sphereEquipped && typeof profile.sphereEquipped === "object" ? deepClone(profile.sphereEquipped) : {},
     trophyEquipped: profile?.trophyEquipped && typeof profile.trophyEquipped === "object" ? deepClone(profile.trophyEquipped) : {},
+    petEquipped: profile?.petEquipped && typeof profile.petEquipped === "object" ? deepClone(profile.petEquipped) : null,
     activeWorkspaceTab: sanitizeWorkspaceTab(profile?.activeWorkspaceTab),
     createdAt: Number(profile?.createdAt) || Date.now(),
     updatedAt: Number(profile?.updatedAt) || Date.now(),
@@ -713,6 +818,7 @@ function createProfileSnapshot(overrides = {}) {
     equipped: overrides.equipped ?? state.equipped,
     sphereEquipped: overrides.sphereEquipped ?? state.sphereEquipped,
     trophyEquipped: overrides.trophyEquipped ?? state.trophyEquipped,
+    petEquipped: overrides.petEquipped ?? state.petEquipped,
     activeWorkspaceTab: overrides.activeWorkspaceTab ?? state.activeWorkspaceTab,
     createdAt: overrides.createdAt ?? Date.now(),
     updatedAt: Date.now(),
@@ -727,6 +833,7 @@ function createEmptyProfile(name = getProfileFallbackName()) {
     equipped: {},
     sphereEquipped: {},
     trophyEquipped: {},
+    petEquipped: null,
     activeWorkspaceTab: "inventory",
   }, state.profiles.length);
 }
@@ -754,6 +861,10 @@ function createSphereUid(item, index) {
 
 function createTrophyUid(item, index) {
   return `trophy:${item.slot_code || "unknown"}:${item.id ?? index}`;
+}
+
+function createPetUid(item, index) {
+  return `pet:${item.id ?? index}`;
 }
 
 function sanitizeClassLevel(level) {
@@ -784,6 +895,16 @@ function loadClassState() {
     return { classKey, level };
   } catch {
     return { classKey: "knight", level: 1 };
+  }
+}
+
+function loadPetEquippedState() {
+  try {
+    const raw = localStorage.getItem(PET_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
   }
 }
 
@@ -819,7 +940,7 @@ function loadTrophyEquippedState() {
 function loadWorkspaceTabState() {
   try {
     const raw = localStorage.getItem(WORKSPACE_TAB_STORAGE_KEY);
-    return ["inventory", "spheres", "trophies"].includes(raw) ? raw : "inventory";
+    return ["inventory", "pet", "spheres", "trophies"].includes(raw) ? raw : "inventory";
   } catch {
     return "inventory";
   }
@@ -887,6 +1008,15 @@ function saveTrophyEquippedState() {
   syncActiveProfileFromState();
 }
 
+function savePetEquippedState() {
+  try {
+    localStorage.setItem(PET_STORAGE_KEY, JSON.stringify(state.petEquipped));
+  } catch {
+    // Ignore storage errors to keep the page usable in private/file contexts.
+  }
+  syncActiveProfileFromState();
+}
+
 function saveWorkspaceTabState() {
   try {
     localStorage.setItem(WORKSPACE_TAB_STORAGE_KEY, state.activeWorkspaceTab);
@@ -939,6 +1069,7 @@ function persistLegacyStateSnapshot() {
   saveEquippedState();
   saveSphereEquippedState();
   saveTrophyEquippedState();
+  savePetEquippedState();
   saveWorkspaceTabState();
   profileSyncLocked = false;
 }
@@ -950,6 +1081,7 @@ function applyProfileToState(profile) {
   state.equipped = deepClone(normalized.equipped);
   state.sphereEquipped = deepClone(normalized.sphereEquipped);
   state.trophyEquipped = deepClone(normalized.trophyEquipped);
+  state.petEquipped = deepClone(normalized.petEquipped);
   state.activeWorkspaceTab = sanitizeWorkspaceTab(normalized.activeWorkspaceTab);
   persistLegacyStateSnapshot();
 }
@@ -966,6 +1098,7 @@ function initializeProfilesState() {
       equipped: state.equipped,
       sphereEquipped: state.sphereEquipped,
       trophyEquipped: state.trophyEquipped,
+      petEquipped: state.petEquipped,
       activeWorkspaceTab: state.activeWorkspaceTab,
     });
     state.profiles = [migratedProfile];
@@ -1000,6 +1133,7 @@ function setActiveProfile(profileId, { persistCurrent = true } = {}) {
   sanitizeEquippedState();
   sanitizeSphereEquippedState();
   sanitizeTrophyEquippedState();
+  sanitizePetEquippedState();
   initializeUiState();
   syncActiveProfileFromState();
   renderAll();
@@ -1236,6 +1370,20 @@ function createCollectedStatsBucket() {
   };
 }
 
+function collectPetSelectionIntoBucket(selection, bucket) {
+  if (!selection || !bucket) {
+    return;
+  }
+
+  const pet = state.petItemsById.get(String(selection.itemId));
+  if (!pet) {
+    return;
+  }
+
+  collectItemParamsIntoBucket(pet, { upgradeLevel: getDefaultUpgradeLevel(pet) }, bucket);
+  getPetMergeStats(selection.mergeCounts).forEach((stat) => addStatWithRules(bucket.numericStats, stat));
+}
+
 function collectItemParamsIntoBucket(item, selected, bucket) {
   const level = getValidUpgradeLevel(item, selected.upgradeLevel);
   const params = getParamsForLevel(item, level);
@@ -1286,6 +1434,7 @@ function collectEquippedStats() {
   const inventoryBucket = createCollectedStatsBucket();
   const sphereBucket = createCollectedStatsBucket();
   const trophyBucket = createCollectedStatsBucket();
+  const petBucket = createCollectedStatsBucket();
   const numericStats = new Map();
   const effects = new Map();
   const setBonuses = [];
@@ -1317,7 +1466,9 @@ function collectEquippedStats() {
     collectItemParamsIntoBucket(item, selected, trophyBucket);
   });
 
-  [inventoryBucket, sphereBucket, trophyBucket].forEach((bucket) => {
+  collectPetSelectionIntoBucket(state.petEquipped, petBucket);
+
+  [inventoryBucket, sphereBucket, trophyBucket, petBucket].forEach((bucket) => {
     addStatCollection(numericStats, [...bucket.numericStats.values()]);
     bucket.effects.forEach((effect, key) => {
       effects.set(key, effect);
@@ -1338,6 +1489,7 @@ function collectEquippedStats() {
     setBonuses,
     sourceBreakdown: {
       inventory: inventoryBucket,
+      pet: petBucket,
       spheres: sphereBucket,
       trophies: trophyBucket,
     },
@@ -1488,22 +1640,27 @@ function computeBaseClassStat(statConfig, level) {
 
 function renderStatsPanel() {
   const inventoryContainer = document.getElementById("stats-inventory-list");
+  const petContainer = document.getElementById("stats-pets-list");
   const spheresContainer = document.getElementById("stats-spheres-list");
   const trophiesContainer = document.getElementById("stats-trophies-list");
   const setContainer = document.getElementById("stats-set-list");
   const effectsContainer = document.getElementById("stats-effects-list");
-  if (!inventoryContainer || !spheresContainer || !trophiesContainer || !setContainer || !effectsContainer) {
+  if (!inventoryContainer || !petContainer || !spheresContainer || !trophiesContainer || !setContainer || !effectsContainer) {
     return;
   }
 
   const { sourceBreakdown, setBonuses, effects } = collectEquippedStats();
   const inventoryStats = getDisplayStatsFromMap(sourceBreakdown.inventory.numericStats).allStats;
+  const petStats = getDisplayStatsFromMap(sourceBreakdown.pet.numericStats).allStats;
   const sphereStats = getDisplayStatsFromMap(sourceBreakdown.spheres.numericStats).allStats;
   const trophyStats = getDisplayStatsFromMap(sourceBreakdown.trophies.numericStats).allStats;
 
   inventoryContainer.innerHTML = inventoryStats.length
     ? renderStatRows(inventoryStats)
     : '<div class="empty-note">Инвентарь пока не даёт числовых параметров.</div>';
+  petContainer.innerHTML = petStats.length
+    ? renderStatRows(petStats)
+    : '<div class="empty-note">Питомец пока не выбран.</div>';
   spheresContainer.innerHTML = sphereStats.length
     ? renderStatRows(sphereStats)
     : '<div class="empty-note">Сферы пока не дают числовых параметров.</div>';
@@ -1753,7 +1910,7 @@ function renderStatsSourceTabs() {
 }
 
 function setWorkspaceTab(tabKey) {
-  if (!["inventory", "spheres", "trophies"].includes(tabKey)) {
+  if (!["inventory", "pet", "spheres", "trophies"].includes(tabKey)) {
     return;
   }
 
@@ -1773,7 +1930,7 @@ function setSidebarTab(tabKey) {
 }
 
 function setStatsSourceTab(tabKey) {
-  if (!["inventory", "spheres", "trophies", "sets", "effects"].includes(tabKey)) {
+  if (!["inventory", "pets", "spheres", "trophies", "sets", "effects"].includes(tabKey)) {
     return;
   }
 
@@ -1935,6 +2092,19 @@ function sanitizeTrophyEquippedState() {
   }
 }
 
+function sanitizePetEquippedState() {
+  const previous = state.petEquipped && typeof state.petEquipped === "object" ? state.petEquipped : null;
+  const item = previous ? state.petItemsById.get(String(previous.itemId)) : null;
+  const normalized = item ? createPetSelection(item.uid, previous?.mergeCounts) : null;
+  const changed = JSON.stringify(previous || null) !== JSON.stringify(normalized || null);
+
+  state.petEquipped = normalized;
+
+  if (changed) {
+    savePetEquippedState();
+  }
+}
+
 function initializeUiState() {
   const equippedSlotKeys = getEquippedSlots().map((slot) => slot.key);
   const initialSlot = equippedSlotKeys[0] || getFirstAvailableSlotKey();
@@ -1942,6 +2112,8 @@ function initializeUiState() {
   const initialSphereSlot = equippedSphereSlotKeys[0] || getFirstAvailableSphereSlotKey();
   const initialSphereCategory = getSphereSlotConfig(initialSphereSlot)?.categoryKey || null;
   const equippedTrophySlotKeys = getEquippedTrophySlots().map((slot) => slot.key);
+  const equippedPet = getEquippedPet();
+  const initialPetCategory = equippedPet?.variant || getFirstAvailablePetCategoryKey();
 
   state.activeSlot = initialSlot;
   state.expandedCategories = new Set(initialSlot ? [initialSlot] : []);
@@ -1950,6 +2122,8 @@ function initializeUiState() {
   state.activeSphereTypeOneTab = getSphereTypeOneTabForSlot(initialSphereSlot);
   state.activeTrophySlot = equippedTrophySlotKeys[0] || TROPHY_SLOT_CONFIG[0]?.key || null;
   state.expandedTrophySlots = new Set(state.activeTrophySlot ? [state.activeTrophySlot] : []);
+  state.activePetCategory = initialPetCategory;
+  state.expandedPetCategories = new Set(initialPetCategory ? [initialPetCategory] : []);
 
   if (equippedSlotKeys.length) {
     setLastAction("Сборка загружена. Выберите слот, чтобы сменить предмет или уровень заточки.");
@@ -1970,6 +2144,7 @@ function renderAll() {
   renderWorkspaceTabs();
   renderDollSlots();
   renderPassiveMorphRingSlot();
+  renderPetWorkspace();
   renderSphereSlots();
   renderTrophySlots();
   renderBoardTotalStats();
@@ -2257,6 +2432,205 @@ function renderPassiveMorphRingSlot() {
     if (control.tagName === "SELECT") {
       control.addEventListener("change", () => setUpgradeLevel(control.dataset.slot, control.value));
     }
+  });
+}
+
+function togglePetCategory(categoryKey) {
+  const category = PET_CATEGORY_CONFIG.find((entry) => entry.key === categoryKey);
+  if (!category) {
+    return;
+  }
+
+  state.activePetCategory = category.key;
+  state.expandedPetCategories = state.expandedPetCategories.has(category.key)
+    ? new Set()
+    : new Set([category.key]);
+  renderAll();
+  setLastAction(`${category.label}: список ${state.expandedPetCategories.has(category.key) ? "открыт" : "свёрнут"}.`);
+}
+
+function equipPet(itemId) {
+  const item = state.petItemsById.get(String(itemId));
+  if (!item) {
+    return;
+  }
+
+  state.petEquipped = createPetSelection(item.uid, state.petEquipped?.mergeCounts);
+  state.activePetCategory = item.variant || getFirstAvailablePetCategoryKey();
+  state.expandedPetCategories = new Set(state.activePetCategory ? [state.activePetCategory] : []);
+  savePetEquippedState();
+  renderAll();
+  setLastAction(`Питомец "${item.name}" выбран.`);
+}
+
+function clearPet() {
+  const current = getEquippedPet();
+  state.petEquipped = null;
+  savePetEquippedState();
+  renderAll();
+  setLastAction(current ? `Питомец "${current.name}" снят.` : "Питомец снят.");
+}
+
+function changePetMergeCount(mergeKey, delta) {
+  const pet = getEquippedPet();
+  const mergeConfig = PET_MERGE_CONFIG.find((entry) => entry.key === mergeKey);
+  if (!pet || !mergeConfig) {
+    return;
+  }
+
+  const currentCounts = getPetMergeCounts();
+  const currentValue = currentCounts[mergeKey] || 0;
+  const totalWithoutCurrent = getPetMergeTotal(currentCounts) - currentValue;
+  const nextValue = Math.min(
+    PET_MERGE_TOTAL_LIMIT,
+    Math.max(0, currentValue + Number(delta || 0)),
+  );
+  const cappedValue = Math.min(nextValue, PET_MERGE_TOTAL_LIMIT - totalWithoutCurrent);
+
+  if (cappedValue === currentValue) {
+    return;
+  }
+
+  if (cappedValue > 0) {
+    currentCounts[mergeKey] = cappedValue;
+  } else {
+    delete currentCounts[mergeKey];
+  }
+
+  state.petEquipped = createPetSelection(pet.uid, currentCounts);
+  savePetEquippedState();
+  renderAll();
+
+  const totalBonus = getPetMergeBonusValue(mergeConfig, cappedValue);
+  setLastAction(`Слияние "${mergeConfig.label}": ${cappedValue}. Бонус ${mergeConfig.statLabel} ${formatStatValue(totalBonus, mergeConfig.unit)}.`);
+}
+
+function getPetWorkspaceData(item, selection = state.petEquipped) {
+  const bucket = createCollectedStatsBucket();
+  collectItemParamsIntoBucket(item, { upgradeLevel: getDefaultUpgradeLevel(item) }, bucket);
+  getPetMergeStats(selection?.mergeCounts).forEach((stat) => addStatWithRules(bucket.numericStats, stat));
+
+  return {
+    stats: getDisplayStatsFromMap(bucket.numericStats).allStats,
+    mergeStats: getPetMergeStats(selection?.mergeCounts),
+    mergeTotal: getPetMergeTotal(selection?.mergeCounts),
+    effects: [...bucket.effects.values()].sort((a, b) => a.localeCompare(b, "ru")),
+  };
+}
+
+function renderPetMergeTable(selection = state.petEquipped) {
+  const mergeCounts = getPetMergeCounts(selection);
+  const totalUsed = getPetMergeTotal(mergeCounts);
+
+  return `
+    <section class="pet-card-section">
+      <div class="stats-subtitle-row stats-subtitle-row-split">
+        <h3>Слияние питомца</h3>
+        <span class="pet-merge-total-note">Использовано ${totalUsed}/${PET_MERGE_TOTAL_LIMIT}</span>
+      </div>
+      <div class="pet-merge-table-wrap">
+        <table class="pet-merge-table">
+          <tbody>
+            ${PET_MERGE_CONFIG.map((entry) => {
+              const count = mergeCounts[entry.key] || 0;
+              const totalWithoutCurrent = totalUsed - count;
+              const canDecrease = count > 0;
+              const canIncrease = count < PET_MERGE_TOTAL_LIMIT && totalWithoutCurrent + count < PET_MERGE_TOTAL_LIMIT;
+              const bonus = getPetMergeBonusValue(entry, count);
+
+              return `
+                <tr>
+                  <td>
+                    <div class="pet-merge-element">${escapeHtml(entry.label)}</div>
+                  </td>
+                  <td>
+                    <div class="pet-merge-stat">${escapeHtml(entry.statLabel)}</div>
+                  </td>
+                  <td>
+                    <div class="pet-merge-controls">
+                      <button type="button" class="pet-merge-btn" data-pet-merge-key="${escapeHtml(entry.key)}" data-pet-merge-delta="-1" ${canDecrease ? "" : "disabled"} aria-label="Уменьшить ${escapeHtml(entry.label)}">-</button>
+                      <span class="pet-merge-count">${count}</span>
+                      <button type="button" class="pet-merge-btn" data-pet-merge-key="${escapeHtml(entry.key)}" data-pet-merge-delta="1" ${canIncrease ? "" : "disabled"} aria-label="Увеличить ${escapeHtml(entry.label)}">+</button>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="pet-merge-bonus">${escapeHtml(formatStatValue(bonus, entry.unit))}</div>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function renderPetWorkspace() {
+  const container = document.getElementById("pet-stage");
+  if (!container) {
+    return;
+  }
+
+  const pet = getEquippedPet();
+  if (!pet) {
+    container.innerHTML = `
+      <div class="pet-stage-empty">
+        <div class="empty-note">Выберите питомца в каталоге справа.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const { stats, effects } = getPetWorkspaceData(pet, state.petEquipped);
+  const subtitle = normalizeText(pet.description_lines?.[0]) || `${pet.element} (${pet.variant})`;
+  const categoryLabel = PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label || pet.category;
+
+  container.innerHTML = `
+    <article class="pet-card">
+      <div class="pet-card-head">
+        <div class="pet-card-portrait">
+          <img src="${escapeHtml(pet.image)}" alt="${escapeHtml(pet.name)}" loading="lazy">
+        </div>
+        <div class="pet-card-copy">
+          <div class="pet-card-kicker">${escapeHtml(categoryLabel)}</div>
+          <div class="pet-card-title-row">
+            <h3>${escapeHtml(pet.name)}</h3>
+            <button type="button" class="pet-remove-btn" data-pet-clear="1">Снять</button>
+          </div>
+          <div class="pet-card-meta">${escapeHtml(subtitle)}</div>
+        </div>
+      </div>
+
+      <section class="pet-card-section">
+        <div class="stats-subtitle-row">
+          <h3>Параметры питомца</h3>
+        </div>
+        <div class="stat-list stat-list-secondary">
+          ${stats.length ? renderStatRows(stats) : '<div class="empty-note">Питомец не даёт числовых параметров.</div>'}
+        </div>
+      </section>
+
+      ${renderPetMergeTable(state.petEquipped)}
+
+      ${effects.length ? `
+        <section class="pet-card-section">
+          <div class="stats-subtitle-row">
+            <h3>Особые эффекты</h3>
+          </div>
+          <div class="effects-list">
+            ${effects.map((effect) => `<div class="effect-pill">${escapeHtml(effect)}</div>`).join("")}
+          </div>
+        </section>
+      ` : ""}
+    </article>
+  `;
+
+  container.querySelectorAll("[data-pet-clear]").forEach((button) => {
+    button.addEventListener("click", () => clearPet());
+  });
+  container.querySelectorAll("[data-pet-merge-key]").forEach((button) => {
+    button.addEventListener("click", () => changePetMergeCount(button.dataset.petMergeKey, Number(button.dataset.petMergeDelta || 0)));
   });
 }
 
@@ -2618,6 +2992,83 @@ function renderCategoryList() {
     return;
   }
 
+  if (state.activeWorkspaceTab === "pet") {
+    const groups = getPetCategoryGroups();
+
+    container.innerHTML = groups.map((group) => {
+      const isExpanded = state.expandedPetCategories.has(group.key);
+      const selectedItemId = state.petEquipped?.itemId || "";
+      let itemsHtml = "";
+
+      if (isExpanded && group.items.length) {
+        itemsHtml = group.items.map((item) => {
+          const previewLevel = getDefaultUpgradeLevel(item);
+          const params = getParamsForLevel(item, previewLevel);
+          const previewText = params[0] || normalizeText(item.description_lines?.[0]) || "Без параметров";
+          const isEquipped = String(item.uid) === String(selectedItemId);
+          const metaParts = [];
+          const subtitle = normalizeText(item.description_lines?.[0]);
+
+          if (subtitle) {
+            metaParts.push(subtitle);
+          }
+          metaParts.push(previewText);
+
+          return `
+            <div class="catalog-item catalog-item-pet ${isEquipped ? "is-selected" : ""}">
+              <div class="item-row">
+                ${renderItemIcon(item)}
+                <div class="item-info">
+                  <div class="item-name">${escapeHtml(item.name)}</div>
+                  <div class="item-meta">${escapeHtml(metaParts.join(" · "))}</div>
+                </div>
+                <button
+                  class="equip-btn ${isEquipped ? "is-selected" : ""}"
+                  type="button"
+                  data-pet-id="${escapeHtml(item.uid)}"
+                  data-action="${isEquipped ? "remove" : "equip"}"
+                >
+                  ${isEquipped ? "Снять" : "Надеть"}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      } else if (isExpanded) {
+        itemsHtml = '<div class="category-empty">Для этой группы питомцев пока нет данных.</div>';
+      }
+
+      return `
+        <div class="category-block ${state.activePetCategory === group.key ? "active" : ""}" data-pet-category="${escapeHtml(group.key)}">
+          <button class="category-header" type="button" data-pet-category="${escapeHtml(group.key)}">
+            <span class="cat-name">${escapeHtml(group.label)}</span>
+            <span class="cat-count">${group.items.length}</span>
+            <span class="cat-arrow" aria-hidden="true">›</span>
+          </button>
+          <div class="category-items ${isExpanded ? "expanded" : "collapsed"}">
+            ${itemsHtml}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    container.querySelectorAll("[data-pet-category]").forEach((button) => {
+      if (button.classList.contains("category-header")) {
+        button.addEventListener("click", () => togglePetCategory(button.dataset.petCategory));
+      }
+    });
+    container.querySelectorAll("[data-pet-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.dataset.action === "remove") {
+          clearPet();
+          return;
+        }
+        equipPet(button.dataset.petId);
+      });
+    });
+    return;
+  }
+
   if (state.activeWorkspaceTab === "spheres") {
     const groups = getSphereCategoryGroups();
 
@@ -2891,11 +3342,21 @@ async function loadTrophyItems() {
   return response.json();
 }
 
+async function loadPetItems() {
+  const response = await fetch("./pet-items.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
 async function init() {
   try {
     const rawItems = await loadItems();
     const rawSphereItems = await loadSphereItems();
     const rawTrophyItems = await loadTrophyItems();
+    const rawPetItems = await loadPetItems();
     state.items = rawItems.map((item, index) => ({
       ...item,
       uid: createItemUid(item, index),
@@ -2908,13 +3369,19 @@ async function init() {
       ...item,
       uid: createTrophyUid(item, index),
     }));
+    state.petItems = rawPetItems.map((item, index) => ({
+      ...item,
+      uid: createPetUid(item, index),
+    }));
     state.itemsById = new Map(state.items.map((item) => [item.uid, item]));
     state.sphereItemsById = new Map(state.sphereItems.map((item) => [item.uid, item]));
     state.trophyItemsById = new Map(state.trophyItems.map((item) => [item.uid, item]));
+    state.petItemsById = new Map(state.petItems.map((item) => [item.uid, item]));
     initializeProfilesState();
     sanitizeEquippedState();
     sanitizeSphereEquippedState();
     sanitizeTrophyEquippedState();
+    sanitizePetEquippedState();
     initializeUiState();
     renderAll();
     bindProfileControls();
@@ -2939,6 +3406,10 @@ async function init() {
     if (trophyGrid) {
       trophyGrid.innerHTML = "";
     }
+    const petStage = document.getElementById("pet-stage");
+    if (petStage) {
+      petStage.innerHTML = "";
+    }
     setLastAction("Каталог не загрузился.");
   }
 }
@@ -2946,6 +3417,9 @@ window.r2App = {
   SLOT_CONFIG,
   SPHERE_SLOT_CONFIG,
   TROPHY_SLOT_CONFIG,
+  PET_CATEGORY_CONFIG,
+  PET_MERGE_CONFIG,
+  PET_MERGE_TOTAL_LIMIT,
   SPHERE_TYPE_ONE_TABS,
   CLASS_CONFIGS,
   MAIN_STATS,
@@ -2961,6 +3435,10 @@ window.r2App = {
   getItemsForEquipmentSlot,
   getSphereItemsForSlot,
   getTrophyItemsForSlot,
+  getPetItemsForCategory,
+  getPetMergeCounts,
+  getPetMergeTotal,
+  getPetMergeStats,
   getLevelKeys,
   getDefaultUpgradeLevel,
   getValidUpgradeLevel,
@@ -2979,6 +3457,7 @@ window.r2App = {
   addStatCollection,
   addStatWithRules,
   createCollectedStatsBucket,
+  collectPetSelectionIntoBucket,
   collectItemParamsIntoBucket,
   getDisplayStatsFromMap,
   computeBaseClassStat,
@@ -2991,6 +3470,7 @@ window.r2App = {
   saveEquippedState,
   saveSphereEquippedState,
   saveTrophyEquippedState,
+  savePetEquippedState,
   saveWorkspaceTabState,
   applyProfileToState,
   setActiveProfile,

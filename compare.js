@@ -14,6 +14,7 @@
   const REVERSE_COMPARE_STATS = new Set([
     "Получаемый урон",
     "Получаемый крит. урон",
+    "Периодический урон",
     "Расход MP",
     "Шанс получить крит. удар",
   ]);
@@ -69,6 +70,7 @@
       equipped: app.state.equipped,
       sphereEquipped: app.state.sphereEquipped,
       trophyEquipped: app.state.trophyEquipped,
+      petEquipped: app.state.petEquipped,
       activeWorkspaceTab: app.state.activeWorkspaceTab,
     });
   }
@@ -239,6 +241,7 @@
     const inventoryBucket = app.createCollectedStatsBucket();
     const sphereBucket = app.createCollectedStatsBucket();
     const trophyBucket = app.createCollectedStatsBucket();
+    const petBucket = app.createCollectedStatsBucket();
     const numericStats = new Map();
     const effects = new Map();
     const setBonuses = [];
@@ -273,7 +276,9 @@
       app.collectItemParamsIntoBucket(item, selected, trophyBucket);
     });
 
-    [inventoryBucket, sphereBucket, trophyBucket].forEach((bucket) => {
+    app.collectPetSelectionIntoBucket(profile.petEquipped, petBucket);
+
+    [inventoryBucket, sphereBucket, trophyBucket, petBucket].forEach((bucket) => {
       app.addStatCollection(numericStats, [...bucket.numericStats.values()]);
       bucket.effects.forEach((effect, key) => effects.set(key, effect));
     });
@@ -303,6 +308,7 @@
       setBonuses,
       sourceBreakdown: {
         inventory: inventoryBucket,
+        pet: petBucket,
         spheres: sphereBucket,
         trophies: trophyBucket,
       },

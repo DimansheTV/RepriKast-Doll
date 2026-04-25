@@ -410,6 +410,13 @@ select.class-control {
   color: var(--text-soft);
 }
 
+.stats-subtitle-row-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .stat-list {
   display: flex;
   flex-direction: column;
@@ -634,6 +641,7 @@ select.class-control {
 
 .stats-frame,
 .equipment-stage,
+.pet-stage,
 .sphere-stage,
 .trophy-stage {
   position: relative;
@@ -800,6 +808,256 @@ select.class-control {
   flex-direction: column;
   align-items: center;
   gap: 18px;
+}
+
+.pet-column {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pet-stage {
+  width: min(100%, 822px);
+  margin: auto;
+  padding: 18px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top, rgba(226, 184, 103, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(62, 43, 31, 0.9), rgba(27, 19, 14, 0.94));
+  border: 1px solid rgba(196, 154, 94, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 226, 179, 0.04),
+    0 20px 42px rgba(0, 0, 0, 0.26);
+}
+
+.pet-stage-grid {
+  width: 100%;
+}
+
+.pet-stage-empty {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.pet-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding: 0;
+}
+
+.pet-card-head {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.pet-card-portrait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 148px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(20, 14, 10, 0.34);
+  border: 1px solid rgba(196, 154, 94, 0.12);
+}
+
+.pet-card-portrait img {
+  max-width: 100%;
+  max-height: 128px;
+  object-fit: contain;
+}
+
+.pet-card-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pet-card-kicker {
+  color: var(--text-warm);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pet-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pet-card-title-row h3 {
+  margin: 0;
+  color: var(--text-bright);
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pet-card-meta {
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pet-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pet-remove-btn {
+  padding: 9px 14px;
+  border: 1px solid rgba(216, 137, 115, 0.26);
+  border-radius: 10px;
+  background: rgba(216, 137, 115, 0.12);
+  color: var(--accent-red);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.pet-remove-btn:hover {
+  background: rgba(216, 137, 115, 0.18);
+  border-color: rgba(216, 137, 115, 0.34);
+}
+
+.pet-merge-total-note {
+  color: var(--text-warm);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pet-merge-note {
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pet-merge-table-wrap {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.pet-merge-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.pet-merge-table th,
+.pet-merge-table td {
+  padding: 10px 8px;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(196, 154, 94, 0.1);
+}
+
+.pet-merge-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.pet-merge-table td:nth-child(1) {
+  width: 18%;
+}
+
+.pet-merge-table td:nth-child(2) {
+  width: 44%;
+}
+
+.pet-merge-table td:nth-child(3) {
+  width: 24%;
+}
+
+.pet-merge-table td:nth-child(4) {
+  width: 14%;
+  text-align: right;
+}
+
+.pet-merge-element,
+.pet-merge-stat,
+.pet-merge-bonus {
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pet-merge-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pet-merge-step {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(226, 184, 103, 0.08);
+  border: 1px solid rgba(226, 184, 103, 0.14);
+  color: var(--text-warm);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pet-merge-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pet-merge-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(196, 154, 94, 0.24);
+  border-radius: 8px;
+  background: rgba(226, 184, 103, 0.08);
+  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.pet-merge-btn:hover:not(:disabled) {
+  background: rgba(226, 184, 103, 0.16);
+  border-color: rgba(226, 184, 103, 0.28);
+  transform: translateY(-1px);
+}
+
+.pet-merge-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.pet-merge-count {
+  min-width: 14px;
+  color: var(--text-bright);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  text-align: center;
 }
 
 .passive-slot-panel {
@@ -2004,6 +2262,27 @@ body[data-page="compare"] .panel {
     width: 112px;
     min-width: 112px;
     align-self: center;
+  }
+
+  .pet-stage {
+    padding: 14px;
+  }
+
+  .pet-card {
+    padding: 14px;
+  }
+
+  .pet-card-head {
+    grid-template-columns: 1fr;
+  }
+
+  .pet-card-portrait {
+    min-height: 132px;
+  }
+
+  .pet-card-title-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .stats-source-tabs {
