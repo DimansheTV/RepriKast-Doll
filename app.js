@@ -592,6 +592,19 @@ function getValidUpgradeLevel(item, level) {
   return levels.includes(level) ? level : getDefaultUpgradeLevel(item);
 }
 
+function shouldDisplayUpgradeLevel(level) {
+  const normalizedLevel = normalizeText(level);
+  return Boolean(normalizedLevel && normalizedLevel !== "+0");
+}
+
+function formatUpgradeSuffix(level) {
+  return shouldDisplayUpgradeLevel(level) ? ` ${level}` : "";
+}
+
+function formatUpgradeTitleSuffix(level) {
+  return shouldDisplayUpgradeLevel(level) ? ` (${level})` : "";
+}
+
 function getParamsForLevel(item, level) {
   return item?.upgrade_levels?.[level] || [];
 }
@@ -1390,7 +1403,7 @@ function renderEquipmentDescription(slot, item, level) {
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(item.name)} ${escapeHtml(level)}</div>
+        <div class="equipment-description-name">${escapeHtml(item.name)}${escapeHtml(formatUpgradeSuffix(level))}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -1425,7 +1438,9 @@ function renderSphereDescription(slot, item, level) {
   const paramsHtml = mergedLines.length
     ? mergedLines.map((param) => `<li>${escapeHtml(param)}</li>`).join("")
     : "<li>Без параметров</li>";
-  const displayLevel = shouldShowSphereUpgrade(item, slot) && getLevelKeys(item).length > 1 ? ` ${level}` : "";
+  const displayLevel = shouldShowSphereUpgrade(item, slot) && getLevelKeys(item).length > 1
+    ? formatUpgradeSuffix(level)
+    : "";
 
   return `
     <div class="equipment-description-card">
@@ -1449,7 +1464,7 @@ function renderTrophyDescription(slot, item, level) {
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(item.name)} ${escapeHtml(level)}</div>
+        <div class="equipment-description-name">${escapeHtml(item.name)}${escapeHtml(formatUpgradeSuffix(level))}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -2081,7 +2096,7 @@ function renderDollSlots() {
     if (!items.length) classes.push("is-unavailable");
 
     const ariaText = item
-      ? `${slot.label}: ${item.name} (${level})`
+      ? `${slot.label}: ${item.name}${formatUpgradeTitleSuffix(level)}`
       : items.length
         ? `${slot.label}: ${items.length} предметов`
         : `${slot.label}: данных нет`;
@@ -2094,7 +2109,7 @@ function renderDollSlots() {
           ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
         </select>
       `
-      : item
+      : item && shouldDisplayUpgradeLevel(level)
         ? `<span class="slot-upgrade-select is-static">${escapeHtml(level)}</span>`
         : "";
     const descriptionHtml = item
@@ -2177,7 +2192,7 @@ function renderPassiveMorphRingSlot() {
   }
 
   const titleText = item
-    ? `${slot.label}: ${item.name} (${level})`
+    ? `${slot.label}: ${item.name}${formatUpgradeTitleSuffix(level)}`
     : items.length
       ? `${slot.label}: ${items.length} колец`
       : `${slot.label}: данных нет`;
@@ -2190,7 +2205,7 @@ function renderPassiveMorphRingSlot() {
         ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
       </select>
     `
-    : item
+    : item && shouldDisplayUpgradeLevel(level)
       ? `<span class="slot-upgrade-select is-static">${escapeHtml(level)}</span>`
       : "";
   const descriptionHtml = item
@@ -2346,7 +2361,7 @@ function renderSphereSlots() {
       ? `<img class="sphere-slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">`
       : "";
     const titleText = item
-      ? `${slot.label}: ${item.name}${showUpgrade ? ` (${level})` : ""}`
+      ? `${slot.label}: ${item.name}${showUpgrade ? formatUpgradeTitleSuffix(level) : ""}`
       : items.length
         ? `${slot.label}: ${items.length} сфер`
         : `${slot.label}: данных нет`;
@@ -2359,7 +2374,7 @@ function renderSphereSlots() {
           ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
         </select>
       `
-      : item && showUpgrade
+      : item && showUpgrade && shouldDisplayUpgradeLevel(level)
         ? `<span class="sphere-upgrade-select is-static">${escapeHtml(level)}</span>`
         : "";
 
@@ -2484,7 +2499,7 @@ function renderTrophySlots() {
       ? `<img class="trophy-slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">`
       : "";
     const titleText = item
-      ? `${slot.label}: ${item.name} (${level})`
+      ? `${slot.label}: ${item.name}${formatUpgradeTitleSuffix(level)}`
       : items.length
         ? `${slot.label}: ${items.length} трофей`
         : `${slot.label}: данных нет`;
@@ -2622,7 +2637,7 @@ function renderCategoryList() {
           if (showCategory) {
             metaParts.push(item.category);
           }
-          if (shouldShowSphereUpgrade(item, targetSlot)) {
+          if (shouldShowSphereUpgrade(item, targetSlot) && shouldDisplayUpgradeLevel(previewLevel)) {
             metaParts.push(previewLevel);
           }
           metaParts.push(previewText);
@@ -2738,7 +2753,7 @@ function renderCategoryList() {
                 ${renderItemIcon(item)}
                 <div class="item-info">
                   <div class="item-name">${escapeHtml(item.name)}</div>
-                  <div class="item-meta">${escapeHtml(previewLevel)} · ${escapeHtml(previewText)}</div>
+                  <div class="item-meta">${escapeHtml(shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
                 </div>
                 <button
                   class="equip-btn ${isEquipped ? "is-selected" : ""}"
@@ -2807,7 +2822,7 @@ function renderCategoryList() {
               ${renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${escapeHtml(item.name)}</div>
-                <div class="item-meta">${escapeHtml(previewLevel)} · ${escapeHtml(previewText)}</div>
+                <div class="item-meta">${escapeHtml(shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
               </div>
               <button class="equip-btn ${isEquipped ? "is-selected" : ""}" type="button" data-slot="${slot.key}" data-id="${escapeHtml(item.uid)}" data-action="${isEquipped ? "remove" : "equip"}">
                 ${isEquipped ? "Снять" : "Надеть"}
@@ -2949,6 +2964,9 @@ window.r2App = {
   getLevelKeys,
   getDefaultUpgradeLevel,
   getValidUpgradeLevel,
+  shouldDisplayUpgradeLevel,
+  formatUpgradeSuffix,
+  formatUpgradeTitleSuffix,
   getParamsForLevel,
   getSphereTypeOneTabForSlot,
   matchesEquipmentSlot,

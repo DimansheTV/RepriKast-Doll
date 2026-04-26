@@ -1,517 +1,510 @@
 (() => {
-  if (document.body?.dataset?.page !== "compare") {
-    return;
-  }
+    if (document.body?.dataset?.page !== "compare") {
+        return;
+    }
 
-  const app = window.r2App;
-  const appReady = window.__R2_APP_READY__;
+    const app = window.r2App;
+    const appReady = window.__R2_APP_READY__;
 
-  if (!app || !appReady) {
-    return;
-  }
+    if (!app || !appReady) {
+        return;
+    }
 
-  const COMPARE_SECONDARY_PROFILE_STORAGE_KEY = "r2-doll-compare-secondary-v1";
-  const REVERSE_COMPARE_STATS = new Set([
-    "Получаемый урон",
-    "Получаемый крит. урон",
-    "Расход MP",
-    "Шанс получить крит. удар",
-  ]);
+    const COMPARE_SECONDARY_PROFILE_STORAGE_KEY = "r2-doll-compare-secondary-v1";
+    const REVERSE_COMPARE_STATS = new Set(["Получаемый урон", "Получаемый крит. урон", "Расход MP", "Шанс получить крит. удар"]);
 
-  const compareState = {
-    secondaryProfileId: loadSecondaryProfileId(),
-    editors: {
-      primary: createEditorState(),
-      secondary: createEditorState(),
-    },
-  };
-
-  function createEditorState() {
-    return {
-      activeWorkspaceTab: "inventory",
-      activeSlot: null,
-      activeSphereSlot: app.SPHERE_SLOT_CONFIG[0]?.key || null,
-      activeSphereTypeOneTab: app.SPHERE_TYPE_ONE_TABS[0]?.category || "Сферы разрушения",
-      activeTrophySlot: app.TROPHY_SLOT_CONFIG[0]?.key || null,
+    const compareState = {
+        secondaryProfileId: loadSecondaryProfileId(),
+        editors: {
+            primary: createEditorState(),
+            secondary: createEditorState(),
+        },
     };
-  }
 
-  function loadSecondaryProfileId() {
-    try {
-      return app.normalizeText(localStorage.getItem(COMPARE_SECONDARY_PROFILE_STORAGE_KEY) || "");
-    } catch {
-      return "";
-    }
-  }
-
-  function saveSecondaryProfileId() {
-    try {
-      localStorage.setItem(COMPARE_SECONDARY_PROFILE_STORAGE_KEY, compareState.secondaryProfileId || "");
-    } catch {
-      // Ignore storage errors.
-    }
-  }
-
-  function getProfileById(profileId) {
-    return app.state.profiles.find((profile) => profile.id === profileId) || null;
-  }
-
-  function getPrimaryProfile() {
-    const active = app.getActiveProfile();
-    if (active) {
-      return app.normalizeProfileRecord(active);
+    function createEditorState() {
+        return {
+            activeWorkspaceTab: "inventory",
+            activeSlot: null,
+            activeSphereSlot: app.SPHERE_SLOT_CONFIG[0]?.key || null,
+            activeSphereTypeOneTab: app.SPHERE_TYPE_ONE_TABS[0]?.category || "Сферы разрушения",
+            activeTrophySlot: app.TROPHY_SLOT_CONFIG[0]?.key || null,
+        };
     }
 
-    return app.normalizeProfileRecord({
-      id: "compare-primary",
-      name: "Профиль 1",
-      classConfig: app.state.classConfig,
-      equipped: app.state.equipped,
-      sphereEquipped: app.state.sphereEquipped,
-      trophyEquipped: app.state.trophyEquipped,
-      activeWorkspaceTab: app.state.activeWorkspaceTab,
-    });
-  }
-
-  function getSecondaryProfile() {
-    const profile = getProfileById(compareState.secondaryProfileId);
-    return profile ? app.normalizeProfileRecord(profile) : null;
-  }
-
-  function getEditorProfileId(editorKey) {
-    return editorKey === "primary" ? app.state.activeProfileId : compareState.secondaryProfileId;
-  }
-
-  function getFirstOtherProfileId(primaryId, preferredId = "") {
-    const candidates = app.state.profiles.filter((profile) => profile.id !== primaryId);
-    if (!candidates.length) {
-      return "";
+    function loadSecondaryProfileId() {
+        try {
+            return app.normalizeText(localStorage.getItem(COMPARE_SECONDARY_PROFILE_STORAGE_KEY) || "");
+        } catch {
+            return "";
+        }
     }
 
-    if (preferredId && preferredId !== primaryId && candidates.some((profile) => profile.id === preferredId)) {
-      return preferredId;
+    function saveSecondaryProfileId() {
+        try {
+            localStorage.setItem(COMPARE_SECONDARY_PROFILE_STORAGE_KEY, compareState.secondaryProfileId || "");
+        } catch {
+            // Ignore storage errors.
+        }
     }
 
-    return candidates[0].id;
-  }
-
-  function getVisibleCompareEquipmentSlots() {
-    return app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
-  }
-
-  function ensureSecondaryProfileSelection() {
-    const nextSecondaryId = getFirstOtherProfileId(app.state.activeProfileId, compareState.secondaryProfileId);
-    if (compareState.secondaryProfileId !== nextSecondaryId) {
-      compareState.secondaryProfileId = nextSecondaryId;
-      saveSecondaryProfileId();
-      resetEditorState("secondary", getSecondaryProfile(), true);
-    }
-  }
-
-  function getFirstAvailableEquipmentSlotKey() {
-    const visibleSlots = getVisibleCompareEquipmentSlots();
-    const slot = visibleSlots.find((entry) => app.getItemsForEquipmentSlot(entry).length);
-    return slot?.key || visibleSlots[0]?.key || null;
-  }
-
-  function getFirstAvailableSphereSlotKey() {
-    const slot = app.SPHERE_SLOT_CONFIG.find((entry) => app.getSphereItemsForSlot(entry.key).length);
-    return slot?.key || app.SPHERE_SLOT_CONFIG[0]?.key || null;
-  }
-
-  function getFirstAvailableTrophySlotKey() {
-    const slot = app.TROPHY_SLOT_CONFIG.find((entry) => app.getTrophyItemsForSlot(entry.key).length);
-    return slot?.key || app.TROPHY_SLOT_CONFIG[0]?.key || null;
-  }
-
-  function getEquippedSlotsForProfile(profile) {
-    return app.SLOT_CONFIG.filter((slot) => profile?.equipped?.[slot.key]);
-  }
-
-  function getVisibleEquippedSlotsForProfile(profile) {
-    const visibleKeys = new Set(getVisibleCompareEquipmentSlots().map((slot) => slot.key));
-    return getEquippedSlotsForProfile(profile).filter((slot) => visibleKeys.has(slot.key));
-  }
-
-  function getEquippedSphereSlotsForProfile(profile) {
-    return app.SPHERE_SLOT_CONFIG.filter((slot) => profile?.sphereEquipped?.[slot.key]);
-  }
-
-  function getEquippedTrophySlotsForProfile(profile) {
-    return app.TROPHY_SLOT_CONFIG.filter((slot) => profile?.trophyEquipped?.[slot.key]);
-  }
-
-  function resetEditorState(editorKey, profile, forceWorkspaceReset = false) {
-    const editor = compareState.editors[editorKey];
-    if (forceWorkspaceReset) {
-      editor.activeWorkspaceTab = "inventory";
+    function getProfileById(profileId) {
+        return app.state.profiles.find((profile) => profile.id === profileId) || null;
     }
 
-    const equippedSlots = getVisibleEquippedSlotsForProfile(profile);
-    const equippedSphereSlots = getEquippedSphereSlotsForProfile(profile);
-    const equippedTrophySlots = getEquippedTrophySlotsForProfile(profile);
-
-    editor.activeSlot = equippedSlots[0]?.key || getFirstAvailableEquipmentSlotKey();
-    editor.activeSphereSlot = equippedSphereSlots[0]?.key || getFirstAvailableSphereSlotKey();
-    editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(editor.activeSphereSlot);
-    editor.activeTrophySlot = equippedTrophySlots[0]?.key || getFirstAvailableTrophySlotKey();
-  }
-
-  function ensureEditorState(editorKey, profile) {
-    const editor = compareState.editors[editorKey];
-    if (!["inventory", "spheres", "trophies"].includes(editor.activeWorkspaceTab)) {
-      editor.activeWorkspaceTab = "inventory";
-    }
-
-    if (!app.getSlotConfig(editor.activeSlot)) {
-      editor.activeSlot = getVisibleEquippedSlotsForProfile(profile)[0]?.key || getFirstAvailableEquipmentSlotKey();
-    }
-
-    if (!app.getSphereSlotConfig(editor.activeSphereSlot)) {
-      editor.activeSphereSlot = getEquippedSphereSlotsForProfile(profile)[0]?.key || getFirstAvailableSphereSlotKey();
-    }
-
-    if (!app.getTrophySlotConfig(editor.activeTrophySlot)) {
-      editor.activeTrophySlot = getEquippedTrophySlotsForProfile(profile)[0]?.key || getFirstAvailableTrophySlotKey();
-    }
-
-    if (app.getSphereSlotConfig(editor.activeSphereSlot)?.categoryKey === "sphere_type_1") {
-      editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(editor.activeSphereSlot);
-    } else if (!app.SPHERE_TYPE_ONE_TABS.some((tab) => tab.category === editor.activeSphereTypeOneTab)) {
-      editor.activeSphereTypeOneTab = app.SPHERE_TYPE_ONE_TABS[0]?.category || "Сферы разрушения";
-    }
-  }
-
-  function getUpgradeNumber(level) {
-    const match = String(level || "").match(/\+(\d+)/);
-    return match ? Number(match[1]) : 0;
-  }
-
-  function isBaphometSetItem(item) {
-    return /Бафомет[а]?/u.test(item?.name || "");
-  }
-
-  function isIfritSetItem(item) {
-    return /Ифрит[а]?/u.test(item?.name || "");
-  }
-
-  function collectEquipmentSetBonusForProfile(profile, { name, bonuses, isSetItem }) {
-    const setItems = getEquippedSlotsForProfile(profile)
-      .map((slot) => {
-        const selected = profile.equipped[slot.key];
-        const item = selected ? app.state.itemsById.get(selected.itemId) : null;
-        if (!isSetItem(item)) {
-          return null;
+    function getPrimaryProfile() {
+        const active = app.getActiveProfile();
+        if (active) {
+            return app.normalizeProfileRecord(active);
         }
 
+        return app.normalizeProfileRecord({
+            id: "compare-primary",
+            name: "Профиль 1",
+            classConfig: app.state.classConfig,
+            equipped: app.state.equipped,
+            sphereEquipped: app.state.sphereEquipped,
+            trophyEquipped: app.state.trophyEquipped,
+            activeWorkspaceTab: app.state.activeWorkspaceTab,
+        });
+    }
+
+    function getSecondaryProfile() {
+        const profile = getProfileById(compareState.secondaryProfileId);
+        return profile ? app.normalizeProfileRecord(profile) : null;
+    }
+
+    function getEditorProfileId(editorKey) {
+        return editorKey === "primary" ? app.state.activeProfileId : compareState.secondaryProfileId;
+    }
+
+    function getFirstOtherProfileId(primaryId, preferredId = "") {
+        const candidates = app.state.profiles.filter((profile) => profile.id !== primaryId);
+        if (!candidates.length) {
+            return "";
+        }
+
+        if (preferredId && preferredId !== primaryId && candidates.some((profile) => profile.id === preferredId)) {
+            return preferredId;
+        }
+
+        return candidates[0].id;
+    }
+
+    function getVisibleCompareEquipmentSlots() {
+        return app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
+    }
+
+    function ensureSecondaryProfileSelection() {
+        const nextSecondaryId = getFirstOtherProfileId(app.state.activeProfileId, compareState.secondaryProfileId);
+        if (compareState.secondaryProfileId !== nextSecondaryId) {
+            compareState.secondaryProfileId = nextSecondaryId;
+            saveSecondaryProfileId();
+            resetEditorState("secondary", getSecondaryProfile(), true);
+        }
+    }
+
+    function getFirstAvailableEquipmentSlotKey() {
+        const visibleSlots = getVisibleCompareEquipmentSlots();
+        const slot = visibleSlots.find((entry) => app.getItemsForEquipmentSlot(entry).length);
+        return slot?.key || visibleSlots[0]?.key || null;
+    }
+
+    function getFirstAvailableSphereSlotKey() {
+        const slot = app.SPHERE_SLOT_CONFIG.find((entry) => app.getSphereItemsForSlot(entry.key).length);
+        return slot?.key || app.SPHERE_SLOT_CONFIG[0]?.key || null;
+    }
+
+    function getFirstAvailableTrophySlotKey() {
+        const slot = app.TROPHY_SLOT_CONFIG.find((entry) => app.getTrophyItemsForSlot(entry.key).length);
+        return slot?.key || app.TROPHY_SLOT_CONFIG[0]?.key || null;
+    }
+
+    function getEquippedSlotsForProfile(profile) {
+        return app.SLOT_CONFIG.filter((slot) => profile?.equipped?.[slot.key]);
+    }
+
+    function getVisibleEquippedSlotsForProfile(profile) {
+        const visibleKeys = new Set(getVisibleCompareEquipmentSlots().map((slot) => slot.key));
+        return getEquippedSlotsForProfile(profile).filter((slot) => visibleKeys.has(slot.key));
+    }
+
+    function getEquippedSphereSlotsForProfile(profile) {
+        return app.SPHERE_SLOT_CONFIG.filter((slot) => profile?.sphereEquipped?.[slot.key]);
+    }
+
+    function getEquippedTrophySlotsForProfile(profile) {
+        return app.TROPHY_SLOT_CONFIG.filter((slot) => profile?.trophyEquipped?.[slot.key]);
+    }
+
+    function resetEditorState(editorKey, profile, forceWorkspaceReset = false) {
+        const editor = compareState.editors[editorKey];
+        if (forceWorkspaceReset) {
+            editor.activeWorkspaceTab = "inventory";
+        }
+
+        const equippedSlots = getVisibleEquippedSlotsForProfile(profile);
+        const equippedSphereSlots = getEquippedSphereSlotsForProfile(profile);
+        const equippedTrophySlots = getEquippedTrophySlotsForProfile(profile);
+
+        editor.activeSlot = equippedSlots[0]?.key || getFirstAvailableEquipmentSlotKey();
+        editor.activeSphereSlot = equippedSphereSlots[0]?.key || getFirstAvailableSphereSlotKey();
+        editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(editor.activeSphereSlot);
+        editor.activeTrophySlot = equippedTrophySlots[0]?.key || getFirstAvailableTrophySlotKey();
+    }
+
+    function ensureEditorState(editorKey, profile) {
+        const editor = compareState.editors[editorKey];
+        if (!["inventory", "spheres", "trophies"].includes(editor.activeWorkspaceTab)) {
+            editor.activeWorkspaceTab = "inventory";
+        }
+
+        if (!app.getSlotConfig(editor.activeSlot)) {
+            editor.activeSlot = getVisibleEquippedSlotsForProfile(profile)[0]?.key || getFirstAvailableEquipmentSlotKey();
+        }
+
+        if (!app.getSphereSlotConfig(editor.activeSphereSlot)) {
+            editor.activeSphereSlot = getEquippedSphereSlotsForProfile(profile)[0]?.key || getFirstAvailableSphereSlotKey();
+        }
+
+        if (!app.getTrophySlotConfig(editor.activeTrophySlot)) {
+            editor.activeTrophySlot = getEquippedTrophySlotsForProfile(profile)[0]?.key || getFirstAvailableTrophySlotKey();
+        }
+
+        if (app.getSphereSlotConfig(editor.activeSphereSlot)?.categoryKey === "sphere_type_1") {
+            editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(editor.activeSphereSlot);
+        } else if (!app.SPHERE_TYPE_ONE_TABS.some((tab) => tab.category === editor.activeSphereTypeOneTab)) {
+            editor.activeSphereTypeOneTab = app.SPHERE_TYPE_ONE_TABS[0]?.category || "Сферы разрушения";
+        }
+    }
+
+    function getUpgradeNumber(level) {
+        const match = String(level || "").match(/\+(\d+)/);
+        return match ? Number(match[1]) : 0;
+    }
+
+    function isBaphometSetItem(item) {
+        return /Бафомет[а]?/u.test(item?.name || "");
+    }
+
+    function isIfritSetItem(item) {
+        return /Ифрит[а]?/u.test(item?.name || "");
+    }
+
+    function collectEquipmentSetBonusForProfile(profile, { name, bonuses, isSetItem }) {
+        const setItems = getEquippedSlotsForProfile(profile)
+            .map((slot) => {
+                const selected = profile.equipped[slot.key];
+                const item = selected ? app.state.itemsById.get(selected.itemId) : null;
+                if (!isSetItem(item)) {
+                    return null;
+                }
+
+                return {
+                    item,
+                    level: getUpgradeNumber(app.getValidUpgradeLevel(item, selected.upgradeLevel)),
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.level - a.level);
+
+        if (setItems.length < 3) {
+            return null;
+        }
+
+        const setSize = Math.min(5, setItems.length);
+        const activeItems = setItems.slice(0, setSize);
+        const setLevel = Math.min(...activeItems.map((entry) => entry.level));
+        const sourceStats = bonuses[setLevel]?.[setSize] || [];
+        if (!sourceStats.length) {
+            return null;
+        }
+
+        const displayStats = new Map();
+        sourceStats.forEach((stat) => app.addStatWithRules(displayStats, stat));
+
         return {
-          item,
-          level: getUpgradeNumber(app.getValidUpgradeLevel(item, selected.upgradeLevel)),
+            name,
+            itemCount: setSize,
+            setLevel,
+            stats: [...displayStats.values()],
         };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.level - a.level);
-
-    if (setItems.length < 3) {
-      return null;
     }
 
-    const setSize = Math.min(5, setItems.length);
-    const activeItems = setItems.slice(0, setSize);
-    const setLevel = Math.min(...activeItems.map((entry) => entry.level));
-    const sourceStats = bonuses[setLevel]?.[setSize] || [];
-    if (!sourceStats.length) {
-      return null;
+    function collectEquippedStatsForProfile(profile) {
+        const inventoryBucket = app.createCollectedStatsBucket();
+        const sphereBucket = app.createCollectedStatsBucket();
+        const trophyBucket = app.createCollectedStatsBucket();
+        const numericStats = new Map();
+        const effects = new Map();
+        const setBonuses = [];
+
+        getEquippedSlotsForProfile(profile).forEach((slot) => {
+            const selected = profile.equipped[slot.key];
+            const item = app.state.itemsById.get(selected.itemId);
+            if (!item) {
+                return;
+            }
+
+            app.collectItemParamsIntoBucket(item, selected, inventoryBucket);
+        });
+
+        getEquippedSphereSlotsForProfile(profile).forEach((slot) => {
+            const selected = profile.sphereEquipped[slot.key];
+            const item = app.state.sphereItemsById.get(selected.itemId);
+            if (!item) {
+                return;
+            }
+
+            app.collectItemParamsIntoBucket(item, selected, sphereBucket);
+        });
+
+        getEquippedTrophySlotsForProfile(profile).forEach((slot) => {
+            const selected = profile.trophyEquipped[slot.key];
+            const item = app.state.trophyItemsById.get(selected.itemId);
+            if (!item) {
+                return;
+            }
+
+            app.collectItemParamsIntoBucket(item, selected, trophyBucket);
+        });
+
+        [inventoryBucket, sphereBucket, trophyBucket].forEach((bucket) => {
+            app.addStatCollection(numericStats, [...bucket.numericStats.values()]);
+            bucket.effects.forEach((effect, key) => effects.set(key, effect));
+        });
+
+        [
+            collectEquipmentSetBonusForProfile(profile, {
+                name: "Бафомета",
+                bonuses: app.BAPHOMET_SET_BONUSES,
+                isSetItem: isBaphometSetItem,
+            }),
+            collectEquipmentSetBonusForProfile(profile, {
+                name: "Ифрита",
+                bonuses: app.IFRIT_SET_BONUSES,
+                isSetItem: isIfritSetItem,
+            }),
+        ].forEach((setBonus) => {
+            if (!setBonus) {
+                return;
+            }
+
+            setBonus.stats.forEach((stat) => app.addNumericStat(numericStats, stat));
+            setBonuses.push(setBonus);
+        });
+
+        return {
+            numericStats,
+            setBonuses,
+            sourceBreakdown: {
+                inventory: inventoryBucket,
+                spheres: sphereBucket,
+                trophies: trophyBucket,
+            },
+            effects: [...effects.values()].sort((a, b) => a.localeCompare(b, "ru")),
+        };
     }
 
-    const displayStats = new Map();
-    sourceStats.forEach((stat) => app.addStatWithRules(displayStats, stat));
+    function getClassPanelDataForProfile(profile) {
+        const config = app.CLASS_CONFIGS[profile.classConfig.classKey] || app.CLASS_CONFIGS.knight;
+        const baseStatMap = {};
+        const baseStats = config.baseStats.map((statConfig) => {
+            const value = app.computeBaseClassStat(statConfig, profile.classConfig.level);
+            baseStatMap[statConfig.label] = value;
+            return {
+                label: statConfig.label,
+                value,
+                unit: "",
+            };
+        });
 
-    return {
-      name,
-      itemCount: setSize,
-      setLevel,
-      stats: [...displayStats.values()],
-    };
-  }
-
-  function collectEquippedStatsForProfile(profile) {
-    const inventoryBucket = app.createCollectedStatsBucket();
-    const sphereBucket = app.createCollectedStatsBucket();
-    const trophyBucket = app.createCollectedStatsBucket();
-    const numericStats = new Map();
-    const effects = new Map();
-    const setBonuses = [];
-
-    getEquippedSlotsForProfile(profile).forEach((slot) => {
-      const selected = profile.equipped[slot.key];
-      const item = app.state.itemsById.get(selected.itemId);
-      if (!item) {
-        return;
-      }
-
-      app.collectItemParamsIntoBucket(item, selected, inventoryBucket);
-    });
-
-    getEquippedSphereSlotsForProfile(profile).forEach((slot) => {
-      const selected = profile.sphereEquipped[slot.key];
-      const item = app.state.sphereItemsById.get(selected.itemId);
-      if (!item) {
-        return;
-      }
-
-      app.collectItemParamsIntoBucket(item, selected, sphereBucket);
-    });
-
-    getEquippedTrophySlotsForProfile(profile).forEach((slot) => {
-      const selected = profile.trophyEquipped[slot.key];
-      const item = app.state.trophyItemsById.get(selected.itemId);
-      if (!item) {
-        return;
-      }
-
-      app.collectItemParamsIntoBucket(item, selected, trophyBucket);
-    });
-
-    [inventoryBucket, sphereBucket, trophyBucket].forEach((bucket) => {
-      app.addStatCollection(numericStats, [...bucket.numericStats.values()]);
-      bucket.effects.forEach((effect, key) => effects.set(key, effect));
-    });
-
-    [
-      collectEquipmentSetBonusForProfile(profile, {
-        name: "Бафомета",
-        bonuses: app.BAPHOMET_SET_BONUSES,
-        isSetItem: isBaphometSetItem,
-      }),
-      collectEquipmentSetBonusForProfile(profile, {
-        name: "Ифрита",
-        bonuses: app.IFRIT_SET_BONUSES,
-        isSetItem: isIfritSetItem,
-      }),
-    ].forEach((setBonus) => {
-      if (!setBonus) {
-        return;
-      }
-
-      setBonus.stats.forEach((stat) => app.addNumericStat(numericStats, stat));
-      setBonuses.push(setBonus);
-    });
-
-    return {
-      numericStats,
-      setBonuses,
-      sourceBreakdown: {
-        inventory: inventoryBucket,
-        spheres: sphereBucket,
-        trophies: trophyBucket,
-      },
-      effects: [...effects.values()].sort((a, b) => a.localeCompare(b, "ru")),
-    };
-  }
-
-  function getClassPanelDataForProfile(profile) {
-    const config = app.CLASS_CONFIGS[profile.classConfig.classKey] || app.CLASS_CONFIGS.knight;
-    const baseStatMap = {};
-    const baseStats = config.baseStats.map((statConfig) => {
-      const value = app.computeBaseClassStat(statConfig, profile.classConfig.level);
-      baseStatMap[statConfig.label] = value;
-      return {
-        label: statConfig.label,
-        value,
-        unit: "",
-      };
-    });
-
-    return {
-      config,
-      baseStatMap,
-      baseStats,
-      derivedStats: config.derivedStats(baseStatMap),
-    };
-  }
-
-  function getTotalStatsDataForProfile(profile) {
-    const totalStats = new Map();
-    const { numericStats, effects } = collectEquippedStatsForProfile(profile);
-    const { config, baseStats, baseStatMap } = getClassPanelDataForProfile(profile);
-    const effectiveAttributeMap = {
-      ...baseStatMap,
-    };
-
-    ["Сила", "Ловкость", "Интеллект"].forEach((label) => {
-      const bonus = numericStats.get(`${label}::`);
-      if (bonus) {
-        effectiveAttributeMap[label] = (effectiveAttributeMap[label] || 0) + bonus.value;
-      }
-    });
-
-    const derivedStats = config.derivedStats(effectiveAttributeMap);
-
-    app.addStatCollection(totalStats, baseStats);
-    app.addStatCollection(totalStats, derivedStats);
-    app.addStatCollection(totalStats, [...numericStats.values()]);
-
-    const { mainStats, secondaryStats } = app.getDisplayStatsFromMap(totalStats, { includeMainZeros: true });
-
-    return {
-      mainStats,
-      secondaryStats,
-      effects,
-    };
-  }
-
-  function getStatKey(stat) {
-    return `${stat.label}::${stat.unit || ""}`;
-  }
-
-  function parseStatKey(key) {
-    const [label, unit = ""] = key.split("::");
-    return { label, unit };
-  }
-
-  function formatAbsoluteStat(stat) {
-    return app.MAIN_STATS.includes(stat.label)
-      ? app.formatBoardPrimaryValue(stat)
-      : app.formatStatValue(stat.value, stat.unit);
-  }
-
-  function getComparisonClasses(label, primaryValue, secondaryValue) {
-    if (primaryValue === secondaryValue) {
-      return {
-        primary: "",
-        secondary: "",
-        delta: "",
-      };
+        return {
+            config,
+            baseStatMap,
+            baseStats,
+            derivedStats: config.derivedStats(baseStatMap),
+        };
     }
 
-    const primaryBetter = REVERSE_COMPARE_STATS.has(label)
-      ? primaryValue < secondaryValue
-      : primaryValue > secondaryValue;
+    function getTotalStatsDataForProfile(profile) {
+        const totalStats = new Map();
+        const { numericStats, effects } = collectEquippedStatsForProfile(profile);
+        const { config, baseStats, baseStatMap } = getClassPanelDataForProfile(profile);
+        const effectiveAttributeMap = {
+            ...baseStatMap,
+        };
 
-    return {
-      primary: primaryBetter ? "is-better" : "is-worse",
-      secondary: primaryBetter ? "is-worse" : "is-better",
-      delta: primaryBetter ? "is-better" : "is-worse",
-    };
-  }
+        ["Сила", "Ловкость", "Интеллект"].forEach((label) => {
+            const bonus = numericStats.get(`${label}::`);
+            if (bonus) {
+                effectiveAttributeMap[label] = (effectiveAttributeMap[label] || 0) + bonus.value;
+            }
+        });
 
-  function buildComparisonRows(primaryProfile, secondaryProfile) {
-    const primaryStats = getTotalStatsDataForProfile(primaryProfile);
-    const secondaryStats = getTotalStatsDataForProfile(secondaryProfile);
-    const primaryAllStats = [...primaryStats.mainStats, ...primaryStats.secondaryStats];
-    const secondaryAllStats = [...secondaryStats.mainStats, ...secondaryStats.secondaryStats];
-    const primaryMap = new Map(primaryAllStats.map((stat) => [getStatKey(stat), stat]));
-    const secondaryMap = new Map(secondaryAllStats.map((stat) => [getStatKey(stat), stat]));
+        const derivedStats = config.derivedStats(effectiveAttributeMap);
 
-    const primaryMainMap = new Map(primaryStats.mainStats.map((stat) => [stat.label, stat]));
-    const secondaryMainMap = new Map(secondaryStats.mainStats.map((stat) => [stat.label, stat]));
+        app.addStatCollection(totalStats, baseStats);
+        app.addStatCollection(totalStats, derivedStats);
+        app.addStatCollection(totalStats, [...numericStats.values()]);
 
-    const keys = app.MAIN_STATS.map((label) => {
-      const stat = primaryMainMap.get(label) || secondaryMainMap.get(label) || { label, unit: "" };
-      return getStatKey(stat);
-    });
+        const { mainStats, secondaryStats } = app.getDisplayStatsFromMap(totalStats, { includeMainZeros: true });
 
-    const secondaryKeyMap = new Map();
-    [...primaryStats.secondaryStats, ...secondaryStats.secondaryStats].forEach((stat) => {
-      secondaryKeyMap.set(getStatKey(stat), stat);
-    });
-
-    const orderedSecondaryKeys = [...secondaryKeyMap.keys()].sort((a, b) => {
-      const statA = secondaryKeyMap.get(a);
-      const statB = secondaryKeyMap.get(b);
-      const priorityA = app.SECONDARY_STAT_PRIORITY.includes(statA.label)
-        ? app.SECONDARY_STAT_PRIORITY.indexOf(statA.label)
-        : Number.MAX_SAFE_INTEGER;
-      const priorityB = app.SECONDARY_STAT_PRIORITY.includes(statB.label)
-        ? app.SECONDARY_STAT_PRIORITY.indexOf(statB.label)
-        : Number.MAX_SAFE_INTEGER;
-      const priorityDiff = priorityA - priorityB;
-      if (priorityDiff !== 0) {
-        return priorityDiff;
-      }
-
-      return statA.label.localeCompare(statB.label, "ru");
-    });
-
-    orderedSecondaryKeys.forEach((key) => {
-      if (!keys.includes(key)) {
-        keys.push(key);
-      }
-    });
-
-    return keys.map((key) => {
-      const baseStat = primaryMap.get(key) || secondaryMap.get(key) || parseStatKey(key);
-      const primaryStat = primaryMap.get(key) || { label: baseStat.label, unit: baseStat.unit, value: 0 };
-      const secondaryStat = secondaryMap.get(key) || { label: baseStat.label, unit: baseStat.unit, value: 0 };
-      const delta = primaryStat.value - secondaryStat.value;
-      const classes = getComparisonClasses(baseStat.label, primaryStat.value, secondaryStat.value);
-
-      return {
-        label: baseStat.label,
-        unit: baseStat.unit || "",
-        primary: primaryStat,
-        secondary: secondaryStat,
-        delta,
-        classes,
-      };
-    });
-  }
-
-  function mutateProfile(editorKey, updater) {
-    const profileId = getEditorProfileId(editorKey);
-    const profileIndex = app.state.profiles.findIndex((profile) => profile.id === profileId);
-    if (profileIndex === -1) {
-      return;
+        return {
+            mainStats,
+            secondaryStats,
+            effects,
+        };
     }
 
-    const draft = app.normalizeProfileRecord(app.state.profiles[profileIndex], profileIndex);
-    updater(draft);
-    draft.updatedAt = Date.now();
-
-    app.state.profiles[profileIndex] = app.normalizeProfileRecord(draft, profileIndex);
-    app.saveProfilesState();
-
-    if (editorKey === "primary") {
-      app.applyProfileToState(app.state.profiles[profileIndex]);
+    function getStatKey(stat) {
+        return `${stat.label}::${stat.unit || ""}`;
     }
-  }
 
-  function renderCompareInventoryStage(editorKey, profile, editor) {
-    const visibleSlots = app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
+    function parseStatKey(key) {
+        const [label, unit = ""] = key.split("::");
+        return { label, unit };
+    }
 
-    const slotsHtml = visibleSlots.map((slot) => {
-      const items = app.getItemsForEquipmentSlot(slot);
-      const selected = profile.equipped[slot.key];
-      const item = selected ? app.state.itemsById.get(selected.itemId) : null;
-      const level = item ? app.getValidUpgradeLevel(item, selected.upgradeLevel) : null;
-      const levels = item ? app.getLevelKeys(item) : [];
-      const classes = ["slot-cell"];
+    function formatAbsoluteStat(stat) {
+        return app.MAIN_STATS.includes(stat.label) ? app.formatBoardPrimaryValue(stat) : app.formatStatValue(stat.value, stat.unit);
+    }
 
-      if (editor.activeSlot === slot.key) {
-        classes.push("is-active");
-      }
-      if (item) {
-        classes.push("is-filled");
-      }
-      if (!items.length) {
-        classes.push("is-unavailable");
-      }
+    function getComparisonClasses(label, primaryValue, secondaryValue) {
+        if (primaryValue === secondaryValue) {
+            return {
+                primary: "",
+                secondary: "",
+                delta: "",
+            };
+        }
 
-      const imageHtml = item?.image
-        ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
-        : "";
-      const upgradeControl = item && levels.length > 1
-        ? `
+        const primaryBetter = REVERSE_COMPARE_STATS.has(label) ? primaryValue < secondaryValue : primaryValue > secondaryValue;
+
+        return {
+            primary: primaryBetter ? "is-better" : "is-worse",
+            secondary: primaryBetter ? "is-worse" : "is-better",
+            delta: primaryBetter ? "is-better" : "is-worse",
+        };
+    }
+
+    function buildComparisonRows(primaryProfile, secondaryProfile) {
+        const primaryStats = getTotalStatsDataForProfile(primaryProfile);
+        const secondaryStats = getTotalStatsDataForProfile(secondaryProfile);
+        const primaryAllStats = [...primaryStats.mainStats, ...primaryStats.secondaryStats];
+        const secondaryAllStats = [...secondaryStats.mainStats, ...secondaryStats.secondaryStats];
+        const primaryMap = new Map(primaryAllStats.map((stat) => [getStatKey(stat), stat]));
+        const secondaryMap = new Map(secondaryAllStats.map((stat) => [getStatKey(stat), stat]));
+
+        const primaryMainMap = new Map(primaryStats.mainStats.map((stat) => [stat.label, stat]));
+        const secondaryMainMap = new Map(secondaryStats.mainStats.map((stat) => [stat.label, stat]));
+
+        const keys = app.MAIN_STATS.map((label) => {
+            const stat = primaryMainMap.get(label) || secondaryMainMap.get(label) || { label, unit: "" };
+            return getStatKey(stat);
+        });
+
+        const secondaryKeyMap = new Map();
+        [...primaryStats.secondaryStats, ...secondaryStats.secondaryStats].forEach((stat) => {
+            secondaryKeyMap.set(getStatKey(stat), stat);
+        });
+
+        const orderedSecondaryKeys = [...secondaryKeyMap.keys()].sort((a, b) => {
+            const statA = secondaryKeyMap.get(a);
+            const statB = secondaryKeyMap.get(b);
+            const priorityA = app.SECONDARY_STAT_PRIORITY.includes(statA.label)
+                ? app.SECONDARY_STAT_PRIORITY.indexOf(statA.label)
+                : Number.MAX_SAFE_INTEGER;
+            const priorityB = app.SECONDARY_STAT_PRIORITY.includes(statB.label)
+                ? app.SECONDARY_STAT_PRIORITY.indexOf(statB.label)
+                : Number.MAX_SAFE_INTEGER;
+            const priorityDiff = priorityA - priorityB;
+            if (priorityDiff !== 0) {
+                return priorityDiff;
+            }
+
+            return statA.label.localeCompare(statB.label, "ru");
+        });
+
+        orderedSecondaryKeys.forEach((key) => {
+            if (!keys.includes(key)) {
+                keys.push(key);
+            }
+        });
+
+        return keys.map((key) => {
+            const baseStat = primaryMap.get(key) || secondaryMap.get(key) || parseStatKey(key);
+            const primaryStat = primaryMap.get(key) || { label: baseStat.label, unit: baseStat.unit, value: 0 };
+            const secondaryStat = secondaryMap.get(key) || { label: baseStat.label, unit: baseStat.unit, value: 0 };
+            const delta = primaryStat.value - secondaryStat.value;
+            const classes = getComparisonClasses(baseStat.label, primaryStat.value, secondaryStat.value);
+
+            return {
+                label: baseStat.label,
+                unit: baseStat.unit || "",
+                primary: primaryStat,
+                secondary: secondaryStat,
+                delta,
+                classes,
+            };
+        });
+    }
+
+    function mutateProfile(editorKey, updater) {
+        const profileId = getEditorProfileId(editorKey);
+        const profileIndex = app.state.profiles.findIndex((profile) => profile.id === profileId);
+        if (profileIndex === -1) {
+            return;
+        }
+
+        const draft = app.normalizeProfileRecord(app.state.profiles[profileIndex], profileIndex);
+        updater(draft);
+        draft.updatedAt = Date.now();
+
+        app.state.profiles[profileIndex] = app.normalizeProfileRecord(draft, profileIndex);
+        app.saveProfilesState();
+
+        if (editorKey === "primary") {
+            app.applyProfileToState(app.state.profiles[profileIndex]);
+        }
+    }
+
+    function renderCompareInventoryStage(editorKey, profile, editor) {
+        const visibleSlots = app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
+
+        const slotsHtml = visibleSlots
+            .map((slot) => {
+                const items = app.getItemsForEquipmentSlot(slot);
+                const selected = profile.equipped[slot.key];
+                const item = selected ? app.state.itemsById.get(selected.itemId) : null;
+                const level = item ? app.getValidUpgradeLevel(item, selected.upgradeLevel) : null;
+                const levels = item ? app.getLevelKeys(item) : [];
+                const classes = ["slot-cell"];
+
+                if (editor.activeSlot === slot.key) {
+                    classes.push("is-active");
+                }
+                if (item) {
+                    classes.push("is-filled");
+                }
+                if (!items.length) {
+                    classes.push("is-unavailable");
+                }
+
+                const imageHtml = item?.image
+                    ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
+                    : "";
+                const upgradeControl =
+                    item && levels.length > 1
+                        ? `
           <select class="slot-upgrade-select" data-compare-upgrade-type="inventory" data-slot-key="${slot.key}">
             ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
           </select>
         `
-        : item
-          ? `<span class="slot-upgrade-select is-static">${app.escapeHtml(level)}</span>`
-          : "";
+                        : item && app.shouldDisplayUpgradeLevel(level)
+                          ? `<span class="slot-upgrade-select is-static">${app.escapeHtml(level)}</span>`
+                          : "";
 
-      return `
+                return `
         <div class="${classes.join(" ")}" style="grid-column: ${slot.col}; grid-row: ${slot.row};">
           <button
             type="button"
@@ -526,51 +519,91 @@
           ${upgradeControl}
         </div>
       `;
-    }).join("");
+            })
+            .join("");
 
-    return `
+        const passiveSlot = app.getSlotConfig(app.PASSIVE_MORPH_RING_SLOT_KEY);
+        const passiveSelected = passiveSlot ? profile.equipped[passiveSlot.key] : null;
+        const passiveItem = passiveSelected ? app.state.itemsById.get(passiveSelected.itemId) : null;
+        const passiveLevel = passiveItem ? app.getValidUpgradeLevel(passiveItem, passiveSelected.upgradeLevel) : null;
+        const passiveClasses = ["slot-cell", "passive-slot-cell", "compare-passive-slot-cell"];
+
+        if (passiveItem) {
+            passiveClasses.push("is-filled");
+        }
+        if (editor.activeSlot === passiveSlot?.key) {
+            passiveClasses.push("is-active");
+        }
+
+        const passiveImageHtml = passiveItem?.image
+            ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(passiveItem.name)}" loading="lazy">`
+            : "";
+        const passiveSlotHtml =
+            passiveItem && passiveSlot
+                ? `
+        <section class="compare-passive-slot-panel">
+          <div class="${passiveClasses.join(" ")}" data-slot="${passiveSlot.key}">
+            <button
+              type="button"
+              class="slot-pin"
+              data-compare-slot-pin="1"
+              data-compare-slot-type="inventory"
+              data-slot-key="${passiveSlot.key}"
+              aria-label="${app.escapeHtml(`${passiveSlot.label}: ${passiveItem.name}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              title="${app.escapeHtml(`${passiveSlot.label}: ${passiveItem.name}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+            >
+              <span class="slot-item-visual" aria-hidden="true">${passiveImageHtml}</span>
+            </button>
+          </div>
+        </section>
+      `
+                : "";
+
+        return `
       <section class="equipment-column compare-stage-column">
         <section class="equipment-stage compare-equipment-stage" aria-label="Слоты экипировки">
           <div class="slot-grid">${slotsHtml}</div>
         </section>
+        ${passiveSlotHtml}
       </section>
     `;
-  }
+    }
 
-  function renderCompareSphereStage(profile, editor) {
-    const slotsHtml = app.SPHERE_SLOT_CONFIG.map((slot) => {
-      const items = app.getSphereItemsForSlot(slot.key);
-      const selected = profile.sphereEquipped[slot.key];
-      const item = selected ? app.state.sphereItemsById.get(selected.itemId) : null;
-      const level = item ? app.getValidUpgradeLevel(item, selected.upgradeLevel) : null;
-      const levels = item ? app.getLevelKeys(item) : [];
-      const showUpgrade = item ? slot.categoryKey === "sphere_type_1" : false;
-      const classes = ["sphere-slot-cell", slot.positionClass];
+    function renderCompareSphereStage(profile, editor) {
+        const slotsHtml = app.SPHERE_SLOT_CONFIG.map((slot) => {
+            const items = app.getSphereItemsForSlot(slot.key);
+            const selected = profile.sphereEquipped[slot.key];
+            const item = selected ? app.state.sphereItemsById.get(selected.itemId) : null;
+            const level = item ? app.getValidUpgradeLevel(item, selected.upgradeLevel) : null;
+            const levels = item ? app.getLevelKeys(item) : [];
+            const showUpgrade = item ? slot.categoryKey === "sphere_type_1" : false;
+            const classes = ["sphere-slot-cell", slot.positionClass];
 
-      if (editor.activeSphereSlot === slot.key) {
-        classes.push("is-active");
-      }
-      if (item) {
-        classes.push("is-filled");
-      }
-      if (!items.length) {
-        classes.push("is-unavailable");
-      }
+            if (editor.activeSphereSlot === slot.key) {
+                classes.push("is-active");
+            }
+            if (item) {
+                classes.push("is-filled");
+            }
+            if (!items.length) {
+                classes.push("is-unavailable");
+            }
 
-      const imageHtml = item?.image
-        ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
-        : "";
-      const upgradeControl = item && showUpgrade && levels.length > 1
-        ? `
+            const imageHtml = item?.image
+                ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
+                : "";
+            const upgradeControl =
+                item && showUpgrade && levels.length > 1
+                    ? `
           <select class="sphere-upgrade-select" data-compare-upgrade-type="sphere" data-slot-key="${slot.key}">
             ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
           </select>
         `
-        : item && showUpgrade
-          ? `<span class="sphere-upgrade-select is-static">${app.escapeHtml(level)}</span>`
-          : "";
+                    : item && showUpgrade && app.shouldDisplayUpgradeLevel(level)
+                      ? `<span class="sphere-upgrade-select is-static">${app.escapeHtml(level)}</span>`
+                      : "";
 
-      return `
+            return `
         <div class="${classes.join(" ")}">
           <button
             type="button"
@@ -585,47 +618,48 @@
           ${upgradeControl}
         </div>
       `;
-    }).join("");
+        }).join("");
 
-    return `
+        return `
       <section class="sphere-column compare-stage-column">
         <section class="sphere-stage compare-sphere-stage" aria-label="Слоты сфер">
           <div class="sphere-slot-grid">${slotsHtml}</div>
         </section>
       </section>
     `;
-  }
+    }
 
-  function renderCompareTrophyStage(profile, editor) {
-    const slotsHtml = app.TROPHY_SLOT_CONFIG.map((slot) => {
-      const items = app.getTrophyItemsForSlot(slot.key);
-      const selected = profile.trophyEquipped[slot.key];
-      const item = selected ? app.state.trophyItemsById.get(selected.itemId) : null;
-      const level = item ? app.getValidUpgradeLevel(item, selected.upgradeLevel) : null;
-      const levels = item ? app.getLevelKeys(item) : [];
-      const classes = ["trophy-slot-cell", slot.positionClass];
+    function renderCompareTrophyStage(profile, editor) {
+        const slotsHtml = app.TROPHY_SLOT_CONFIG.map((slot) => {
+            const items = app.getTrophyItemsForSlot(slot.key);
+            const selected = profile.trophyEquipped[slot.key];
+            const item = selected ? app.state.trophyItemsById.get(selected.itemId) : null;
+            const level = item ? app.getValidUpgradeLevel(item, selected.upgradeLevel) : null;
+            const levels = item ? app.getLevelKeys(item) : [];
+            const classes = ["trophy-slot-cell", slot.positionClass];
 
-      if (editor.activeTrophySlot === slot.key) {
-        classes.push("is-active");
-      }
-      if (item) {
-        classes.push("is-filled");
-      }
+            if (editor.activeTrophySlot === slot.key) {
+                classes.push("is-active");
+            }
+            if (item) {
+                classes.push("is-filled");
+            }
 
-      const imageHtml = item?.image
-        ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
-        : "";
-      const upgradeControl = item && levels.length > 1
-        ? `
+            const imageHtml = item?.image
+                ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
+                : "";
+            const upgradeControl =
+                item && levels.length > 1
+                    ? `
           <select class="trophy-upgrade-select" data-compare-upgrade-type="trophy" data-slot-key="${slot.key}">
             ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
           </select>
         `
-        : item
-          ? `<span class="trophy-upgrade-select is-static">${app.escapeHtml(level)}</span>`
-          : "";
+                    : item && app.shouldDisplayUpgradeLevel(level)
+                      ? `<span class="trophy-upgrade-select is-static">${app.escapeHtml(level)}</span>`
+                      : "";
 
-      return `
+            return `
         <div class="${classes.join(" ")}">
           <button
             type="button"
@@ -640,43 +674,44 @@
           ${upgradeControl}
         </div>
       `;
-    }).join("");
+        }).join("");
 
-    return `
+        return `
       <section class="trophy-column compare-stage-column">
         <section class="trophy-stage compare-trophy-stage" aria-label="Слоты трофеев">
           <div class="trophy-slot-grid">${slotsHtml}</div>
         </section>
       </section>
     `;
-  }
-
-  function renderCompareCatalogForInventory(profile, editor) {
-    const slot = app.getSlotConfig(editor.activeSlot);
-    if (!slot) {
-      return {
-        title: "Инвентарь",
-        count: 0,
-        body: '<div class="empty-note">Выберите слот экипировки.</div>',
-      };
     }
 
-    const items = app.getItemsForEquipmentSlot(slot);
-    const selectedItemId = profile.equipped[slot.key]?.itemId;
-    const body = items.length
-      ? items.map((item) => {
-        const previewLevel = app.getDefaultUpgradeLevel(item);
-        const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Без параметров";
-        const isEquipped = String(item.uid) === String(selectedItemId || "");
+    function renderCompareCatalogForInventory(profile, editor) {
+        const slot = app.getSlotConfig(editor.activeSlot);
+        if (!slot) {
+            return {
+                title: "Инвентарь",
+                count: 0,
+                body: '<div class="empty-note">Выберите слот экипировки.</div>',
+            };
+        }
 
-        return `
+        const items = app.getItemsForEquipmentSlot(slot);
+        const selectedItemId = profile.equipped[slot.key]?.itemId;
+        const body = items.length
+            ? items
+                  .map((item) => {
+                      const previewLevel = app.getDefaultUpgradeLevel(item);
+                      const params = app.getParamsForLevel(item, previewLevel);
+                      const previewText = params[0] || "Без параметров";
+                      const isEquipped = String(item.uid) === String(selectedItemId || "");
+
+                      return `
           <div class="catalog-item ${isEquipped ? "is-selected" : ""}">
             <div class="item-row">
               ${app.renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(previewLevel)} · ${app.escapeHtml(previewText)}</div>
+                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
               </div>
               <button
                 class="equip-btn ${isEquipped ? "is-selected" : ""}"
@@ -690,42 +725,44 @@
             </div>
           </div>
         `;
-      }).join("")
-      : '<div class="empty-note">Для этого слота пока нет предметов.</div>';
+                  })
+                  .join("")
+            : '<div class="empty-note">Для этого слота пока нет предметов.</div>';
 
-    return {
-      title: slot.catalogLabel || slot.label,
-      count: items.length,
-      body,
-    };
-  }
-
-  function renderCompareCatalogForSphere(profile, editor) {
-    const slot = app.getSphereSlotConfig(editor.activeSphereSlot);
-    if (!slot) {
-      return {
-        title: "Сферы",
-        count: 0,
-        body: '<div class="empty-note">Выберите слот сферы.</div>',
-      };
+        return {
+            title: slot.catalogLabel || slot.label,
+            count: items.length,
+            body,
+        };
     }
 
-    const items = app.getSphereItemsForSlot(slot.key);
-    const selectedItemId = profile.sphereEquipped[slot.key]?.itemId;
-    const body = items.length
-      ? items.map((item) => {
-        const previewLevel = app.getDefaultUpgradeLevel(item);
-        const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Без параметров";
-        const showUpgrade = slot.categoryKey === "sphere_type_1";
-        const isEquipped = String(item.uid) === String(selectedItemId || "");
-        const metaParts = [previewText];
-
-        if (showUpgrade) {
-          metaParts.unshift(previewLevel);
+    function renderCompareCatalogForSphere(profile, editor) {
+        const slot = app.getSphereSlotConfig(editor.activeSphereSlot);
+        if (!slot) {
+            return {
+                title: "Сферы",
+                count: 0,
+                body: '<div class="empty-note">Выберите слот сферы.</div>',
+            };
         }
 
-        return `
+        const items = app.getSphereItemsForSlot(slot.key);
+        const selectedItemId = profile.sphereEquipped[slot.key]?.itemId;
+        const body = items.length
+            ? items
+                  .map((item) => {
+                      const previewLevel = app.getDefaultUpgradeLevel(item);
+                      const params = app.getParamsForLevel(item, previewLevel);
+                      const previewText = params[0] || "Без параметров";
+                      const showUpgrade = slot.categoryKey === "sphere_type_1";
+                      const isEquipped = String(item.uid) === String(selectedItemId || "");
+                      const metaParts = [previewText];
+
+                      if (showUpgrade && app.shouldDisplayUpgradeLevel(previewLevel)) {
+                          metaParts.unshift(previewLevel);
+                      }
+
+                      return `
           <div class="catalog-item ${isEquipped ? "is-selected" : ""}">
             <div class="item-row">
               ${app.renderItemIcon(item)}
@@ -745,42 +782,44 @@
             </div>
           </div>
         `;
-      }).join("")
-      : '<div class="empty-note">Для этого слота пока нет сфер.</div>';
+                  })
+                  .join("")
+            : '<div class="empty-note">Для этого слота пока нет сфер.</div>';
 
-    return {
-      title: slot.label,
-      count: items.length,
-      body,
-    };
-  }
-
-  function renderCompareCatalogForTrophy(profile, editor) {
-    const slot = app.getTrophySlotConfig(editor.activeTrophySlot);
-    if (!slot) {
-      return {
-        title: "Трофеи",
-        count: 0,
-        body: '<div class="empty-note">Выберите слот трофея.</div>',
-      };
+        return {
+            title: slot.label,
+            count: items.length,
+            body,
+        };
     }
 
-    const items = app.getTrophyItemsForSlot(slot.key);
-    const selectedItemId = profile.trophyEquipped[slot.key]?.itemId;
-    const body = items.length
-      ? items.map((item) => {
-        const previewLevel = app.getDefaultUpgradeLevel(item);
-        const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Без параметров";
-        const isEquipped = String(item.uid) === String(selectedItemId || "");
+    function renderCompareCatalogForTrophy(profile, editor) {
+        const slot = app.getTrophySlotConfig(editor.activeTrophySlot);
+        if (!slot) {
+            return {
+                title: "Трофеи",
+                count: 0,
+                body: '<div class="empty-note">Выберите слот трофея.</div>',
+            };
+        }
 
-        return `
+        const items = app.getTrophyItemsForSlot(slot.key);
+        const selectedItemId = profile.trophyEquipped[slot.key]?.itemId;
+        const body = items.length
+            ? items
+                  .map((item) => {
+                      const previewLevel = app.getDefaultUpgradeLevel(item);
+                      const params = app.getParamsForLevel(item, previewLevel);
+                      const previewText = params[0] || "Без параметров";
+                      const isEquipped = String(item.uid) === String(selectedItemId || "");
+
+                      return `
           <div class="catalog-item ${isEquipped ? "is-selected" : ""}">
             <div class="item-row">
               ${app.renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(previewLevel)} · ${app.escapeHtml(previewText)}</div>
+                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
               </div>
               <button
                 class="equip-btn ${isEquipped ? "is-selected" : ""}"
@@ -794,46 +833,47 @@
             </div>
           </div>
         `;
-      }).join("")
-      : '<div class="empty-note">Для этого слота пока нет трофеев.</div>';
+                  })
+                  .join("")
+            : '<div class="empty-note">Для этого слота пока нет трофеев.</div>';
 
-    return {
-      title: `${slot.label} · ${slot.statLabel}`,
-      count: items.length,
-      body,
-    };
-  }
-
-  function renderCompareCatalog(profile, editor) {
-    if (editor.activeWorkspaceTab === "spheres") {
-      return renderCompareCatalogForSphere(profile, editor);
+        return {
+            title: `${slot.label} · ${slot.statLabel}`,
+            count: items.length,
+            body,
+        };
     }
 
-    if (editor.activeWorkspaceTab === "trophies") {
-      return renderCompareCatalogForTrophy(profile, editor);
+    function renderCompareCatalog(profile, editor) {
+        if (editor.activeWorkspaceTab === "spheres") {
+            return renderCompareCatalogForSphere(profile, editor);
+        }
+
+        if (editor.activeWorkspaceTab === "trophies") {
+            return renderCompareCatalogForTrophy(profile, editor);
+        }
+
+        return renderCompareCatalogForInventory(profile, editor);
     }
 
-    return renderCompareCatalogForInventory(profile, editor);
-  }
+    function renderProfileEditor(editorKey, profile, containerId, title) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            return;
+        }
 
-  function renderProfileEditor(editorKey, profile, containerId, title) {
-    const container = document.getElementById(containerId);
-    if (!container) {
-      return;
-    }
+        ensureEditorState(editorKey, profile);
+        const editor = compareState.editors[editorKey];
+        const classLabel = app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || "Класс";
+        let stageHtml = renderCompareInventoryStage(editorKey, profile, editor);
 
-    ensureEditorState(editorKey, profile);
-    const editor = compareState.editors[editorKey];
-    const classLabel = app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || "Класс";
-    let stageHtml = renderCompareInventoryStage(editorKey, profile, editor);
+        if (editor.activeWorkspaceTab === "spheres") {
+            stageHtml = renderCompareSphereStage(profile, editor);
+        } else if (editor.activeWorkspaceTab === "trophies") {
+            stageHtml = renderCompareTrophyStage(profile, editor);
+        }
 
-    if (editor.activeWorkspaceTab === "spheres") {
-      stageHtml = renderCompareSphereStage(profile, editor);
-    } else if (editor.activeWorkspaceTab === "trophies") {
-      stageHtml = renderCompareTrophyStage(profile, editor);
-    }
-
-    container.innerHTML = `
+        container.innerHTML = `
       <section class="compare-editor-shell">
         <div class="section-title-row compare-editor-heading">
           <div class="compare-editor-headline">
@@ -847,11 +887,15 @@
           <label class="class-field">
             <span class="summary-label">Класс</span>
             <select class="class-control" data-compare-class-select="1">
-              ${Object.entries(app.CLASS_CONFIGS).map(([key, config]) => `
+              ${Object.entries(app.CLASS_CONFIGS)
+                  .map(
+                      ([key, config]) => `
                 <option value="${app.escapeHtml(key)}" ${profile.classConfig.classKey === key ? "selected" : ""}>
                   ${app.escapeHtml(config.label)}
                 </option>
-              `).join("")}
+              `,
+                  )
+                  .join("")}
             </select>
           </label>
 
@@ -880,25 +924,25 @@
         </section>
       </section>
     `;
-  }
-
-  function renderSummary(primaryProfile, secondaryProfile) {
-    const container = document.getElementById("compare-summary");
-    if (!container) {
-      return;
     }
 
-    if (!secondaryProfile) {
-      container.innerHTML = '<div class="empty-note">Создайте или выберите второй профиль для сравнения.</div>';
-      return;
-    }
+    function renderSummary(primaryProfile, secondaryProfile) {
+        const container = document.getElementById("compare-summary");
+        if (!container) {
+            return;
+        }
 
-    const rows = buildComparisonRows(primaryProfile, secondaryProfile);
-    const betterCount = rows.filter((row) => row.classes.delta === "is-better").length;
-    const worseCount = rows.filter((row) => row.classes.delta === "is-worse").length;
-    const equalCount = rows.length - betterCount - worseCount;
+        if (!secondaryProfile) {
+            container.innerHTML = '<div class="empty-note">Создайте или выберите второй профиль для сравнения.</div>';
+            return;
+        }
 
-    container.innerHTML = `
+        const rows = buildComparisonRows(primaryProfile, secondaryProfile);
+        const betterCount = rows.filter((row) => row.classes.delta === "is-better").length;
+        const worseCount = rows.filter((row) => row.classes.delta === "is-worse").length;
+        const equalCount = rows.length - betterCount - worseCount;
+
+        container.innerHTML = `
       <section class="compare-summary-shell">
         <div class="section-title-row compare-summary-heading">
           <div class="compare-summary-headline">
@@ -921,204 +965,214 @@
             <div class="compare-table-header">${app.escapeHtml(secondaryProfile.name)}</div>
             <div class="compare-table-header">Δ</div>
 
-            ${rows.map((row) => `
+            ${rows
+                .map(
+                    (row) => `
               <div class="compare-table-cell compare-table-label">${app.escapeHtml(row.label)}</div>
               <div class="compare-table-cell compare-table-value ${row.classes.primary}">${app.escapeHtml(formatAbsoluteStat(row.primary))}</div>
               <div class="compare-table-cell compare-table-value ${row.classes.secondary}">${app.escapeHtml(formatAbsoluteStat(row.secondary))}</div>
               <div class="compare-table-cell compare-table-delta ${row.classes.delta}">${app.escapeHtml(app.formatStatValue(row.delta, row.unit))}</div>
-            `).join("")}
+            `,
+                )
+                .join("")}
           </div>
         </div>
       </section>
     `;
-  }
+    }
 
-  function renderTopbar(primaryProfile, secondaryProfile) {
-    const primarySelect = document.getElementById("compare-primary-select");
-    const secondarySelect = document.getElementById("compare-secondary-select");
-    const hasSecondary = Boolean(secondaryProfile);
+    function renderTopbar(primaryProfile, secondaryProfile) {
+        const primarySelect = document.getElementById("compare-primary-select");
+        const secondarySelect = document.getElementById("compare-secondary-select");
+        const hasSecondary = Boolean(secondaryProfile);
 
-    if (primarySelect) {
-      primarySelect.innerHTML = app.state.profiles.map((profile) => `
+        if (primarySelect) {
+            primarySelect.innerHTML = app.state.profiles
+                .map(
+                    (profile) => `
         <option value="${app.escapeHtml(profile.id)}" ${profile.id === primaryProfile.id ? "selected" : ""}>
           ${app.escapeHtml(profile.name)}
         </option>
-      `).join("");
-    }
+      `,
+                )
+                .join("");
+        }
 
-    if (secondarySelect) {
-      secondarySelect.innerHTML = app.state.profiles
-        .filter((profile) => profile.id !== primaryProfile.id)
-        .map((profile) => `
+        if (secondarySelect) {
+            secondarySelect.innerHTML = app.state.profiles
+                .filter((profile) => profile.id !== primaryProfile.id)
+                .map(
+                    (profile) => `
           <option value="${app.escapeHtml(profile.id)}" ${profile.id === secondaryProfile?.id ? "selected" : ""}>
             ${app.escapeHtml(profile.name)}
           </option>
-        `).join("");
-      secondarySelect.disabled = !hasSecondary;
-    }
-  }
-
-  function renderComparePage() {
-    ensureSecondaryProfileSelection();
-    const primaryProfile = getPrimaryProfile();
-    const secondaryProfile = getSecondaryProfile();
-
-    renderTopbar(primaryProfile, secondaryProfile);
-    renderProfileEditor("primary", primaryProfile, "compare-primary-editor", "Профиль 1");
-
-    if (secondaryProfile) {
-      renderProfileEditor("secondary", secondaryProfile, "compare-secondary-editor", "Профиль 2");
-    } else {
-      const secondaryContainer = document.getElementById("compare-secondary-editor");
-      if (secondaryContainer) {
-        secondaryContainer.innerHTML = '<div class="empty-note">Создайте второй профиль, чтобы увидеть вторую сборку.</div>';
-      }
-    }
-
-    renderSummary(primaryProfile, secondaryProfile);
-  }
-
-  function setPrimaryProfile(profileId) {
-    if (!profileId || profileId === app.state.activeProfileId) {
-      return;
-    }
-
-    app.setActiveProfile(profileId);
-    ensureSecondaryProfileSelection();
-    resetEditorState("primary", getPrimaryProfile(), true);
-    renderComparePage();
-  }
-
-  function setSecondaryProfile(profileId) {
-    if (!profileId || profileId === app.state.activeProfileId) {
-      return;
-    }
-
-    compareState.secondaryProfileId = profileId;
-    saveSecondaryProfileId();
-    resetEditorState("secondary", getSecondaryProfile(), true);
-    renderComparePage();
-  }
-
-  function handleEditorClick(editorKey, event) {
-    const workspaceTabButton = event.target.closest("[data-compare-workspace-tab]");
-    if (workspaceTabButton) {
-      compareState.editors[editorKey].activeWorkspaceTab = workspaceTabButton.dataset.compareWorkspaceTab;
-      renderComparePage();
-      return;
-    }
-
-    const slotButton = event.target.closest("[data-compare-slot-pin]");
-    if (slotButton) {
-      const slotType = slotButton.dataset.compareSlotType;
-      const slotKey = slotButton.dataset.slotKey;
-      const editor = compareState.editors[editorKey];
-
-      if (slotType === "sphere") {
-        editor.activeWorkspaceTab = "spheres";
-        editor.activeSphereSlot = slotKey;
-        if (app.getSphereSlotConfig(slotKey)?.categoryKey === "sphere_type_1") {
-          editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(slotKey);
+        `,
+                )
+                .join("");
+            secondarySelect.disabled = !hasSecondary;
         }
-      } else if (slotType === "trophy") {
-        editor.activeWorkspaceTab = "trophies";
-        editor.activeTrophySlot = slotKey;
-      } else {
-        editor.activeWorkspaceTab = "inventory";
-        editor.activeSlot = slotKey;
-      }
-
-      renderComparePage();
-      return;
     }
 
-  }
+    function renderComparePage() {
+        ensureSecondaryProfileSelection();
+        const primaryProfile = getPrimaryProfile();
+        const secondaryProfile = getSecondaryProfile();
 
-  function handleEditorChange(editorKey, event) {
-    if (event.target.matches("[data-compare-class-select]")) {
-      const nextClassKey = app.CLASS_CONFIGS[event.target.value] ? event.target.value : "knight";
-      mutateProfile(editorKey, (profile) => {
-        profile.classConfig.classKey = nextClassKey;
-      });
-      renderComparePage();
-      return;
-    }
+        renderTopbar(primaryProfile, secondaryProfile);
+        renderProfileEditor("primary", primaryProfile, "compare-primary-editor", "Профиль 1");
 
-    if (event.target.matches("[data-compare-level-input]")) {
-      mutateProfile(editorKey, (profile) => {
-        profile.classConfig.level = app.sanitizeClassLevel(event.target.value);
-      });
-      renderComparePage();
-      return;
-    }
-
-    if (event.target.matches("[data-compare-upgrade-type]")) {
-      const slotKey = event.target.dataset.slotKey;
-      const upgradeType = event.target.dataset.compareUpgradeType;
-
-      mutateProfile(editorKey, (profile) => {
-        if (upgradeType === "inventory") {
-          const selected = profile.equipped[slotKey];
-          const item = selected ? app.state.itemsById.get(selected.itemId) : null;
-          if (selected && item) {
-            selected.upgradeLevel = app.getValidUpgradeLevel(item, event.target.value);
-          }
-          return;
+        if (secondaryProfile) {
+            renderProfileEditor("secondary", secondaryProfile, "compare-secondary-editor", "Профиль 2");
+        } else {
+            const secondaryContainer = document.getElementById("compare-secondary-editor");
+            if (secondaryContainer) {
+                secondaryContainer.innerHTML = '<div class="empty-note">Создайте второй профиль, чтобы увидеть вторую сборку.</div>';
+            }
         }
-        if (upgradeType === "sphere") {
-          const selected = profile.sphereEquipped[slotKey];
-          const item = selected ? app.state.sphereItemsById.get(selected.itemId) : null;
-          if (selected && item) {
-            selected.upgradeLevel = app.getValidUpgradeLevel(item, event.target.value);
-          }
-          return;
+
+        renderSummary(primaryProfile, secondaryProfile);
+    }
+
+    function setPrimaryProfile(profileId) {
+        if (!profileId || profileId === app.state.activeProfileId) {
+            return;
         }
-        if (upgradeType === "trophy") {
-          const selected = profile.trophyEquipped[slotKey];
-          const item = selected ? app.state.trophyItemsById.get(selected.itemId) : null;
-          if (selected && item) {
-            selected.upgradeLevel = app.getValidUpgradeLevel(item, event.target.value);
-          }
+
+        app.setActiveProfile(profileId);
+        ensureSecondaryProfileSelection();
+        resetEditorState("primary", getPrimaryProfile(), true);
+        renderComparePage();
+    }
+
+    function setSecondaryProfile(profileId) {
+        if (!profileId || profileId === app.state.activeProfileId) {
+            return;
         }
-      });
 
-      renderComparePage();
-    }
-  }
-
-  function bindEditor(editorKey, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container || container.dataset.bound === "1") {
-      return;
+        compareState.secondaryProfileId = profileId;
+        saveSecondaryProfileId();
+        resetEditorState("secondary", getSecondaryProfile(), true);
+        renderComparePage();
     }
 
-    container.dataset.bound = "1";
-    container.addEventListener("click", (event) => handleEditorClick(editorKey, event));
-    container.addEventListener("change", (event) => handleEditorChange(editorKey, event));
-  }
+    function handleEditorClick(editorKey, event) {
+        const workspaceTabButton = event.target.closest("[data-compare-workspace-tab]");
+        if (workspaceTabButton) {
+            compareState.editors[editorKey].activeWorkspaceTab = workspaceTabButton.dataset.compareWorkspaceTab;
+            renderComparePage();
+            return;
+        }
 
-  function bindTopbar() {
-    const primarySelect = document.getElementById("compare-primary-select");
-    const secondarySelect = document.getElementById("compare-secondary-select");
+        const slotButton = event.target.closest("[data-compare-slot-pin]");
+        if (slotButton) {
+            const slotType = slotButton.dataset.compareSlotType;
+            const slotKey = slotButton.dataset.slotKey;
+            const editor = compareState.editors[editorKey];
 
-    if (primarySelect && primarySelect.dataset.bound !== "1") {
-      primarySelect.dataset.bound = "1";
-      primarySelect.addEventListener("change", () => setPrimaryProfile(primarySelect.value));
+            if (slotType === "sphere") {
+                editor.activeWorkspaceTab = "spheres";
+                editor.activeSphereSlot = slotKey;
+                if (app.getSphereSlotConfig(slotKey)?.categoryKey === "sphere_type_1") {
+                    editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(slotKey);
+                }
+            } else if (slotType === "trophy") {
+                editor.activeWorkspaceTab = "trophies";
+                editor.activeTrophySlot = slotKey;
+            } else {
+                editor.activeWorkspaceTab = "inventory";
+                editor.activeSlot = slotKey;
+            }
+
+            renderComparePage();
+            return;
+        }
     }
 
-    if (secondarySelect && secondarySelect.dataset.bound !== "1") {
-      secondarySelect.dataset.bound = "1";
-      secondarySelect.addEventListener("change", () => setSecondaryProfile(secondarySelect.value));
-    }
-  }
+    function handleEditorChange(editorKey, event) {
+        if (event.target.matches("[data-compare-class-select]")) {
+            const nextClassKey = app.CLASS_CONFIGS[event.target.value] ? event.target.value : "knight";
+            mutateProfile(editorKey, (profile) => {
+                profile.classConfig.classKey = nextClassKey;
+            });
+            renderComparePage();
+            return;
+        }
 
-  appReady.then(() => {
-    ensureSecondaryProfileSelection();
-    resetEditorState("primary", getPrimaryProfile(), true);
-    resetEditorState("secondary", getSecondaryProfile(), true);
-    bindTopbar();
-    bindEditor("primary", "compare-primary-editor");
-    bindEditor("secondary", "compare-secondary-editor");
-    renderComparePage();
-  });
+        if (event.target.matches("[data-compare-level-input]")) {
+            mutateProfile(editorKey, (profile) => {
+                profile.classConfig.level = app.sanitizeClassLevel(event.target.value);
+            });
+            renderComparePage();
+            return;
+        }
+
+        if (event.target.matches("[data-compare-upgrade-type]")) {
+            const slotKey = event.target.dataset.slotKey;
+            const upgradeType = event.target.dataset.compareUpgradeType;
+
+            mutateProfile(editorKey, (profile) => {
+                if (upgradeType === "inventory") {
+                    const selected = profile.equipped[slotKey];
+                    const item = selected ? app.state.itemsById.get(selected.itemId) : null;
+                    if (selected && item) {
+                        selected.upgradeLevel = app.getValidUpgradeLevel(item, event.target.value);
+                    }
+                    return;
+                }
+                if (upgradeType === "sphere") {
+                    const selected = profile.sphereEquipped[slotKey];
+                    const item = selected ? app.state.sphereItemsById.get(selected.itemId) : null;
+                    if (selected && item) {
+                        selected.upgradeLevel = app.getValidUpgradeLevel(item, event.target.value);
+                    }
+                    return;
+                }
+                if (upgradeType === "trophy") {
+                    const selected = profile.trophyEquipped[slotKey];
+                    const item = selected ? app.state.trophyItemsById.get(selected.itemId) : null;
+                    if (selected && item) {
+                        selected.upgradeLevel = app.getValidUpgradeLevel(item, event.target.value);
+                    }
+                }
+            });
+
+            renderComparePage();
+        }
+    }
+
+    function bindEditor(editorKey, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container || container.dataset.bound === "1") {
+            return;
+        }
+
+        container.dataset.bound = "1";
+        container.addEventListener("click", (event) => handleEditorClick(editorKey, event));
+        container.addEventListener("change", (event) => handleEditorChange(editorKey, event));
+    }
+
+    function bindTopbar() {
+        const primarySelect = document.getElementById("compare-primary-select");
+        const secondarySelect = document.getElementById("compare-secondary-select");
+
+        if (primarySelect && primarySelect.dataset.bound !== "1") {
+            primarySelect.dataset.bound = "1";
+            primarySelect.addEventListener("change", () => setPrimaryProfile(primarySelect.value));
+        }
+
+        if (secondarySelect && secondarySelect.dataset.bound !== "1") {
+            secondarySelect.dataset.bound = "1";
+            secondarySelect.addEventListener("change", () => setSecondaryProfile(secondarySelect.value));
+        }
+    }
+
+    appReady.then(() => {
+        ensureSecondaryProfileSelection();
+        resetEditorState("primary", getPrimaryProfile(), true);
+        resetEditorState("secondary", getSecondaryProfile(), true);
+        bindTopbar();
+        bindEditor("primary", "compare-primary-editor");
+        bindEditor("secondary", "compare-secondary-editor");
+        renderComparePage();
+    });
 })();
