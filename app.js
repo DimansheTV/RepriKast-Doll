@@ -131,6 +131,8 @@ const SIDEBAR_TAB_STORAGE_KEY = "r2-doll-sidebar-tab-v2";
 const WORKSPACE_TAB_STORAGE_KEY = "r2-doll-workspace-tab-v1";
 const PROFILE_STORAGE_KEY = "r2-doll-profiles-v1";
 const ACTIVE_PROFILE_STORAGE_KEY = "r2-doll-active-profile-v1";
+const NAV_TRANSITION_STORAGE_KEY = "r2-nav-transition-v1";
+const NAV_TRANSITION_DURATION_MS = 420;
 const PASSIVE_MORPH_RING_SLOT_KEY = "ring_morph_passive";
 const MAIN_STATS = ["HP", "MP", "Сила", "Ловкость", "Интеллект", "Защита"];
 const CLASS_PRIMARY_ATTRIBUTES = new Set(["Сила", "Ловкость", "Интеллект"]);
@@ -900,6 +902,29 @@ function getNextProfileName() {
   return `Профиль ${index}`;
 }
 
+function getUniqueProfileCopyName(sourceName) {
+  const names = new Set(state.profiles.map((profile) => profile.name));
+  const source = normalizeText(sourceName) || "Профиль";
+  const baseName = sanitizeProfileName(`${source} копия`, "Профиль копия");
+
+  if (!names.has(baseName)) {
+    return baseName;
+  }
+
+  let index = 2;
+  while (index < 1000) {
+    const suffix = ` копия ${index}`;
+    const trimmedSource = source.slice(0, Math.max(1, 40 - suffix.length));
+    const candidate = sanitizeProfileName(`${trimmedSource}${suffix}`, `Профиль копия ${index}`);
+    if (!names.has(candidate)) {
+      return candidate;
+    }
+    index += 1;
+  }
+
+  return sanitizeProfileName(`Профиль копия ${Date.now()}`, "Профиль копия");
+}
+
 function getActiveProfile() {
   return state.profiles.find((profile) => profile.id === state.activeProfileId) || null;
 }
@@ -1213,6 +1238,38 @@ function createNewProfile() {
   saveProfilesState();
   setActiveProfile(profile.id, { persistCurrent: false });
   setLastAction(`Создан профиль "${profile.name}".`);
+}
+
+function saveActiveProfileExplicitly() {
+  syncActiveProfileFromState();
+  const profile = getActiveProfile();
+  if (!profile) {
+    return;
+  }
+
+  saveProfilesState();
+  saveActiveProfileIdState();
+  renderProfileBar();
+  setLastAction(`Профиль "${profile.name}" сохранён.`);
+}
+
+function copyActiveProfile() {
+  syncActiveProfileFromState();
+  const sourceProfile = getActiveProfile();
+  if (!sourceProfile) {
+    return;
+  }
+
+  const profile = createProfileSnapshot({
+    id: createProfileId(),
+    name: getUniqueProfileCopyName(sourceProfile.name),
+    createdAt: Date.now(),
+  });
+
+  state.profiles.push(profile);
+  saveProfilesState();
+  setActiveProfile(profile.id, { persistCurrent: false });
+  setLastAction(`Создана копия профиля "${profile.name}".`);
 }
 
 function deleteActiveProfile() {
@@ -1888,6 +1945,8 @@ function bindClassControls() {
 function renderProfileBar() {
   const select = document.getElementById("profile-select");
   const nameInput = document.getElementById("profile-name-input");
+  const saveButton = document.getElementById("profile-save-button");
+  const copyButton = document.getElementById("profile-copy-button");
   const deleteButton = document.getElementById("profile-delete-button");
   if (!select || !nameInput || !deleteButton) {
     return;
@@ -1901,16 +1960,24 @@ function renderProfileBar() {
   `).join("");
 
   nameInput.value = activeProfile?.name || "";
+  if (saveButton) {
+    saveButton.disabled = !activeProfile;
+  }
+  if (copyButton) {
+    copyButton.disabled = !activeProfile;
+  }
   deleteButton.disabled = state.profiles.length <= 1;
 }
 
 function bindProfileControls() {
   const select = document.getElementById("profile-select");
   const nameInput = document.getElementById("profile-name-input");
+  const saveButton = document.getElementById("profile-save-button");
+  const copyButton = document.getElementById("profile-copy-button");
   const newButton = document.getElementById("profile-new-button");
   const deleteButton = document.getElementById("profile-delete-button");
 
-  if (!select || !nameInput || !newButton || !deleteButton) {
+  if (!select || !nameInput || !saveButton || !copyButton || !newButton || !deleteButton) {
     return;
   }
 
@@ -1937,6 +2004,16 @@ function bindProfileControls() {
     });
     nameInput.addEventListener("change", () => renameActiveProfile(nameInput.value));
     nameInput.addEventListener("blur", () => renameActiveProfile(nameInput.value));
+  }
+
+  if (saveButton.dataset.bound !== "1") {
+    saveButton.dataset.bound = "1";
+    saveButton.addEventListener("click", saveActiveProfileExplicitly);
+  }
+
+  if (copyButton.dataset.bound !== "1") {
+    copyButton.dataset.bound = "1";
+    copyButton.addEventListener("click", copyActiveProfile);
   }
 
   if (newButton.dataset.bound !== "1") {
@@ -3434,6 +3511,76 @@ async function loadPetItems() {
   return response.json();
 }
 
+function finalizeEntryTransition() {
+  const transition = document.documentElement.dataset.navTransition || "";
+  if (!transition.startsWith("enter-")) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      delete document.documentElement.dataset.navTransition;
+      try {
+        sessionStorage.removeItem(NAV_TRANSITION_STORAGE_KEY);
+      } catch {
+        // Ignore storage errors.
+      }
+    });
+  });
+}
+
+function bindPageTransitions() {
+  finalizeEntryTransition();
+
+  if (document.body?.dataset?.navBound === "1") {
+    return;
+  }
+
+  document.body.dataset.navBound = "1";
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest("a[data-nav-direction]");
+    if (!link) {
+      return;
+    }
+
+    const href = link.getAttribute("href");
+    const direction = link.dataset.navDirection;
+    if (!href || !direction || !["forward", "back"].includes(direction)) {
+      return;
+    }
+
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      link.target === "_blank"
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    try {
+      sessionStorage.setItem(NAV_TRANSITION_STORAGE_KEY, JSON.stringify({
+        phase: "enter",
+        direction,
+      }));
+    } catch {
+      // Ignore storage errors.
+    }
+
+    document.body.classList.remove("page-transition-exit-forward", "page-transition-exit-back");
+    document.body.classList.add(`page-transition-exit-${direction}`);
+
+    window.setTimeout(() => {
+      window.location.href = href;
+    }, NAV_TRANSITION_DURATION_MS);
+  });
+}
+
 async function init() {
   try {
     const rawItems = await loadItems();
@@ -3496,6 +3643,7 @@ async function init() {
     setLastAction("Каталог не загрузился.");
   }
 }
+bindPageTransitions();
 window.r2App = {
   SLOT_CONFIG,
   SPHERE_SLOT_CONFIG,
@@ -3558,6 +3706,8 @@ window.r2App = {
   applyProfileToState,
   setActiveProfile,
   createNewProfile,
+  saveActiveProfileExplicitly,
+  copyActiveProfile,
   deleteActiveProfile,
 };
 window.__R2_APP_READY__ = init();

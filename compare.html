@@ -4,13 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>R2 Doll Compare</title>
+  <script>
+    (() => {
+      try {
+        const raw = sessionStorage.getItem("r2-nav-transition-v1");
+        if (!raw) {
+          return;
+        }
+        const data = JSON.parse(raw);
+        if (data?.phase === "enter" && (data.direction === "forward" || data.direction === "back")) {
+          document.documentElement.dataset.navTransition = `enter-${data.direction}`;
+        }
+      } catch {}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body data-page="compare">
   <header class="app-header">
     <section class="panel panel-topbar" aria-label="Панель сравнения профилей">
       <div class="compare-topbar">
-        <a href="index.html" class="ghost-button profile-link-button">Главное меню</a>
+        <div class="compare-topbar-actions">
+          <a href="index.html" class="ghost-button profile-link-button" data-nav-direction="back">Главное меню</a>
+        </div>
 
         <div class="compare-topbar-fields">
           <label class="compare-topbar-field">

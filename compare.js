@@ -996,7 +996,7 @@
           <option value="${app.escapeHtml(profile.id)}" ${profile.id === secondaryProfile?.id ? "selected" : ""}>
             ${app.escapeHtml(profile.name)}
           </option>
-        `).join("");
+      `).join("");
       secondarySelect.disabled = !hasSecondary;
     }
   }

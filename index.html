@@ -4,9 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>R2 Doll</title>
+  <script>
+    (() => {
+      try {
+        const raw = sessionStorage.getItem("r2-nav-transition-v1");
+        if (!raw) {
+          return;
+        }
+        const data = JSON.parse(raw);
+        if (data?.phase === "enter" && (data.direction === "forward" || data.direction === "back")) {
+          document.documentElement.dataset.navTransition = `enter-${data.direction}`;
+        }
+      } catch {}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-page="main">
   <header class="app-header">
     <section class="panel panel-topbar" aria-label="Панель профиля">
       <div class="profile-toolbar">
@@ -19,9 +33,11 @@
         </div>
 
         <div class="profile-actions">
-          <a href="compare.html" class="ghost-button profile-link-button">Сравнение</a>
+          <button id="profile-save-button" class="ghost-button" type="button">Сохранить</button>
+          <button id="profile-copy-button" class="ghost-button" type="button">Скопировать</button>
           <button id="profile-new-button" class="ghost-button" type="button">Новый профиль</button>
           <button id="profile-delete-button" class="ghost-button" type="button">Удалить профиль</button>
+          <a href="compare.html" class="ghost-button profile-link-button" data-nav-direction="forward">Сравнение</a>
         </div>
       </div>
     </section>
