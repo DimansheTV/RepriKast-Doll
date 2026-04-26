@@ -1,0 +1,26 @@
+{
+  "name": "reprikast-doll",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "catalog:build": "node scripts/build-catalog.mjs",
+    "catalog:equipment": "node scripts/build-catalog.mjs --kind equipment",
+    "catalog:sphere": "node scripts/build-catalog.mjs --kind sphere",
+    "catalog:trophy": "node scripts/build-catalog.mjs --kind trophy",
+    "catalog:pet": "node scripts/build-catalog.mjs --kind pet",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "@types/node": "^24.9.1",
+    "cheerio": "^1.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  }
+}
