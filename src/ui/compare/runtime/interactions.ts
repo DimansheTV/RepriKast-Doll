@@ -33,103 +33,15 @@ export function createCompareInteractionsModule(deps) {
   }
 
   function handleCompareListAction(editorKey, button) {
-    const action = button.dataset.compareListAction;
-    const slotKey = button.dataset.slotKey;
-    const itemId = button.dataset.itemId;
-    const editor = compareState.editors[editorKey];
-
-    mutateProfile(editorKey, (profile) => {
-      if (action === "inventory-equip") {
-        const slot = app.getSlotConfig(slotKey);
-        const item = app.state.itemsById.get(String(itemId));
-        if (!slot || !item || !app.matchesEquipmentSlot(slot, item)) {
-          return;
-        }
-        profile.equipped[slot.key] = {
-          itemId: String(item.uid),
-          upgradeLevel: app.getDefaultUpgradeLevel(item),
-        };
-        editor.activeSlot = slot.key;
-        return;
-      }
-
-      if (action === "inventory-remove") {
-        delete profile.equipped[slotKey];
-        editor.activeSlot = slotKey;
-        return;
-      }
-
-      if (action === "sphere-equip") {
-        const slot = app.getSphereSlotConfig(slotKey);
-        const item = app.state.sphereItemsById.get(String(itemId));
-        if (!slot || !item || !slot.matches(item)) {
-          return;
-        }
-        profile.sphereEquipped[slot.key] = {
-          itemId: String(item.uid),
-          upgradeLevel: app.getDefaultUpgradeLevel(item),
-        };
-        editor.activeSphereSlot = slot.key;
-        if (slot.categoryKey === "sphere_type_1") {
-          editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(slot.key);
-        }
-        return;
-      }
-
-      if (action === "sphere-remove") {
-        delete profile.sphereEquipped[slotKey];
-        editor.activeSphereSlot = slotKey;
-        return;
-      }
-
-      if (action === "trophy-equip") {
-        const slot = app.getTrophySlotConfig(slotKey);
-        const item = app.state.trophyItemsById.get(String(itemId));
-        if (!slot || !item || item.slot_code !== slot.key) {
-          return;
-        }
-        profile.trophyEquipped[slot.key] = {
-          itemId: String(item.uid),
-          upgradeLevel: app.getDefaultUpgradeLevel(item),
-        };
-        editor.activeTrophySlot = slot.key;
-        return;
-      }
-
-      if (action === "trophy-remove") {
-        delete profile.trophyEquipped[slotKey];
-        editor.activeTrophySlot = slotKey;
-        return;
-      }
-
-      if (action === "pet-equip") {
-        const item = app.state.petItemsById.get(String(itemId));
-        if (!item) {
-          return;
-        }
-        profile.petEquipped = { itemId: String(item.uid) };
-        return;
-      }
-
-      if (action === "pet-remove") {
-        profile.petEquipped = null;
-      }
-    });
-
-    renderComparePage();
+    return;
   }
 
   function stepUpgradeLevel(editorKey, upgradeType, slotKey, delta) {
-    mutateProfile(editorKey, (profile) => {
-      if (upgradeType === "inventory") {
-        const selected = profile.equipped[slotKey];
-        const item = selected ? app.state.itemsById.get(selected.itemId) : null;
-        if (selected && item) {
-          selected.upgradeLevel = app.getAdjacentUpgradeLevel(item, selected.upgradeLevel, delta);
-        }
-        return;
-      }
+    if (upgradeType === "inventory") {
+      return;
+    }
 
+    mutateProfile(editorKey, (profile) => {
       if (upgradeType === "sphere") {
         const selected = profile.sphereEquipped[slotKey];
         const item = selected ? app.state.sphereItemsById.get(selected.itemId) : null;
@@ -152,16 +64,11 @@ export function createCompareInteractionsModule(deps) {
   }
 
   function setUpgradeLevel(editorKey, upgradeType, slotKey, level) {
-    mutateProfile(editorKey, (profile) => {
-      if (upgradeType === "inventory") {
-        const selected = profile.equipped[slotKey];
-        const item = selected ? app.state.itemsById.get(selected.itemId) : null;
-        if (selected && item) {
-          selected.upgradeLevel = app.getValidUpgradeLevel(item, level);
-        }
-        return;
-      }
+    if (upgradeType === "inventory") {
+      return;
+    }
 
+    mutateProfile(editorKey, (profile) => {
       if (upgradeType === "sphere") {
         const selected = profile.sphereEquipped[slotKey];
         const item = selected ? app.state.sphereItemsById.get(selected.itemId) : null;
