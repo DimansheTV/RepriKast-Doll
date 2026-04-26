@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 
 type ProfileSeed = {
@@ -112,6 +113,49 @@ async function expectCompareSecondaryStored(page: Page, predicateSource: string)
     ))
     .toBe(true);
 }
+
+test("production dist entrypoints load bundled assets", async ({ page }) => {
+  await page.goto("/index.html");
+  await expect(page.locator("#profile-select")).toBeVisible();
+
+  const indexAssets = await page.evaluate(() => ({
+    scripts: [...document.querySelectorAll<HTMLScriptElement>('script[type="module"]')].map((script) =>
+      script.getAttribute("src") || "",
+    ),
+    styles: [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].map((link) =>
+      link.getAttribute("href") || "",
+    ),
+  }));
+
+  expect(indexAssets.scripts.length).toBeGreaterThan(0);
+  expect(indexAssets.styles.length).toBeGreaterThan(0);
+  expect([...indexAssets.scripts, ...indexAssets.styles].every((asset) => asset.includes("assets/"))).toBe(true);
+  expect([...indexAssets.scripts, ...indexAssets.styles].some((asset) => asset.includes("/src/"))).toBe(false);
+
+  await page.goto("/compare.html");
+  await expect(page.locator("#compare-primary-select")).toBeVisible();
+
+  const compareAssets = await page.evaluate(() => ({
+    scripts: [...document.querySelectorAll<HTMLScriptElement>('script[type="module"]')].map((script) =>
+      script.getAttribute("src") || "",
+    ),
+    styles: [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].map((link) =>
+      link.getAttribute("href") || "",
+    ),
+  }));
+
+  expect(compareAssets.scripts.length).toBeGreaterThan(0);
+  expect(compareAssets.styles.length).toBeGreaterThan(0);
+  expect([...compareAssets.scripts, ...compareAssets.styles].every((asset) => asset.includes("assets/"))).toBe(true);
+  expect([...compareAssets.scripts, ...compareAssets.styles].some((asset) => asset.includes("/src/"))).toBe(false);
+});
+
+test("catalog CLI validates local equipment and pet data without network", () => {
+  test.setTimeout(120000);
+
+  execSync("corepack pnpm catalog:build -- --kind equipment", { stdio: "pipe" });
+  execSync("corepack pnpm catalog:build -- --kind pet", { stdio: "pipe" });
+});
 
 test("default knight baseline stats match origin/main", async ({ page }) => {
   await page.goto("/index.html");

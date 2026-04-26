@@ -10,10 +10,10 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "powershell -NoProfile -Command \"$env:Path += ';C:\\Program Files\\nodejs'; & 'C:\\Program Files\\nodejs\\corepack.cmd' pnpm dev --host 127.0.0.1 --port 4173\"",
+    command: "powershell -NoProfile -Command \"corepack pnpm build; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; corepack pnpm preview --host 127.0.0.1 --port 4173\"",
     url: "http://127.0.0.1:4173",
-    reuseExistingServer: true,
-    timeout: 120000,
+    reuseExistingServer: false,
+    timeout: 180000,
   },
   projects: [
     {

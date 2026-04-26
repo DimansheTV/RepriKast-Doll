@@ -1,52 +1,86 @@
-# RepriKast-Doll
+# RepriKast Doll
 
-Статическое web-приложение для сборки и сравнения экипировки, сфер, трофеев и питомцев в RepriKast. Клиент собирается через Vite, каталоги данных поддерживаются Python-скриптами, а e2e-проверки идут через Playwright.
+Веб-калькулятор персонажа R2: экипировка, сферы, трофеи, питомцы, профили и сравнение двух сборок.
 
 ## Требования
 
-- `pnpm` через `corepack`
-- Node.js 24+ для разработки и сборки
-- Python 3.11+ для скриптов обновления каталогов
+- Node.js 24+
+- Corepack
+- pnpm через Corepack
 
-## Команды
+Перед первым запуском:
 
-```powershell
+```bash
+corepack enable
 corepack pnpm install
+```
+
+## Разработка
+
+```bash
 corepack pnpm dev
+```
+
+Vite поднимает сайт локально и обрабатывает корневые `index.html` и `compare.html`. Эти файлы используют TypeScript-исходники напрямую, поэтому через Live Server их открывать не нужно.
+
+## Сборка
+
+```bash
 corepack pnpm build
+```
+
+Готовый статический сайт появляется в `dist/`. В production-сборке ссылки на JS, CSS и изображения относительные, поэтому каталог удобно раздавать как обычную статику.
+
+## Live Server
+
+1. Соберите проект:
+
+```bash
+corepack pnpm build
+```
+
+2. В VS Code запустите Live Server для `dist/index.html`.
+
+В репозитории есть `.vscode/settings.json`: Live Server использует `/dist` как корень. Для страницы сравнения откройте `dist/compare.html`.
+
+## Проверка
+
+```bash
 corepack pnpm test:e2e
 ```
 
-## Структура
+Playwright сначала выполняет `corepack pnpm build`, затем запускает `vite preview` и проверяет уже готовый `dist`, а не dev-сервер.
 
-```text
-src/
-  application/   repositories и app context
-  domain/        конфиги и доменные правила по equipment/spheres/trophies/pets/stats
-  resources/     JSON-каталоги и изображения
-  shared/        общие утилиты и схемы
-  ui/
-    main/        bootstrap и runtime основной страницы
-    compare/     bootstrap и runtime страницы сравнения
+## Каталоги
+
+Основные данные лежат в `src/resources/data`, изображения - в `src/resources/images`.
+
+Проверить локальные каталоги без сети:
+
+```bash
+corepack pnpm catalog:build -- --kind equipment
+corepack pnpm catalog:build -- --kind pet
+corepack pnpm catalog:build -- --kind sphere --validate-only
+corepack pnpm catalog:build -- --kind trophy --validate-only
 ```
 
-## Обновление каталогов
+Обновить каталоги через Node:
 
-```powershell
-python build_catalog.py --kind equipment
-python build_catalog.py --kind sphere
-python build_catalog.py --kind trophy
-python build_catalog.py --kind pet
+```bash
+corepack pnpm catalog:equipment
+corepack pnpm catalog:pet
+corepack pnpm catalog:sphere
+corepack pnpm catalog:trophy
 ```
 
-Скрипты используют общий слой в `scripts/data` и проверяют обязательные поля, `upgrade_levels`, дубликаты `id` и совместимость `slot_code`.
+`equipment` и `pet` сейчас валидируют уже подготовленные JSON. `sphere` и `trophy` могут обращаться к r2online.ru, скачивать недостающие изображения и перезаписывать соответствующие JSON.
 
-## Production build
+## Деплой
 
-```powershell
+Для деплоя нужен только каталог `dist/`.
+
+```bash
 corepack pnpm build
 ```
 
-Результат попадает в `dist/`. Это статический сайт: на сервере не нужен Node runtime, достаточно раздавать `dist/` с корректными MIME-типами для JS/CSS/JSON/изображений. В проекте уже зафиксирован `base: "./"` в `vite.config.ts`, поэтому `index.html` и `compare.html` можно раздавать как два отдельных entrypoint'а.
-
-Готовый пример для Nginx лежит в `deploy/nginx.conf.example`.
+После сборки загрузите весь `dist/` на статический хостинг, CDN или сервер с nginx. Node.js на сервере не нужен. Пример nginx-конфига лежит в `deploy/nginx.conf.example` и показывает раздачу готового `dist`.
