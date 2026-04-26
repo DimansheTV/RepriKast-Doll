@@ -470,6 +470,98 @@ export function createComparePageApp({ app, ready, uiStateRepository }) {
     }
   }
 
+  function getPetMergeBonusValue(mergeConfig, count) {
+    const safeCount = Math.min(app.PET_MERGE_TOTAL_LIMIT, Math.max(0, Math.floor(Number(count) || 0)));
+    return mergeConfig.bonusSteps.slice(0, safeCount).reduce((sum, value) => sum + value, 0);
+  }
+
+  function handleCompareListAction(editorKey, button) {
+    const action = button.dataset.compareListAction;
+    const slotKey = button.dataset.slotKey;
+    const itemId = button.dataset.itemId;
+    const editor = compareState.editors[editorKey];
+
+    mutateProfile(editorKey, (profile) => {
+      if (action === "inventory-equip") {
+        const slot = app.getSlotConfig(slotKey);
+        const item = app.state.itemsById.get(String(itemId));
+        if (!slot || !item || !app.matchesEquipmentSlot(slot, item)) {
+          return;
+        }
+        profile.equipped[slot.key] = {
+          itemId: String(item.uid),
+          upgradeLevel: app.getDefaultUpgradeLevel(item),
+        };
+        editor.activeSlot = slot.key;
+        return;
+      }
+
+      if (action === "inventory-remove") {
+        delete profile.equipped[slotKey];
+        editor.activeSlot = slotKey;
+        return;
+      }
+
+      if (action === "sphere-equip") {
+        const slot = app.getSphereSlotConfig(slotKey);
+        const item = app.state.sphereItemsById.get(String(itemId));
+        if (!slot || !item || !slot.matches(item)) {
+          return;
+        }
+        profile.sphereEquipped[slot.key] = {
+          itemId: String(item.uid),
+          upgradeLevel: app.getDefaultUpgradeLevel(item),
+        };
+        editor.activeSphereSlot = slot.key;
+        if (slot.categoryKey === "sphere_type_1") {
+          editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(slot.key);
+        }
+        return;
+      }
+
+      if (action === "sphere-remove") {
+        delete profile.sphereEquipped[slotKey];
+        editor.activeSphereSlot = slotKey;
+        return;
+      }
+
+      if (action === "trophy-equip") {
+        const slot = app.getTrophySlotConfig(slotKey);
+        const item = app.state.trophyItemsById.get(String(itemId));
+        if (!slot || !item || item.slot_code !== slot.key) {
+          return;
+        }
+        profile.trophyEquipped[slot.key] = {
+          itemId: String(item.uid),
+          upgradeLevel: app.getDefaultUpgradeLevel(item),
+        };
+        editor.activeTrophySlot = slot.key;
+        return;
+      }
+
+      if (action === "trophy-remove") {
+        delete profile.trophyEquipped[slotKey];
+        editor.activeTrophySlot = slotKey;
+        return;
+      }
+
+      if (action === "pet-equip") {
+        const item = app.state.petItemsById.get(String(itemId));
+        if (!item) {
+          return;
+        }
+        profile.petEquipped = { itemId: String(item.uid) };
+        return;
+      }
+
+      if (action === "pet-remove") {
+        profile.petEquipped = null;
+      }
+    });
+
+    renderComparePage();
+  }
+
   function renderCompareInventoryStage(editorKey, profile, editor) {
     const visibleSlots = app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
 
@@ -727,7 +819,7 @@ export function createComparePageApp({ app, ready, uiStateRepository }) {
                 const totalWithoutCurrent = totalUsed - count;
                 const canDecrease = count > 0;
                 const canIncrease = count < app.PET_MERGE_TOTAL_LIMIT && totalWithoutCurrent + count < app.PET_MERGE_TOTAL_LIMIT;
-                const bonus = (entry.bonusPerStep || 0) * count;
+                const bonus = getPetMergeBonusValue(entry, count);
 
                 return `
                   <tr>
@@ -966,7 +1058,76 @@ export function createComparePageApp({ app, ready, uiStateRepository }) {
     };
   }
 
+  function renderCompareCatalogForPet(profile) {
+    const selectedItemId = profile.petEquipped?.itemId || "";
+    const groups = app.PET_CATEGORY_CONFIG.map((group) => ({
+      ...group,
+      items: app.getPetItemsForCategory(group.key),
+    }));
+    const count = groups.reduce((total, group) => total + group.items.length, 0);
+    const body = count
+      ? groups.map((group) => {
+        const itemsHtml = group.items.length
+          ? group.items.map((item) => {
+            const previewLevel = app.getDefaultUpgradeLevel(item);
+            const params = app.getParamsForLevel(item, previewLevel);
+            const previewText = params[0] || app.normalizeText(item.description_lines?.[0]) || "Без параметров";
+            const isEquipped = String(item.uid) === String(selectedItemId);
+            const subtitle = app.normalizeText(item.description_lines?.[0]);
+            const metaParts = [];
+
+            if (subtitle) {
+              metaParts.push(subtitle);
+            }
+            metaParts.push(previewText);
+
+            return `
+              <div class="catalog-item catalog-item-pet ${isEquipped ? "is-selected" : ""}">
+                <div class="item-row">
+                  ${app.renderItemIcon(item)}
+                  <div class="item-info">
+                    <div class="item-name">${app.escapeHtml(item.name)}</div>
+                    <div class="item-meta">${app.escapeHtml(metaParts.join(" · "))}</div>
+                  </div>
+                  <button
+                    class="equip-btn ${isEquipped ? "is-selected" : ""}"
+                    type="button"
+                    data-compare-list-action="${isEquipped ? "pet-remove" : "pet-equip"}"
+                    data-item-id="${app.escapeHtml(item.uid)}"
+                  >
+                    ${isEquipped ? "Снять" : "Надеть"}
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join("")
+          : '<div class="empty-note">Для этой группы питомцев пока нет данных.</div>';
+
+        return `
+          <section class="compare-pet-catalog-group">
+            <div class="compare-editor-catalog-title">
+              <span class="section-note">${app.escapeHtml(group.label)}</span>
+            </div>
+            <div class="category-list compare-category-list">
+              ${itemsHtml}
+            </div>
+          </section>
+        `;
+      }).join("")
+      : '<div class="empty-note">Питомцы пока не загружены.</div>';
+
+    return {
+      title: "Питомцы",
+      count,
+      body,
+    };
+  }
+
   function renderCompareCatalog(profile, editor) {
+    if (editor.activeWorkspaceTab === "pets") {
+      return renderCompareCatalogForPet(profile);
+    }
+
     if (editor.activeWorkspaceTab === "spheres") {
       return renderCompareCatalogForSphere(profile, editor);
     }
@@ -996,6 +1157,7 @@ export function createComparePageApp({ app, ready, uiStateRepository }) {
     } else if (editor.activeWorkspaceTab === "trophies") {
       stageHtml = renderCompareTrophyStage(profile, editor);
     }
+    const catalog = renderCompareCatalog(profile, editor);
 
     container.innerHTML = `
       <section class="compare-editor-shell">
@@ -1037,7 +1199,18 @@ export function createComparePageApp({ app, ready, uiStateRepository }) {
         </nav>
 
         <section class="compare-editor-stage">
-          ${stageHtml}
+          <div class="compare-editor-stage-view">
+            ${stageHtml}
+          </div>
+          <aside class="compare-editor-catalog">
+            <div class="compare-editor-catalog-title">
+              <h3>${app.escapeHtml(catalog.title)}</h3>
+              <span class="section-note">${app.escapeHtml(catalog.count)} шт.</span>
+            </div>
+            <div class="category-list compare-category-list">
+              ${catalog.body}
+            </div>
+          </aside>
         </section>
       </section>
     `;
@@ -1167,6 +1340,12 @@ export function createComparePageApp({ app, ready, uiStateRepository }) {
     if (workspaceTabButton) {
       compareState.editors[editorKey].activeWorkspaceTab = workspaceTabButton.dataset.compareWorkspaceTab;
       renderComparePage();
+      return;
+    }
+
+    const listActionButton = event.target.closest("[data-compare-list-action]");
+    if (listActionButton) {
+      handleCompareListAction(editorKey, listActionButton);
       return;
     }
 

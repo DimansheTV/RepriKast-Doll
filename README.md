@@ -6,7 +6,7 @@
 
 - `pnpm` через `corepack`
 - Node.js 24+ для разработки и сборки
-- Python 3.11+ для data-pipeline и smoke-тестов
+- Python 3.11+ для скриптов обновления каталогов
 
 ## Команды
 
@@ -15,7 +15,6 @@ corepack pnpm install
 corepack pnpm dev
 corepack pnpm build
 corepack pnpm test:e2e
-python -m unittest discover -s tests -v
 ```
 
 ## Структура

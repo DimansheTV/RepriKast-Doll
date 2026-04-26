@@ -28,6 +28,11 @@ async function seedProfiles(
 ) {
   await page.addInitScript(
     ({ keys, seededProfiles, activeId, compareId }) => {
+      const seedMarker = "r2-doll-e2e-seeded-v1";
+      if (window.sessionStorage.getItem(seedMarker) === "1") {
+        return;
+      }
+
       window.localStorage.clear();
       window.sessionStorage.clear();
       window.localStorage.setItem(keys.profiles, JSON.stringify(seededProfiles));
@@ -35,6 +40,7 @@ async function seedProfiles(
       if (compareId) {
         window.localStorage.setItem(keys.compareSecondaryProfileId, compareId);
       }
+      window.sessionStorage.setItem(seedMarker, "1");
     },
     {
       keys: STORAGE_KEYS,
@@ -45,8 +51,8 @@ async function seedProfiles(
   );
 }
 
-async function readBoardMainStats(page: Page) {
-  return page.locator("#board-main-stats .board-stat-row").evaluateAll((rows) => {
+async function readBoardStats(page: Page, selector: string) {
+  return page.locator(`${selector} .board-stat-row`).evaluateAll((rows) => {
     return Object.fromEntries(
       rows.map((row) => {
         const name = row.querySelector(".board-stat-name")?.textContent?.trim() || "";
@@ -55,6 +61,14 @@ async function readBoardMainStats(page: Page) {
       }),
     );
   });
+}
+
+async function readBoardMainStats(page: Page) {
+  return readBoardStats(page, "#board-main-stats");
+}
+
+async function readBoardExtraStats(page: Page) {
+  return readBoardStats(page, "#board-extra-stats");
 }
 
 async function readCompareRow(page: Page, label: string) {
@@ -80,6 +94,25 @@ async function readCompareRow(page: Page, label: string) {
   }, label);
 }
 
+async function clickFirstEquipButton(page: Page, selector: string) {
+  const button = page.locator(selector).first();
+  await expect(button).toBeVisible();
+  await button.click();
+}
+
+async function expectCompareSecondaryStored(page: Page, predicateSource: string) {
+  await expect
+    .poll(async () => page.evaluate(
+      ({ key, predicateBody }) => {
+        const profiles = JSON.parse(window.localStorage.getItem(key) || "[]");
+        const secondary = profiles.find((profile: { id: string }) => profile.id === "profile-secondary");
+        return Function("profile", `return (${predicateBody})(profile)`)(secondary);
+      },
+      { key: STORAGE_KEYS.profiles, predicateBody: predicateSource },
+    ))
+    .toBe(true);
+}
+
 test("default knight baseline stats match origin/main", async ({ page }) => {
   await page.goto("/index.html");
 
@@ -95,27 +128,12 @@ test("default knight baseline stats match origin/main", async ({ page }) => {
   });
 });
 
-test("seeded knight level 10 profile keeps baseline totals", async ({ page }) => {
-  await seedProfiles(
-    page,
-    [
-      {
-        id: "profile-knight-10",
-        name: "Knight 10",
-        classConfig: { classKey: "knight", level: 10 },
-        equipped: {},
-        sphereEquipped: {},
-        trophyEquipped: {},
-        petEquipped: null,
-        activeWorkspaceTab: "inventory",
-      },
-    ],
-    "profile-knight-10",
-  );
-
+test("class controls recalculate baseline totals from the UI", async ({ page }) => {
   await page.goto("/index.html");
 
-  await expect(page.locator("#profile-name-input")).toHaveValue("Knight 10");
+  await page.locator("#class-level-input").fill("10");
+  await page.locator("#class-level-input").press("Enter");
+
   await expect(readBoardMainStats(page)).resolves.toEqual({
     HP: "758",
     MP: "44",
@@ -123,6 +141,9 @@ test("seeded knight level 10 profile keeps baseline totals", async ({ page }) =>
     "Ловкость": "4",
     "Интеллект": "2",
   });
+
+  await page.locator("#class-select").selectOption("mage");
+  await expect.poll(async () => (await readBoardMainStats(page)).HP).not.toBe("758");
 });
 
 test("main page keeps equipment after reload and supports profile create/copy/delete", async ({ page }) => {
@@ -132,8 +153,7 @@ test("main page keeps equipment after reload and supports profile create/copy/de
   await expect(profileOptions).toHaveCount(1);
 
   await page.locator("#profile-name-input").fill("Main build");
-  await expect(page.locator("#category-list .equip-btn[data-action='equip']").first()).toBeVisible();
-  await page.locator("#category-list .equip-btn[data-action='equip']").first().click();
+  await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
   await page.locator("#profile-save-button").click();
 
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
@@ -160,35 +180,52 @@ test("main page keeps equipment after reload and supports profile create/copy/de
   await expect(page.locator("#profile-name-input")).toHaveValue("Main build");
 });
 
-test("pet, sphere and trophy workflows fill their slots", async ({ page }) => {
+test("main page equipment, pet, sphere and trophy workflows recalculate and persist", async ({ page }) => {
   await page.goto("/index.html");
 
+  const baselineHp = (await readBoardMainStats(page)).HP;
+  await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await expect.poll(async () => (await readBoardMainStats(page)).HP).not.toBe(baselineHp);
+
+  const inventoryStepper = page.locator('#slot-grid [data-upgrade-type="inventory"][data-upgrade-delta="1"]').first();
+  await expect(inventoryStepper).toBeVisible();
+  await inventoryStepper.click();
+  await expect(page.locator("#slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
+
   await page.locator('[data-workspace-tab="pet"]').click();
-  const petEquipButton = page.locator("#category-list [data-pet-id][data-action='equip']").first();
-  if (await petEquipButton.count() === 0) {
-    await page.locator(".category-header[data-pet-category]").first().click();
-  }
-  await expect(petEquipButton).toBeVisible();
-  await petEquipButton.click();
+  await clickFirstEquipButton(page, "#category-list [data-pet-id][data-action='equip']");
   await expect(page.locator("#pet-stage .pet-card")).toBeVisible();
+  await expect.poll(async () => (await readBoardExtraStats(page))["Получаемый урон"]).toBe("-15%");
 
   await page.locator('[data-workspace-tab="spheres"]').click();
-  const sphereEquipButton = page.locator("#category-list [data-sphere-id][data-action='equip']").first();
-  if (await sphereEquipButton.count() === 0) {
-    await page.locator(".category-header[data-sphere-category]").first().click();
-  }
-  await expect(sphereEquipButton).toBeVisible();
-  await sphereEquipButton.click();
+  await clickFirstEquipButton(page, "#category-list [data-sphere-id][data-action='equip']");
   await expect(page.locator("#sphere-slot-grid .sphere-slot-cell.is-filled")).toHaveCount(1);
+  const sphereStepper = page.locator('#sphere-slot-grid [data-upgrade-type="sphere"][data-upgrade-delta="1"]').first();
+  await expect(sphereStepper).toBeVisible();
+  await sphereStepper.click();
+  await expect(page.locator("#sphere-slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
 
   await page.locator('[data-workspace-tab="trophies"]').click();
-  const trophyEquipButton = page.locator("#category-list [data-trophy-id][data-action='equip']").first();
-  if (await trophyEquipButton.count() === 0) {
-    await page.locator(".category-header[data-trophy-category]").first().click();
-  }
-  await expect(trophyEquipButton).toBeVisible();
-  await trophyEquipButton.click();
+  await clickFirstEquipButton(page, "#category-list [data-trophy-id][data-action='equip']");
   await expect(page.locator("#trophy-slot-grid .trophy-slot-cell.is-filled")).toHaveCount(1);
+  const trophyStepper = page.locator('#trophy-slot-grid [data-upgrade-type="trophy"][data-upgrade-delta="1"]').first();
+  await expect(trophyStepper).toBeVisible();
+  await trophyStepper.click();
+  await expect(page.locator("#trophy-slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
+
+  await page.reload();
+
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await expect(page.locator("#slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
+  await page.locator('[data-workspace-tab="pet"]').click();
+  await expect(page.locator("#pet-stage .pet-card")).toBeVisible();
+  await page.locator('[data-workspace-tab="spheres"]').click();
+  await expect(page.locator("#sphere-slot-grid .sphere-slot-cell.is-filled")).toHaveCount(1);
+  await expect(page.locator("#sphere-slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
+  await page.locator('[data-workspace-tab="trophies"]').click();
+  await expect(page.locator("#trophy-slot-grid .trophy-slot-cell.is-filled")).toHaveCount(1);
+  await expect(page.locator("#trophy-slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
 });
 
 test("compare page preserves baseline math and reverse-stat direction", async ({ page }) => {
@@ -242,4 +279,87 @@ test("compare page preserves baseline math and reverse-stat direction", async ({
   expect(reverseRow?.primaryClass).toContain("is-worse");
   expect(reverseRow?.secondaryClass).toContain("is-better");
   expect(reverseRow?.deltaClass).toContain("is-worse");
+});
+
+test("compare editor catalog equips, removes, merges and persists secondary profile", async ({ page }) => {
+  await seedProfiles(
+    page,
+    [
+      {
+        id: "profile-primary",
+        name: "Primary",
+        classConfig: { classKey: "knight", level: 1 },
+        equipped: {},
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+      {
+        id: "profile-secondary",
+        name: "Secondary",
+        classConfig: { classKey: "knight", level: 1 },
+        equipped: {},
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+    ],
+    "profile-primary",
+    "profile-secondary",
+  );
+
+  await page.goto("/compare.html");
+
+  const secondary = page.locator("#compare-secondary-editor");
+  await expect(page.locator("#compare-primary-editor .compare-editor-catalog")).toBeVisible();
+  await expect(secondary.locator(".compare-editor-catalog")).toBeVisible();
+
+  await secondary.locator('[data-compare-list-action="inventory-equip"]').first().click();
+  await expect(secondary.locator(".compare-equipment-stage .slot-cell.is-filled")).toHaveCount(1);
+  await expect.poll(async () => (await readCompareRow(page, "HP"))?.secondaryText).not.toBe("707");
+  await expectCompareSecondaryStored(page, "(profile) => Boolean(profile?.equipped?.earring)");
+
+  await page.reload();
+  await expect(page.locator("#compare-secondary-editor .compare-equipment-stage .slot-cell.is-filled")).toHaveCount(1);
+  await page.locator('#compare-secondary-editor [data-compare-list-action="inventory-remove"]').first().click();
+  await expect(page.locator("#compare-secondary-editor .compare-equipment-stage .slot-cell.is-filled")).toHaveCount(0);
+  await expectCompareSecondaryStored(page, "(profile) => !profile?.equipped?.earring");
+
+  await page.locator('#compare-secondary-editor [data-compare-workspace-tab="spheres"]').click();
+  await page.locator('#compare-secondary-editor [data-compare-list-action="sphere-equip"]').first().click();
+  await expect(page.locator("#compare-secondary-editor .compare-sphere-stage .sphere-slot-cell.is-filled")).toHaveCount(1);
+  await expectCompareSecondaryStored(page, "(profile) => Object.keys(profile?.sphereEquipped || {}).length === 1");
+
+  await page.locator('#compare-secondary-editor [data-compare-workspace-tab="trophies"]').click();
+  await page.locator('#compare-secondary-editor [data-compare-list-action="trophy-equip"]').first().click();
+  await expect(page.locator("#compare-secondary-editor .compare-trophy-stage .trophy-slot-cell.is-filled")).toHaveCount(1);
+  await expectCompareSecondaryStored(page, "(profile) => Object.keys(profile?.trophyEquipped || {}).length === 1");
+
+  await page.locator('#compare-secondary-editor [data-compare-workspace-tab="pets"]').click();
+  await page.locator('#compare-secondary-editor [data-compare-list-action="pet-equip"]').first().click();
+  await expect(page.locator("#compare-secondary-editor .compare-pet-stage .pet-card")).toBeVisible();
+  await expect.poll(async () => (await readCompareRow(page, "HP"))?.secondaryText).not.toBe("707");
+
+  const mergeIncrease = page.locator('#compare-secondary-editor [data-compare-pet-merge-key="fire"][data-compare-pet-merge-delta="1"]');
+  await mergeIncrease.click();
+  await expect(page.locator("#compare-secondary-editor .pet-merge-count").first()).toHaveText("1");
+  await expect(page.locator("#compare-secondary-editor .pet-merge-bonus").first()).toHaveText("+4");
+  await mergeIncrease.click();
+  await mergeIncrease.click();
+  await mergeIncrease.click();
+  await mergeIncrease.click();
+  await expect(page.locator("#compare-secondary-editor .pet-merge-count").first()).toHaveText("5");
+  await expect(mergeIncrease).toBeDisabled();
+  await expectCompareSecondaryStored(page, "(profile) => profile?.petEquipped?.mergeCounts?.fire === 5");
+
+  await page.reload();
+  await page.locator('#compare-secondary-editor [data-compare-workspace-tab="pets"]').click();
+  await expect(page.locator("#compare-secondary-editor .compare-pet-stage .pet-card")).toBeVisible();
+  await expect(page.locator("#compare-secondary-editor .pet-merge-count").first()).toHaveText("5");
+
+  await page.locator('#compare-secondary-editor [data-compare-list-action="pet-remove"]').first().click();
+  await expect(page.locator("#compare-secondary-editor .compare-pet-stage .pet-card")).toHaveCount(0);
+  await expectCompareSecondaryStored(page, "(profile) => profile?.petEquipped === null");
 });
