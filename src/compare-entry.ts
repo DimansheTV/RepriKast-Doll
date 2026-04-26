@@ -5,7 +5,7 @@ import { createComparePageApp } from "./ui/compare/page-app";
 const context = createAppContext();
 const runtime = createAppRuntime(context);
 const app = createComparePageApp({
-  app: runtime,
+  app: runtime.shared,
   ready: runtime.init(),
   uiStateRepository: context.uiStateRepository,
 });
