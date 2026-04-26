@@ -2,7 +2,6 @@ import equipmentCatalog from "./data/equipment-items.json";
 import sphereCatalog from "./data/sphere-items.json";
 import trophyCatalog from "./data/trophy-items.json";
 import petCatalog from "./data/pet-items.json";
-import matchOverrides from "./data/match-overrides.json";
 
 const imageModules = import.meta.glob("./images/**/*.{png,jpg,jpeg,webp,gif}", {
   eager: true,
@@ -32,6 +31,5 @@ export function getCatalogPayloads() {
     sphere: sphereCatalog,
     trophy: trophyCatalog,
     pet: petCatalog,
-    matchOverrides,
   };
 }

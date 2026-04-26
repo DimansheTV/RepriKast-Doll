@@ -16,8 +16,8 @@ class ArchitectureSmokeTests(unittest.TestCase):
         self.assertIn('type="module" src="/src/compare-entry.ts"', compare_html)
 
     def test_runtime_no_longer_exports_window_globals(self) -> None:
-        runtime_source = (ROOT / "src" / "ui" / "app-runtime.ts").read_text(encoding="utf-8")
-        compare_source = (ROOT / "src" / "ui" / "compare-page-app.ts").read_text(encoding="utf-8")
+        runtime_source = (ROOT / "src" / "ui" / "main" / "runtime-core.ts").read_text(encoding="utf-8")
+        compare_source = (ROOT / "src" / "ui" / "compare" / "page-app.ts").read_text(encoding="utf-8")
 
         self.assertNotIn("window.r2App", runtime_source)
         self.assertNotIn("window.__R2_APP_READY__", runtime_source)
@@ -30,10 +30,18 @@ class ArchitectureSmokeTests(unittest.TestCase):
             ROOT / "src" / "application" / "catalog-repository.ts",
             ROOT / "src" / "application" / "profile-repository.ts",
             ROOT / "src" / "application" / "ui-state-repository.ts",
-            ROOT / "src" / "application" / "app-store.ts",
-            ROOT / "src" / "domain" / "stats-engine.ts",
+            ROOT / "src" / "domain" / "equipment" / "config.ts",
+            ROOT / "src" / "domain" / "spheres" / "config.ts",
+            ROOT / "src" / "domain" / "trophies" / "config.ts",
+            ROOT / "src" / "domain" / "pets" / "config.ts",
+            ROOT / "src" / "domain" / "stats" / "runtime-config.ts",
             ROOT / "src" / "shared" / "item-schema.ts",
+            ROOT / "src" / "shared" / "text.ts",
             ROOT / "src" / "resources" / "catalogs.ts",
+            ROOT / "src" / "ui" / "main" / "runtime-core.ts",
+            ROOT / "src" / "ui" / "main" / "page-app.ts",
+            ROOT / "src" / "ui" / "main" / "page-transitions.ts",
+            ROOT / "src" / "ui" / "compare" / "page-app.ts",
             ROOT / "src" / "main-entry.ts",
             ROOT / "src" / "compare-entry.ts",
         ]

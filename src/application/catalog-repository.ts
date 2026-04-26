@@ -39,7 +39,7 @@ export function createCatalogRepository(fetchImpl) {
         Promise.resolve(loadCatalog("pet", payloads.pet)),
       ]);
 
-      return { equipment, sphere, trophy, pet, matchOverrides: payloads.matchOverrides };
+      return { equipment, sphere, trophy, pet };
     },
   };
 }
