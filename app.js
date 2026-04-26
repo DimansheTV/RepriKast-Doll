@@ -368,9 +368,9 @@ const CLASS_CONFIGS = {
       { label: "Сила", base: 6, growthType: "interval", interval: 3, amount: 1 },
       { label: "Ловкость", base: 3, growthType: "interval", interval: 6, amount: 1 },
       { label: "Интеллект", base: 1, growthType: "interval", interval: 9, amount: 1 },
-      { label: "HP", base: 707, growthType: "per_level", amount: 5 },
-      { label: "MP", base: 33, growthType: "per_level", amount: 1 },
-      { label: "Вес", base: 3205, growthType: "per_level", amount: 25 },
+      { label: "HP", base: 695, growthType: "per_level", amount: 5 },
+      { label: "MP", base: 31, growthType: "per_level", amount: 1 },
+      { label: "Вес", base: 3025, growthType: "per_level", amount: 25 },
     ],
     derivedStats(baseStats) {
       const strength = baseStats["Сила"] || 0;
