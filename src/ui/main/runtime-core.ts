@@ -1,529 +1,28 @@
-const SLOT_CONFIG = [
-  { key: "earring", label: "Серьги", sourceSlot: "earring", col: 1, row: 1 },
-  { key: "helmet", label: "Шлемы", sourceSlot: "helmet", col: 2, row: 1 },
-  { key: "cloak", label: "Плащи", sourceSlot: "cloak", col: 3, row: 1 },
-  { key: "necklace", label: "Ожерелья", sourceSlot: "necklace", col: 1, row: 2 },
-  { key: "armor", label: "Доспехи", sourceSlot: "armor", col: 2, row: 2 },
-  { key: "shield", label: "Снаряжение", sourceSlot: "shield", col: 3, row: 2 },
-  { key: "weapon", label: "Оружие", sourceSlot: "weapon", col: 1, row: 3 },
-  { key: "belt", label: "Ремни", sourceSlot: "belt", col: 2, row: 3 },
-  { key: "gloves", label: "Перчатки", sourceSlot: "gloves", col: 3, row: 3 },
-  { key: "ring_left", label: "Кольцо 1-й слот", sourceSlot: "ring", col: 1, row: 4, matches: (item) => !isMorphRingItem(item) },
-  { key: "boots", label: "Сапоги", sourceSlot: "boots", col: 2, row: 4 },
-  { key: "ring_right", label: "Кольцо 2-й слот", sourceSlot: "ring", col: 3, row: 4, matches: (item) => !isMorphRingItem(item) },
-  {
-    key: "ring_morph_passive",
-    label: "Кольцо перевоплощения",
-    catalogLabel: "Кольца перевоплощения",
-    sourceSlot: "ring",
-    renderOnDoll: false,
-    isPassive: true,
-    matches: (item) => isMorphRingItem(item),
-  },
-];
+﻿// @ts-nocheck
+import { SLOT_CONFIG, PASSIVE_MORPH_RING_SLOT_KEY, isMorphRingItem } from "../../domain/equipment/config";
+import { SPHERE_SLOT_CONFIG, SPHERE_CATEGORY_CONFIG, SPHERE_TYPE_ONE_TABS } from "../../domain/spheres/config";
+import { TROPHY_SLOT_CONFIG } from "../../domain/trophies/config";
+import { PET_CATEGORY_CONFIG, PET_MERGE_CONFIG, PET_MERGE_TOTAL_LIMIT } from "../../domain/pets/config";
+import {
+  MAIN_STATS,
+  CLASS_PRIMARY_ATTRIBUTES,
+  SECONDARY_STAT_PRIORITY,
+  STAT_LABEL_ALIASES,
+  GROUPED_ATTACK_STAT_TARGETS,
+  BAPHOMET_SET_BONUSES,
+  IFRIT_SET_BONUSES,
+  CLASS_CONFIGS,
+} from "../../domain/stats/runtime-config";
+import { bindPageTransitions as bindPageTransitionsImpl } from "./page-transitions";
 
-const SPHERE_SLOT_CONFIG = [
-  {
-    key: "sphere_life",
-    label: "Сфера жизни",
-    categoryKey: "sphere_type_1",
-    positionClass: "sphere-pos-top-left",
-    matches: (item) => item.category === "Сферы жизни",
-  },
-  {
-    key: "sphere_mastery",
-    label: "Сфера мастерства",
-    categoryKey: "sphere_type_1",
-    positionClass: "sphere-pos-top-center",
-    matches: (item) => item.category === "Сферы мастерства",
-  },
-  {
-    key: "sphere_soul",
-    label: "Сфера души",
-    categoryKey: "sphere_type_1",
-    positionClass: "sphere-pos-top-right",
-    matches: (item) => item.category === "Сферы души",
-  },
-  {
-    key: "sphere_destruction",
-    label: "Сфера разрушения",
-    categoryKey: "sphere_type_1",
-    positionClass: "sphere-pos-bottom-left-upper",
-    matches: (item) => item.category === "Сферы разрушения",
-  },
-  {
-    key: "sphere_protection",
-    label: "Сфера защиты",
-    categoryKey: "sphere_type_1",
-    positionClass: "sphere-pos-bottom-right-upper",
-    matches: (item) => item.category === "Сферы защиты",
-  },
-  {
-    key: "sphere_harvest",
-    label: "Сфера добычи",
-    categoryKey: "sphere_type_2",
-    positionClass: "sphere-pos-bottom-left",
-    matches: (item) =>
-      item.category === "Особые сферы" && /(алчност|гармони)/i.test(item.name || ""),
-  },
-  {
-    key: "sphere_class",
-    label: "Классовая сфера",
-    categoryKey: "sphere_type_3",
-    positionClass: "sphere-pos-bottom-center",
-    matches: (item) =>
-      item.category === "Особые сферы" && !/(алчност|гармони)/i.test(item.name || ""),
-  },
-  {
-    key: "sphere_morph",
-    label: "Сфера перевоплощения",
-    categoryKey: "sphere_type_4",
-    positionClass: "sphere-pos-bottom-right",
-    matches: (item) => item.category === "Сферы перевоплощения",
-  },
-];
+export function createAppRuntime(context) {
+const {
+  catalogRepository,
+  profileRepository,
+  uiStateRepository,
+} = context;
 
-const SPHERE_CATEGORY_CONFIG = [
-  { key: "sphere_type_1", label: "Сферы 1-го типа" },
-  { key: "sphere_type_2", label: "Сферы 2-го типа" },
-  { key: "sphere_type_3", label: "Сферы 3-го типа" },
-  { key: "sphere_type_4", label: "Сферы 4-го типа" },
-];
-
-const SPHERE_TYPE_ONE_TABS = [
-  { category: "Сферы разрушения", label: "Разрушения", slotKey: "sphere_destruction" },
-  { category: "Сферы жизни", label: "Жизни", slotKey: "sphere_life" },
-  { category: "Сферы мастерства", label: "Мастерства", slotKey: "sphere_mastery" },
-  { category: "Сферы души", label: "Души", slotKey: "sphere_soul" },
-  { category: "Сферы защиты", label: "Защиты", slotKey: "sphere_protection" },
-];
-
-const TROPHY_SLOT_CONFIG = [
-  { key: "trophy_top_left", label: "Корона", statLabel: "HP", positionClass: "trophy-pos-top-left" },
-  { key: "trophy_top_right", label: "Маска", statLabel: "Защита", positionClass: "trophy-pos-top-right" },
-  { key: "trophy_middle_left", label: "Браслет", statLabel: "Сила", positionClass: "trophy-pos-middle-left" },
-  { key: "trophy_middle_right", label: "Амулет", statLabel: "Ловкость", positionClass: "trophy-pos-middle-right" },
-  { key: "trophy_bottom_left", label: "Чаша", statLabel: "Скорость бега", positionClass: "trophy-pos-bottom-left" },
-  { key: "trophy_bottom_right", label: "Горн", statLabel: "Скорость атаки", positionClass: "trophy-pos-bottom-right" },
-];
-
-const PET_CATEGORY_CONFIG = [
-  { key: "I", label: "Тип I" },
-  { key: "II", label: "Тип II" },
-];
-const PET_MERGE_TOTAL_LIMIT = 5;
-const PET_MERGE_CONFIG = [
-  { key: "fire", label: "Огонь", statLabel: "Сила", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
-  { key: "earth", label: "Земля", statLabel: "Ловкость", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
-  { key: "energy", label: "Энергия", statLabel: "Интеллект", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
-  { key: "wind", label: "Ветер", statLabel: "Скорость атаки", unit: "%", bonusSteps: [8, 4, 2, 2, 2] },
-  { key: "moon", label: "Луна", statLabel: "Поглощение", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
-  { key: "sun", label: "Солнце", statLabel: "Уклонение", unit: "", bonusSteps: [4, 2, 1, 1, 1] },
-  { key: "water", label: "Вода", statLabel: "Вероятность выпадения трофеев", unit: "%", bonusSteps: [10, 5, 1, 1, 1] },
-];
-
-const STORAGE_KEY = "r2-doll-equip-v3";
-const SPHERE_STORAGE_KEY = "r2-doll-sphere-v1";
-const TROPHY_STORAGE_KEY = "r2-doll-trophy-v1";
-const PET_STORAGE_KEY = "r2-doll-pet-v1";
-const CLASS_STORAGE_KEY = "r2-doll-class-v1";
-const SIDEBAR_TAB_STORAGE_KEY = "r2-doll-sidebar-tab-v2";
-const WORKSPACE_TAB_STORAGE_KEY = "r2-doll-workspace-tab-v1";
-const PROFILE_STORAGE_KEY = "r2-doll-profiles-v1";
-const ACTIVE_PROFILE_STORAGE_KEY = "r2-doll-active-profile-v1";
-const NAV_TRANSITION_STORAGE_KEY = "r2-nav-transition-v1";
-const NAV_TRANSITION_DURATION_MS = 420;
-const PASSIVE_MORPH_RING_SLOT_KEY = "ring_morph_passive";
-const MAIN_STATS = ["HP", "MP", "Сила", "Ловкость", "Интеллект", "Защита"];
-const CLASS_PRIMARY_ATTRIBUTES = new Set(["Сила", "Ловкость", "Интеллект"]);
-const SECONDARY_STAT_PRIORITY = [
-  "Скорость атаки",
-  "Скорость бега",
-  "Уровень ближних атак",
-  "Уровень дальних атак",
-  "Уровень магических атак",
-  "Точность ближних атак",
-  "Точность дальних атак",
-  "Точность магических атак",
-  "Шанс нанести крит. удар",
-  "Шанс получить крит. удар",
-  "Доп. урон при крит. ударе",
-  "Получаемый крит. урон",
-  "Получаемый урон",
-  "Периодический урон",
-  "Поглощение",
-  "Уклонение",
-  "Восстановление HP",
-  "Восстановление MP",
-  "Особое восстановление MP",
-  "Эффект зелий здоровья",
-  "Уровень зелий здоровья",
-  "Вероятность выпадения трофеев",
-  "Количество получаемых очков опыта",
-  "Вес",
-];
-const STAT_LABEL_ALIASES = new Map([
-  ["hp", "HP"],
-  ["максимум hp", "HP"],
-  ["макс. hp", "HP"],
-  ["макс. hp от силы", "HP"],
-  ["mp", "MP"],
-  ["максимум mp", "MP"],
-  ["макс. mp", "MP"],
-  ["макс. mp от интеллекта", "MP"],
-  ["сила", "Сила"],
-  ["ловкость", "Ловкость"],
-  ["интеллект", "Интеллект"],
-  ["защита", "Защита"],
-  ["скорость атаки", "Скорость атаки"],
-  ["скорость бега", "Скорость бега"],
-  ["скорость передвижения", "Скорость бега"],
-  ["уровень всех атак", "Уровень всех атак"],
-  ["уровень ближних атак", "Уровень ближних атак"],
-  ["уровень дальних атак", "Уровень дальних атак"],
-  ["уровень магических атак", "Уровень магических атак"],
-  ["точность всех атак", "Точность всех атак"],
-  ["точность ближних атак", "Точность ближних атак"],
-  ["точность дальних атак", "Точность дальних атак"],
-  ["точность магических атак", "Точность магических атак"],
-  ["шанс нанести крит. удар", "Шанс нанести крит. удар"],
-  ["шанс крит. удара", "Шанс нанести крит. удар"],
-  ["шанс получить крит. удар", "Шанс получить крит. удар"],
-  ["доп. урон при крит. ударе", "Доп. урон при крит. ударе"],
-  ["дополнительный урон при крит. ударе", "Доп. урон при крит. ударе"],
-  ["получаемый крит. урон", "Получаемый крит. урон"],
-  ["получаемый урон", "Получаемый урон"],
-  ["весь получаемый урон", "Получаемый урон"],
-  ["периодический урон", "Периодический урон"],
-  ["поглощение", "Поглощение"],
-  ["уклонение", "Уклонение"],
-  ["восстановление hp", "Восстановление HP"],
-  ["регенерация hp", "Восстановление HP"],
-  ["восстановление mp", "Восстановление MP"],
-  ["регенерация mp", "Восстановление MP"],
-  ["особое восстановление hp", "Восстановление HP"],
-  ["особое восстановление mp", "Восстановление MP"],
-  ["эффект зелий здоровья", "Эффект зелий здоровья"],
-  ["уровень зелий здоровья", "Уровень зелий здоровья"],
-  ["дроп", "Вероятность выпадения трофеев"],
-  ["опыт", "Количество получаемых очков опыта"],
-  ["параметры", "Все параметры"],
-  ["вес", "Вес"],
-  ["максимальный вес", "Вес"],
-  ["макс. вес", "Вес"],
-  ["макс. вес от силы", "Вес"],
-  ["увеличение уровня переносимого веса", "Вес"],
-  ["все параметры", "Все параметры"],
-]);
 let profileSyncLocked = false;
-const GROUPED_ATTACK_STAT_TARGETS = new Map([
-  ["Уровень всех атак", ["Уровень ближних атак", "Уровень дальних атак", "Уровень магических атак"]],
-  ["Точность всех атак", ["Точность ближних атак", "Точность дальних атак", "Точность магических атак"]],
-]);
-const BAPHOMET_SET_BONUSES = {
-  4: {
-    3: [{ label: "Уровень всех атак", value: 1, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 1, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 2, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 1, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 2, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 4, unit: "" },
-    ],
-  },
-  5: {
-    3: [{ label: "Уровень всех атак", value: 2, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 2, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 3, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 2, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 3, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 6, unit: "" },
-    ],
-  },
-  6: {
-    3: [{ label: "Уровень всех атак", value: 3, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 3, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 4, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 3, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 4, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 8, unit: "" },
-    ],
-  },
-  7: {
-    3: [{ label: "Уровень всех атак", value: 4, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 4, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 5, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 4, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 5, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 10, unit: "" },
-    ],
-  },
-  8: {
-    3: [{ label: "Уровень всех атак", value: 5, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 5, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 6, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 5, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 6, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 12, unit: "" },
-    ],
-  },
-  9: {
-    3: [{ label: "Уровень всех атак", value: 6, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 6, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 7, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 6, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 7, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 14, unit: "" },
-    ],
-  },
-  10: {
-    3: [{ label: "Уровень всех атак", value: 6, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 6, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 7, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 6, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 7, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 14, unit: "" },
-    ],
-  },
-  11: {
-    3: [{ label: "Уровень всех атак", value: 7, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 7, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 8, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 7, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 8, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 16, unit: "" },
-    ],
-  },
-  12: {
-    3: [{ label: "Уровень всех атак", value: 7, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 7, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 8, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 7, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 8, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 16, unit: "" },
-    ],
-  },
-  13: {
-    3: [{ label: "Уровень всех атак", value: 8, unit: "" }],
-    4: [
-      { label: "Уровень всех атак", value: 8, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 9, unit: "" },
-    ],
-    5: [
-      { label: "Уровень всех атак", value: 8, unit: "" },
-      { label: "Шанс нанести крит. удар", value: 9, unit: "" },
-      { label: "Доп. урон при крит. ударе", value: 18, unit: "" },
-    ],
-  },
-};
-const IFRIT_SET_BONUSES = Object.fromEntries(
-  Array.from({ length: 10 }, (_, index) => {
-    const level = index + 4;
-    const hp = (level - 2) * 50;
-    const defense = level - 3;
-    const damageReduction = -(level - 3);
-
-    return [level, {
-      3: [{ label: "HP", value: hp, unit: "" }],
-      4: [
-        { label: "HP", value: hp, unit: "" },
-        { label: "Защита", value: defense, unit: "" },
-      ],
-      5: [
-        { label: "HP", value: hp, unit: "" },
-        { label: "Защита", value: defense, unit: "" },
-        { label: "Получаемый урон", value: damageReduction, unit: "%" },
-      ],
-    }];
-  })
-);
-const CLASS_CONFIGS = {
-  knight: {
-    label: "Рыцарь",
-    baseStats: [
-      { label: "Сила", base: 6, growthType: "interval", interval: 3, amount: 1 },
-      { label: "Ловкость", base: 3, growthType: "interval", interval: 6, amount: 1 },
-      { label: "Интеллект", base: 1, growthType: "interval", interval: 9, amount: 1 },
-      { label: "HP", base: 695, growthType: "per_level", amount: 5 },
-      { label: "MP", base: 31, growthType: "per_level", amount: 1 },
-      { label: "Вес", base: 3025, growthType: "per_level", amount: 25 },
-    ],
-    derivedStats(baseStats) {
-      const strength = baseStats["Сила"] || 0;
-      const dexterity = baseStats["Ловкость"] || 0;
-      const intelligence = baseStats["Интеллект"] || 0;
-
-      return [
-        { label: "Уровень ближних атак", value: Math.floor(strength / 3), unit: "" },
-        { label: "Точность ближних атак", value: Math.floor(strength / 2), unit: "" },
-        { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 12), unit: "" },
-        { label: "HP", value: strength * 2, unit: "" },
-        { label: "Регенерация HP", value: Math.floor(strength / 12) * 0.1, unit: "" },
-        { label: "Вес", value: strength * 30, unit: "" },
-        { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 9), unit: "" },
-        { label: "Скорость атаки", value: Math.floor(dexterity / 12), unit: "%" },
-        { label: "Скорость передвижения", value: Math.floor(dexterity / 6), unit: "" },
-        { label: "MP", value: intelligence * 2, unit: "" },
-        { label: "Регенерация MP", value: Math.floor(intelligence / 6) * 0.1, unit: "" },
-      ];
-    },
-  },
-  ranger: {
-    label: "Рейнджер",
-    baseStats: [
-      { label: "Сила", base: 3, growthType: "interval", interval: 6, amount: 1 },
-      { label: "Ловкость", base: 6, growthType: "interval", interval: 3, amount: 1 },
-      { label: "Интеллект", base: 1, growthType: "interval", interval: 9, amount: 1 },
-      { label: "HP", base: 604, growthType: "per_level", amount: 4 },
-      { label: "MP", base: 30, growthType: "per_level", amount: 1 },
-      { label: "Вес", base: 3000, growthType: "per_level", amount: 15 },
-    ],
-    derivedStats(baseStats) {
-      const strength = baseStats["Сила"] || 0;
-      const dexterity = baseStats["Ловкость"] || 0;
-      const intelligence = baseStats["Интеллект"] || 0;
-
-      return [
-        { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 9), unit: "" },
-        { label: "HP", value: strength * 2, unit: "" },
-        { label: "Регенерация HP", value: Math.floor(strength / 9) * 0.1, unit: "" },
-        { label: "Вес", value: strength * 30, unit: "" },
-        { label: "Уровень дальних атак", value: Math.floor(dexterity / 3), unit: "" },
-        { label: "Точность дальних атак", value: Math.floor(dexterity / 2), unit: "" },
-        { label: "Защита", value: Math.floor(dexterity / 6), unit: "" },
-        { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 9), unit: "" },
-        { label: "Скорость атаки", value: Math.floor(dexterity / 17), unit: "%" },
-        { label: "Скорость передвижения", value: Math.floor(dexterity / 7), unit: "" },
-        { label: "MP", value: intelligence * 2, unit: "" },
-        { label: "Регенерация MP", value: Math.floor(intelligence / 4) * 0.1, unit: "" },
-      ];
-    },
-  },
-  mage: {
-    label: "Маг",
-    baseStats: [
-      { label: "Сила", base: 6, growthType: "interval", interval: 3, amount: 1 },
-      { label: "Ловкость", base: 2, growthType: "interval", interval: 7, amount: 1 },
-      { label: "Интеллект", base: 4, growthType: "interval", interval: 4, amount: 1 },
-      { label: "HP", base: 356, growthType: "per_level", amount: 4 },
-      { label: "MP", base: 44, growthType: "per_level", amount: 2 },
-      { label: "Вес", base: 3200, growthType: "per_level", amount: 20 },
-    ],
-    derivedStats(baseStats) {
-      const strength = baseStats["Сила"] || 0;
-      const dexterity = baseStats["Ловкость"] || 0;
-      const intelligence = baseStats["Интеллект"] || 0;
-
-      return [
-        { label: "Уровень ближних атак", value: Math.floor(strength / 3), unit: "" },
-        { label: "Точность ближних атак", value: Math.floor(strength / 2), unit: "" },
-        { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 12), unit: "" },
-        { label: "HP", value: strength * 2, unit: "" },
-        { label: "Регенерация HP", value: Math.floor(strength / 9) * 0.1, unit: "" },
-        { label: "Вес", value: strength * 30, unit: "" },
-        { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 9), unit: "" },
-        { label: "Скорость атаки", value: Math.floor(dexterity / 12), unit: "%" },
-        { label: "Скорость передвижения", value: Math.floor(dexterity / 6), unit: "" },
-        { label: "Уровень магических атак", value: Math.floor(intelligence / 3), unit: "" },
-        { label: "Точность магических атак", value: Math.floor(intelligence / 2), unit: "" },
-        { label: "MP", value: intelligence * 3, unit: "" },
-        { label: "Регенерация MP", value: Math.floor(intelligence / 4) * 0.1, unit: "" },
-      ];
-    },
-  },
-  summoner: {
-    label: "Призыватель",
-    baseStats: [
-      { label: "Сила", base: 5, growthType: "interval", interval: 4, amount: 1 },
-      { label: "Ловкость", base: 5, growthType: "interval", interval: 4, amount: 1 },
-      { label: "Интеллект", base: 3, growthType: "interval", interval: 6, amount: 1 },
-      { label: "HP", base: 354, growthType: "per_level", amount: 4 },
-      { label: "MP", base: 37, growthType: "per_level", amount: 1 },
-      { label: "Вес", base: 3165, growthType: "per_level", amount: 15 },
-    ],
-    derivedStats(baseStats) {
-      const strength = baseStats["Сила"] || 0;
-      const dexterity = baseStats["Ловкость"] || 0;
-      const intelligence = baseStats["Интеллект"] || 0;
-
-      return [
-        { label: "Уровень ближних атак", value: Math.floor(strength / 3), unit: "" },
-        { label: "Точность ближних атак", value: Math.floor(strength / 2), unit: "" },
-        { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 15), unit: "" },
-        { label: "HP", value: strength * 2, unit: "" },
-        { label: "Регенерация HP", value: Math.floor(strength / 12) * 0.1, unit: "" },
-        { label: "Вес", value: strength * 30, unit: "" },
-        { label: "Уровень дальних атак", value: Math.floor(dexterity / 3), unit: "" },
-        { label: "Точность дальних атак", value: Math.floor(dexterity / 2), unit: "" },
-        { label: "Защита", value: Math.floor(dexterity / 5), unit: "" },
-        { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 15), unit: "" },
-        { label: "Скорость атаки", value: Math.floor(dexterity / 13), unit: "%" },
-        { label: "Скорость передвижения", value: Math.floor(dexterity / 8), unit: "" },
-        { label: "Уровень магических атак", value: Math.floor(intelligence / 6), unit: "" },
-        { label: "Точность магических атак", value: Math.floor(intelligence / 6), unit: "" },
-        { label: "MP", value: intelligence * 2, unit: "" },
-        { label: "Регенерация MP", value: Math.floor(intelligence / 4) * 0.1, unit: "" },
-      ];
-    },
-  },
-  assassin: {
-    label: "Ассасин",
-    baseStats: [
-      { label: "Сила", base: 5, growthType: "interval", interval: 5, amount: 1 },
-      { label: "Ловкость", base: 6, growthType: "interval", interval: 3, amount: 1 },
-      { label: "Интеллект", base: 1, growthType: "interval", interval: 9, amount: 1 },
-      { label: "HP", base: 153, growthType: "per_level", amount: 3 },
-      { label: "MP", base: 33, growthType: "per_level", amount: 1 },
-      { label: "Вес", base: 3170, growthType: "per_level", amount: 20 },
-    ],
-    derivedStats(baseStats) {
-      const strength = baseStats["Сила"] || 0;
-      const dexterity = baseStats["Ловкость"] || 0;
-      const intelligence = baseStats["Интеллект"] || 0;
-
-      return [
-        { label: "Уровень ближних атак", value: Math.floor(strength / 3), unit: "" },
-        { label: "Точность ближних атак", value: Math.floor(strength / 2), unit: "" },
-        { label: "Доп. урон при крит. ударе", value: Math.floor(strength / 7), unit: "" },
-        { label: "HP", value: strength * 2, unit: "" },
-        { label: "Регенерация HP", value: Math.floor(strength / 9) * 0.1, unit: "" },
-        { label: "Вес", value: strength * 30, unit: "" },
-        { label: "Защита", value: Math.floor(dexterity / 4), unit: "" },
-        { label: "Шанс нанести крит. удар", value: Math.floor(dexterity / 10), unit: "" },
-        { label: "Скорость атаки", value: Math.floor(dexterity / 12), unit: "%" },
-        { label: "Скорость передвижения", value: Math.floor(dexterity / 9), unit: "" },
-        { label: "MP", value: intelligence * 2, unit: "" },
-        { label: "Регенерация MP", value: Math.floor(intelligence / 4) * 0.1, unit: "" },
-      ];
-    },
-  },
-};
 
 const state = {
   items: [],
@@ -991,169 +490,84 @@ function sanitizeClassLevel(level) {
 }
 
 function loadEquippedState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+  return profileRepository.loadLegacyEquipment();
 }
 
 function loadClassState() {
-  try {
-    const raw = localStorage.getItem(CLASS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    const classKey = CLASS_CONFIGS[parsed?.classKey] ? parsed.classKey : "knight";
-    const level = sanitizeClassLevel(parsed?.level ?? 1);
-    return { classKey, level };
-  } catch {
-    return { classKey: "knight", level: 1 };
-  }
+  const parsed = profileRepository.loadLegacyClassConfig();
+  const classKey = CLASS_CONFIGS[parsed?.classKey] ? parsed.classKey : "knight";
+  const level = sanitizeClassLevel(parsed?.level ?? 1);
+  return { classKey, level };
 }
 
 function loadPetEquippedState() {
-  try {
-    const raw = localStorage.getItem(PET_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
+  return profileRepository.loadLegacyPetSelection();
 }
 
 function loadSidebarTabState() {
-  try {
-    const raw = localStorage.getItem(SIDEBAR_TAB_STORAGE_KEY);
-    return ["class", "stats"].includes(raw) ? raw : "class";
-  } catch {
-    return "class";
-  }
+  return uiStateRepository.loadSidebarTab();
 }
 
 function loadSphereEquippedState() {
-  try {
-    const raw = localStorage.getItem(SPHERE_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+  return profileRepository.loadLegacySphereEquipment();
 }
 
 function loadTrophyEquippedState() {
-  try {
-    const raw = localStorage.getItem(TROPHY_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+  return profileRepository.loadLegacyTrophyEquipment();
 }
 
 function loadWorkspaceTabState() {
-  try {
-    const raw = localStorage.getItem(WORKSPACE_TAB_STORAGE_KEY);
-    return ["inventory", "pet", "spheres", "trophies"].includes(raw) ? raw : "inventory";
-  } catch {
-    return "inventory";
-  }
+  return uiStateRepository.loadWorkspaceTab();
 }
 
 function loadProfilesState() {
-  try {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return profileRepository.loadProfiles();
 }
 
 function loadActiveProfileIdState() {
-  try {
-    return normalizeText(localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY) || "");
-  } catch {
-    return "";
-  }
+  return normalizeText(profileRepository.loadActiveProfileId() || "");
 }
 
 function saveEquippedState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.equipped));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacyEquipment(state.equipped);
   syncActiveProfileFromState();
 }
 
 function saveClassState() {
-  try {
-    localStorage.setItem(CLASS_STORAGE_KEY, JSON.stringify(state.classConfig));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacyClassConfig(state.classConfig);
   syncActiveProfileFromState();
 }
 
 function saveSidebarTabState() {
-  try {
-    localStorage.setItem(SIDEBAR_TAB_STORAGE_KEY, state.activeSidebarTab);
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  uiStateRepository.saveSidebarTab(state.activeSidebarTab);
 }
 
 function saveSphereEquippedState() {
-  try {
-    localStorage.setItem(SPHERE_STORAGE_KEY, JSON.stringify(state.sphereEquipped));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacySphereEquipment(state.sphereEquipped);
   syncActiveProfileFromState();
 }
 
 function saveTrophyEquippedState() {
-  try {
-    localStorage.setItem(TROPHY_STORAGE_KEY, JSON.stringify(state.trophyEquipped));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacyTrophyEquipment(state.trophyEquipped);
   syncActiveProfileFromState();
 }
 
 function savePetEquippedState() {
-  try {
-    localStorage.setItem(PET_STORAGE_KEY, JSON.stringify(state.petEquipped));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacyPetSelection(state.petEquipped);
   syncActiveProfileFromState();
 }
 
 function saveWorkspaceTabState() {
-  try {
-    localStorage.setItem(WORKSPACE_TAB_STORAGE_KEY, state.activeWorkspaceTab);
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  uiStateRepository.saveWorkspaceTab(state.activeWorkspaceTab);
   syncActiveProfileFromState();
 }
 
 function saveProfilesState() {
-  try {
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profiles));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveProfiles(state.profiles);
 }
 
 function saveActiveProfileIdState() {
-  try {
-    localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, state.activeProfileId || "");
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveActiveProfileId(state.activeProfileId || "");
 }
 
 function syncActiveProfileFromState() {
@@ -3609,131 +3023,26 @@ function renderCategoryList() {
   });
 }
 
-async function loadItems() {
-  const response = await fetch("./equipment-items.json", { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
-async function loadSphereItems() {
-  const response = await fetch("./sphere-items.json", { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
-async function loadTrophyItems() {
-  const response = await fetch("./trophy-items.json", { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
-async function loadPetItems() {
-  const response = await fetch("./pet-items.json", { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
-function finalizeEntryTransition() {
-  const transition = document.documentElement.dataset.navTransition || "";
-  if (!transition.startsWith("enter-")) {
-    return;
-  }
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      delete document.documentElement.dataset.navTransition;
-      try {
-        sessionStorage.removeItem(NAV_TRANSITION_STORAGE_KEY);
-      } catch {
-        // Ignore storage errors.
-      }
-    });
-  });
-}
-
 function bindPageTransitions() {
-  finalizeEntryTransition();
-
-  if (document.body?.dataset?.navBound === "1") {
-    return;
-  }
-
-  document.body.dataset.navBound = "1";
-  document.addEventListener("click", (event) => {
-    const link = event.target.closest("a[data-nav-direction]");
-    if (!link) {
-      return;
-    }
-
-    const href = link.getAttribute("href");
-    const direction = link.dataset.navDirection;
-    if (!href || !direction || !["forward", "back"].includes(direction)) {
-      return;
-    }
-
-    if (
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey ||
-      link.target === "_blank"
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-
-    try {
-      sessionStorage.setItem(NAV_TRANSITION_STORAGE_KEY, JSON.stringify({
-        phase: "enter",
-        direction,
-      }));
-    } catch {
-      // Ignore storage errors.
-    }
-
-    document.body.classList.remove("page-transition-exit-forward", "page-transition-exit-back");
-    document.body.classList.add(`page-transition-exit-${direction}`);
-
-    window.setTimeout(() => {
-      window.location.href = href;
-    }, NAV_TRANSITION_DURATION_MS);
-  });
+  return bindPageTransitionsImpl(uiStateRepository);
 }
 
 async function init() {
   try {
-    const rawItems = await loadItems();
-    const rawSphereItems = await loadSphereItems();
-    const rawTrophyItems = await loadTrophyItems();
-    const rawPetItems = await loadPetItems();
-    state.items = rawItems.map((item, index) => ({
+    const catalogs = await catalogRepository.loadAll();
+    state.items = catalogs.equipment.map((item, index) => ({
       ...item,
       uid: createItemUid(item, index),
     }));
-    state.sphereItems = rawSphereItems.map((item, index) => ({
+    state.sphereItems = catalogs.sphere.map((item, index) => ({
       ...item,
       uid: createSphereUid(item, index),
     }));
-    state.trophyItems = rawTrophyItems.map((item, index) => ({
+    state.trophyItems = catalogs.trophy.map((item, index) => ({
       ...item,
       uid: createTrophyUid(item, index),
     }));
-    state.petItems = rawPetItems.map((item, index) => ({
+    state.petItems = catalogs.pet.map((item, index) => ({
       ...item,
       uid: createPetUid(item, index),
     }));
@@ -3777,8 +3086,8 @@ async function init() {
     setLastAction("Каталог не загрузился.");
   }
 }
-bindPageTransitions();
-window.r2App = {
+
+return {
   SLOT_CONFIG,
   SPHERE_SLOT_CONFIG,
   TROPHY_SLOT_CONFIG,
@@ -3845,5 +3154,8 @@ window.r2App = {
   saveActiveProfileExplicitly,
   copyActiveProfile,
   deleteActiveProfile,
+  bindPageTransitions,
+  init,
 };
-window.__R2_APP_READY__ = init();
+}
+

@@ -936,7 +936,7 @@ select.class-control {
   inset: 0;
   z-index: 0;
   border-radius: 0;
-  background-image: url("img/equipment.png");
+  background-image: url("src/resources/images/equipment.png");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -1278,7 +1278,7 @@ select.class-control {
   margin: auto;
   aspect-ratio: 822 / 1003;
   border-radius: 0;
-  background-image: url("img/sphere.png");
+  background-image: url("src/resources/images/sphere.png");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -1304,7 +1304,7 @@ select.class-control {
   margin: auto;
   aspect-ratio: 822 / 1003;
   border-radius: 0;
-  background-image: url("img/trophy.png");
+  background-image: url("src/resources/images/trophy.png");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -2174,11 +2174,17 @@ body[data-page="compare"] .panel {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.95fr) minmax(150px, 1.05fr);
+  gap: 12px;
   align-items: flex-start;
-  justify-content: center;
   overflow: auto;
   padding-right: 4px;
+}
+
+.compare-editor-stage-view {
+  min-width: 0;
+  width: 100%;
 }
 
 .compare-stage-column {
@@ -2219,10 +2225,23 @@ body[data-page="compare"] .panel {
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  width: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .compare-editor-catalog-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 0;
+}
+
+.compare-editor-catalog-title h3 {
+  margin: 0;
+  min-width: 0;
+  font-size: 13px;
 }
 
 .compare-category-list {
@@ -2231,6 +2250,19 @@ body[data-page="compare"] .panel {
   overflow: hidden;
   background: linear-gradient(180deg, rgba(61, 43, 31, 0.42), rgba(39, 28, 21, 0.56));
   border: 1px solid rgba(191, 150, 92, 0.16);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.compare-pet-catalog-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+}
+
+.compare-pet-catalog-group:last-child {
+  padding-bottom: 0;
 }
 
 .compare-summary-heading {
@@ -3055,7 +3087,7 @@ body[data-page="compare"] .panel {
 }
 
 .compare-page-shell {
-  grid-template-columns: minmax(250px, 25%) minmax(250px, 25%) minmax(460px, 1fr);
+  grid-template-columns: minmax(360px, 30%) minmax(360px, 30%) minmax(420px, 1fr);
   gap: 12px;
   overflow: hidden;
 }
