@@ -1,0 +1,21 @@
+{
+  "name": "reprikast-doll",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:python": "python -m unittest discover -s tests -v"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "@types/node": "^24.9.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  }
+}

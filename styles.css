@@ -936,7 +936,7 @@ select.class-control {
   inset: 0;
   z-index: 0;
   border-radius: 0;
-  background-image: url("img/equipment.png");
+  background-image: url("src/resources/images/equipment.png");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -1278,7 +1278,7 @@ select.class-control {
   margin: auto;
   aspect-ratio: 822 / 1003;
   border-radius: 0;
-  background-image: url("img/sphere.png");
+  background-image: url("src/resources/images/sphere.png");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -1304,7 +1304,7 @@ select.class-control {
   margin: auto;
   aspect-ratio: 822 / 1003;
   border-radius: 0;
-  background-image: url("img/trophy.png");
+  background-image: url("src/resources/images/trophy.png");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;

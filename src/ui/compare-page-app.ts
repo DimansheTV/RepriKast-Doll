@@ -1,16 +1,5 @@
-(() => {
-  if (document.body?.dataset?.page !== "compare") {
-    return;
-  }
-
-  const app = window.r2App;
-  const appReady = window.__R2_APP_READY__;
-
-  if (!app || !appReady) {
-    return;
-  }
-
-  const COMPARE_SECONDARY_PROFILE_STORAGE_KEY = "r2-doll-compare-secondary-v1";
+// @ts-nocheck
+export function createComparePageApp({ app, ready, uiStateRepository }) {
   const REVERSE_COMPARE_STATS = new Set([
     "Получаемый урон",
     "Получаемый крит. урон",
@@ -39,19 +28,11 @@
   }
 
   function loadSecondaryProfileId() {
-    try {
-      return app.normalizeText(localStorage.getItem(COMPARE_SECONDARY_PROFILE_STORAGE_KEY) || "");
-    } catch {
-      return "";
-    }
+    return app.normalizeText(uiStateRepository.loadCompareSecondaryProfileId() || "");
   }
 
   function saveSecondaryProfileId() {
-    try {
-      localStorage.setItem(COMPARE_SECONDARY_PROFILE_STORAGE_KEY, compareState.secondaryProfileId || "");
-    } catch {
-      // Ignore storage errors.
-    }
+    uiStateRepository.saveCompareSecondaryProfileId(compareState.secondaryProfileId || "");
   }
 
   function getProfileById(profileId) {
@@ -1429,13 +1410,17 @@
     }
   }
 
-  appReady.then(() => {
-    ensureSecondaryProfileSelection();
-    resetEditorState("primary", getPrimaryProfile(), true);
-    resetEditorState("secondary", getSecondaryProfile(), true);
-    bindTopbar();
-    bindEditor("primary", "compare-primary-editor");
-    bindEditor("secondary", "compare-secondary-editor");
-    renderComparePage();
-  });
-})();
+  return {
+    mount() {
+      return ready.then(() => {
+        ensureSecondaryProfileSelection();
+        resetEditorState("primary", getPrimaryProfile(), true);
+        resetEditorState("secondary", getSecondaryProfile(), true);
+        bindTopbar();
+        bindEditor("primary", "compare-primary-editor");
+        bindEditor("secondary", "compare-secondary-editor");
+        renderComparePage();
+      });
+    },
+  };
+}

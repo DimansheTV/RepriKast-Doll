@@ -1,3 +1,13 @@
+// @ts-nocheck
+export function createAppRuntime(context) {
+const {
+  catalogRepository,
+  profileRepository,
+  uiStateRepository,
+  store,
+  statsEngine,
+} = context;
+
 const SLOT_CONFIG = [
   { key: "earring", label: "Серьги", sourceSlot: "earring", col: 1, row: 1 },
   { key: "helmet", label: "Шлемы", sourceSlot: "helmet", col: 2, row: 1 },
@@ -991,169 +1001,84 @@ function sanitizeClassLevel(level) {
 }
 
 function loadEquippedState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+  return profileRepository.loadLegacyEquipment();
 }
 
 function loadClassState() {
-  try {
-    const raw = localStorage.getItem(CLASS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    const classKey = CLASS_CONFIGS[parsed?.classKey] ? parsed.classKey : "knight";
-    const level = sanitizeClassLevel(parsed?.level ?? 1);
-    return { classKey, level };
-  } catch {
-    return { classKey: "knight", level: 1 };
-  }
+  const parsed = profileRepository.loadLegacyClassConfig();
+  const classKey = CLASS_CONFIGS[parsed?.classKey] ? parsed.classKey : "knight";
+  const level = sanitizeClassLevel(parsed?.level ?? 1);
+  return { classKey, level };
 }
 
 function loadPetEquippedState() {
-  try {
-    const raw = localStorage.getItem(PET_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
+  return profileRepository.loadLegacyPetSelection();
 }
 
 function loadSidebarTabState() {
-  try {
-    const raw = localStorage.getItem(SIDEBAR_TAB_STORAGE_KEY);
-    return ["class", "stats"].includes(raw) ? raw : "class";
-  } catch {
-    return "class";
-  }
+  return uiStateRepository.loadSidebarTab();
 }
 
 function loadSphereEquippedState() {
-  try {
-    const raw = localStorage.getItem(SPHERE_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+  return profileRepository.loadLegacySphereEquipment();
 }
 
 function loadTrophyEquippedState() {
-  try {
-    const raw = localStorage.getItem(TROPHY_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+  return profileRepository.loadLegacyTrophyEquipment();
 }
 
 function loadWorkspaceTabState() {
-  try {
-    const raw = localStorage.getItem(WORKSPACE_TAB_STORAGE_KEY);
-    return ["inventory", "pet", "spheres", "trophies"].includes(raw) ? raw : "inventory";
-  } catch {
-    return "inventory";
-  }
+  return uiStateRepository.loadWorkspaceTab();
 }
 
 function loadProfilesState() {
-  try {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return profileRepository.loadProfiles();
 }
 
 function loadActiveProfileIdState() {
-  try {
-    return normalizeText(localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY) || "");
-  } catch {
-    return "";
-  }
+  return normalizeText(profileRepository.loadActiveProfileId() || "");
 }
 
 function saveEquippedState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.equipped));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacyEquipment(state.equipped);
   syncActiveProfileFromState();
 }
 
 function saveClassState() {
-  try {
-    localStorage.setItem(CLASS_STORAGE_KEY, JSON.stringify(state.classConfig));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacyClassConfig(state.classConfig);
   syncActiveProfileFromState();
 }
 
 function saveSidebarTabState() {
-  try {
-    localStorage.setItem(SIDEBAR_TAB_STORAGE_KEY, state.activeSidebarTab);
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  uiStateRepository.saveSidebarTab(state.activeSidebarTab);
 }
 
 function saveSphereEquippedState() {
-  try {
-    localStorage.setItem(SPHERE_STORAGE_KEY, JSON.stringify(state.sphereEquipped));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacySphereEquipment(state.sphereEquipped);
   syncActiveProfileFromState();
 }
 
 function saveTrophyEquippedState() {
-  try {
-    localStorage.setItem(TROPHY_STORAGE_KEY, JSON.stringify(state.trophyEquipped));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacyTrophyEquipment(state.trophyEquipped);
   syncActiveProfileFromState();
 }
 
 function savePetEquippedState() {
-  try {
-    localStorage.setItem(PET_STORAGE_KEY, JSON.stringify(state.petEquipped));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveLegacyPetSelection(state.petEquipped);
   syncActiveProfileFromState();
 }
 
 function saveWorkspaceTabState() {
-  try {
-    localStorage.setItem(WORKSPACE_TAB_STORAGE_KEY, state.activeWorkspaceTab);
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  uiStateRepository.saveWorkspaceTab(state.activeWorkspaceTab);
   syncActiveProfileFromState();
 }
 
 function saveProfilesState() {
-  try {
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profiles));
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveProfiles(state.profiles);
 }
 
 function saveActiveProfileIdState() {
-  try {
-    localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, state.activeProfileId || "");
-  } catch {
-    // Ignore storage errors to keep the page usable in private/file contexts.
-  }
+  profileRepository.saveActiveProfileId(state.activeProfileId || "");
 }
 
 function syncActiveProfileFromState() {
@@ -3654,11 +3579,7 @@ function finalizeEntryTransition() {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       delete document.documentElement.dataset.navTransition;
-      try {
-        sessionStorage.removeItem(NAV_TRANSITION_STORAGE_KEY);
-      } catch {
-        // Ignore storage errors.
-      }
+      uiStateRepository.clearNavTransition();
     });
   });
 }
@@ -3697,14 +3618,10 @@ function bindPageTransitions() {
 
     event.preventDefault();
 
-    try {
-      sessionStorage.setItem(NAV_TRANSITION_STORAGE_KEY, JSON.stringify({
-        phase: "enter",
-        direction,
-      }));
-    } catch {
-      // Ignore storage errors.
-    }
+    uiStateRepository.saveNavTransition(JSON.stringify({
+      phase: "enter",
+      direction,
+    }));
 
     document.body.classList.remove("page-transition-exit-forward", "page-transition-exit-back");
     document.body.classList.add(`page-transition-exit-${direction}`);
@@ -3717,23 +3634,20 @@ function bindPageTransitions() {
 
 async function init() {
   try {
-    const rawItems = await loadItems();
-    const rawSphereItems = await loadSphereItems();
-    const rawTrophyItems = await loadTrophyItems();
-    const rawPetItems = await loadPetItems();
-    state.items = rawItems.map((item, index) => ({
+    const catalogs = await catalogRepository.loadAll();
+    state.items = catalogs.equipment.map((item, index) => ({
       ...item,
       uid: createItemUid(item, index),
     }));
-    state.sphereItems = rawSphereItems.map((item, index) => ({
+    state.sphereItems = catalogs.sphere.map((item, index) => ({
       ...item,
       uid: createSphereUid(item, index),
     }));
-    state.trophyItems = rawTrophyItems.map((item, index) => ({
+    state.trophyItems = catalogs.trophy.map((item, index) => ({
       ...item,
       uid: createTrophyUid(item, index),
     }));
-    state.petItems = rawPetItems.map((item, index) => ({
+    state.petItems = catalogs.pet.map((item, index) => ({
       ...item,
       uid: createPetUid(item, index),
     }));
@@ -3747,6 +3661,7 @@ async function init() {
     sanitizeTrophyEquippedState();
     sanitizePetEquippedState();
     initializeUiState();
+    store.replace(state);
     renderAll();
     bindProfileControls();
     bindSidebarTabs();
@@ -3777,8 +3692,8 @@ async function init() {
     setLastAction("Каталог не загрузился.");
   }
 }
-bindPageTransitions();
-window.r2App = {
+
+return {
   SLOT_CONFIG,
   SPHERE_SLOT_CONFIG,
   TROPHY_SLOT_CONFIG,
@@ -3845,5 +3760,9 @@ window.r2App = {
   saveActiveProfileExplicitly,
   copyActiveProfile,
   deleteActiveProfile,
+  bindPageTransitions,
+  init,
+  store,
+  statsEngine,
 };
-window.__R2_APP_READY__ = init();
+}

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "baseUrl": ".",
+    "types": ["node", "@playwright/test"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "playwright.config.ts",
+    "tests/**/*.ts"
+  ]
+}
