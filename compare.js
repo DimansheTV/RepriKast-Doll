@@ -21,6 +21,7 @@
 
   const compareState = {
     secondaryProfileId: loadSecondaryProfileId(),
+    pendingLevelFocus: null,
     editors: {
       primary: createEditorState(),
       secondary: createEditorState(),
@@ -101,6 +102,37 @@
     return app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
   }
 
+  function queueLevelInputFocus(editorKey, input = null) {
+    compareState.pendingLevelFocus = {
+      editorKey,
+      selectionStart: typeof input?.selectionStart === "number" ? input.selectionStart : null,
+      selectionEnd: typeof input?.selectionEnd === "number" ? input.selectionEnd : null,
+    };
+  }
+
+  function restorePendingLevelInputFocus() {
+    const pending = compareState.pendingLevelFocus;
+    if (!pending) {
+      return;
+    }
+
+    compareState.pendingLevelFocus = null;
+    const containerId = pending.editorKey === "primary" ? "compare-primary-editor" : "compare-secondary-editor";
+    const container = document.getElementById(containerId);
+    const input = container?.querySelector("[data-compare-level-input]");
+    if (!input) {
+      return;
+    }
+
+    input.focus({ preventScroll: true });
+    if (typeof pending.selectionStart === "number" && typeof pending.selectionEnd === "number") {
+      const nextLength = String(input.value || "").length;
+      const start = Math.max(0, Math.min(nextLength, pending.selectionStart));
+      const end = Math.max(0, Math.min(nextLength, pending.selectionEnd));
+      input.setSelectionRange(start, end);
+    }
+  }
+
   function ensureSecondaryProfileSelection() {
     const nextSecondaryId = getFirstOtherProfileId(app.state.activeProfileId, compareState.secondaryProfileId);
     if (compareState.secondaryProfileId !== nextSecondaryId) {
@@ -161,7 +193,7 @@
 
   function ensureEditorState(editorKey, profile) {
     const editor = compareState.editors[editorKey];
-    if (!["inventory", "spheres", "trophies"].includes(editor.activeWorkspaceTab)) {
+    if (!["inventory", "pets", "spheres", "trophies"].includes(editor.activeWorkspaceTab)) {
       editor.activeWorkspaceTab = "inventory";
     }
 
@@ -507,15 +539,15 @@
       const imageHtml = item?.image
         ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
         : "";
-      const upgradeControl = item && levels.length > 1
-        ? `
-          <select class="slot-upgrade-select" data-compare-upgrade-type="inventory" data-slot-key="${slot.key}">
-            ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
-          </select>
-        `
-        : item && app.shouldDisplayUpgradeLevel(level)
-          ? `<span class="slot-upgrade-select is-static">${app.escapeHtml(level)}</span>`
-          : "";
+      const upgradeControl = item
+        ? app.renderUpgradeStepperControl(
+            "slot-upgrade-select",
+            item,
+            level,
+            { "compare-upgrade-type": "inventory", "slot-key": slot.key },
+            `Уровень заточки ${slot.label}`,
+          )
+        : "";
 
       return `
         <div class="${classes.join(" ")}" style="grid-column: ${slot.col}; grid-row: ${slot.row};">
@@ -603,15 +635,15 @@
       const imageHtml = item?.image
         ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
         : "";
-      const upgradeControl = item && showUpgrade && levels.length > 1
-        ? `
-          <select class="sphere-upgrade-select" data-compare-upgrade-type="sphere" data-slot-key="${slot.key}">
-            ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
-          </select>
-        `
-        : item && showUpgrade && app.shouldDisplayUpgradeLevel(level)
-          ? `<span class="sphere-upgrade-select is-static">${app.escapeHtml(level)}</span>`
-          : "";
+      const upgradeControl = item && showUpgrade
+        ? app.renderUpgradeStepperControl(
+            "sphere-upgrade-select",
+            item,
+            level,
+            { "compare-upgrade-type": "sphere", "slot-key": slot.key },
+            `Уровень сферы ${slot.label}`,
+          )
+        : "";
 
       return `
         <div class="${classes.join(" ")}">
@@ -658,15 +690,15 @@
       const imageHtml = item?.image
         ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
         : "";
-      const upgradeControl = item && levels.length > 1
-        ? `
-          <select class="trophy-upgrade-select" data-compare-upgrade-type="trophy" data-slot-key="${slot.key}">
-            ${levels.map((entry) => `<option value="${app.escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${app.escapeHtml(entry)}</option>`).join("")}
-          </select>
-        `
-        : item && app.shouldDisplayUpgradeLevel(level)
-          ? `<span class="trophy-upgrade-select is-static">${app.escapeHtml(level)}</span>`
-          : "";
+      const upgradeControl = item
+        ? app.renderUpgradeStepperControl(
+            "trophy-upgrade-select",
+            item,
+            level,
+            { "compare-upgrade-type": "trophy", "slot-key": slot.key },
+            `Усиление трофея ${slot.label}`,
+          )
+        : "";
 
       return `
         <div class="${classes.join(" ")}">
@@ -689,6 +721,138 @@
       <section class="trophy-column compare-stage-column">
         <section class="trophy-stage compare-trophy-stage" aria-label="Слоты трофеев">
           <div class="trophy-slot-grid">${slotsHtml}</div>
+        </section>
+      </section>
+    `;
+  }
+
+  function renderCompareStatRows(stats) {
+    return stats.map((stat) => `
+      <div class="stat-row ${stat.value > 0 ? "is-positive" : stat.value < 0 ? "is-negative" : ""}">
+        <span class="stat-name">${app.escapeHtml(stat.label)}</span>
+        <span class="stat-value">${app.escapeHtml(app.formatStatValue(stat.value, stat.unit))}</span>
+      </div>
+    `).join("");
+  }
+
+  function getComparePetWorkspaceData(profile) {
+    const pet = profile?.petEquipped ? app.state.petItemsById.get(String(profile.petEquipped.itemId)) || null : null;
+    if (!pet) {
+      return null;
+    }
+
+    const bucket = app.createCollectedStatsBucket();
+    app.collectItemParamsIntoBucket(pet, { upgradeLevel: app.getDefaultUpgradeLevel(pet) }, bucket);
+    app.getPetMergeStats(profile.petEquipped?.mergeCounts).forEach((stat) => app.addStatWithRules(bucket.numericStats, stat));
+
+    return {
+      pet,
+      stats: app.getDisplayStatsFromMap(bucket.numericStats).allStats,
+      effects: [...bucket.effects.values()].sort((a, b) => a.localeCompare(b, "ru")),
+      mergeCounts: app.getPetMergeCounts(profile.petEquipped),
+      mergeTotal: app.getPetMergeTotal(profile.petEquipped?.mergeCounts),
+    };
+  }
+
+  function renderComparePetMergeTable(profile) {
+    const mergeCounts = app.getPetMergeCounts(profile.petEquipped);
+    const totalUsed = app.getPetMergeTotal(mergeCounts);
+
+    return `
+      <section class="pet-card-section">
+        <div class="stats-subtitle-row stats-subtitle-row-split">
+          <h3>Слияние питомца</h3>
+          <span class="pet-merge-total-note">Использовано ${totalUsed}/${app.PET_MERGE_TOTAL_LIMIT}</span>
+        </div>
+        <div class="pet-merge-table-wrap">
+          <table class="pet-merge-table">
+            <tbody>
+              ${app.PET_MERGE_CONFIG.map((entry) => {
+                const count = mergeCounts[entry.key] || 0;
+                const totalWithoutCurrent = totalUsed - count;
+                const canDecrease = count > 0;
+                const canIncrease = count < app.PET_MERGE_TOTAL_LIMIT && totalWithoutCurrent + count < app.PET_MERGE_TOTAL_LIMIT;
+                const bonus = (entry.bonusPerStep || 0) * count;
+
+                return `
+                  <tr>
+                    <td><div class="pet-merge-element">${app.escapeHtml(entry.label)}</div></td>
+                    <td><div class="pet-merge-stat">${app.escapeHtml(entry.statLabel)}</div></td>
+                    <td>
+                      <div class="pet-merge-controls">
+                        <button type="button" class="pet-merge-btn" data-compare-pet-merge-key="${app.escapeHtml(entry.key)}" data-compare-pet-merge-delta="-1" ${canDecrease ? "" : "disabled"} aria-label="Уменьшить ${app.escapeHtml(entry.label)}">-</button>
+                        <span class="pet-merge-count">${count}</span>
+                        <button type="button" class="pet-merge-btn" data-compare-pet-merge-key="${app.escapeHtml(entry.key)}" data-compare-pet-merge-delta="1" ${canIncrease ? "" : "disabled"} aria-label="Увеличить ${app.escapeHtml(entry.label)}">+</button>
+                      </div>
+                    </td>
+                    <td><div class="pet-merge-bonus">${app.escapeHtml(app.formatStatValue(bonus, entry.unit))}</div></td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderComparePetStage(profile) {
+    const petData = getComparePetWorkspaceData(profile);
+    if (!petData) {
+      return `
+        <section class="pet-column compare-stage-column">
+          <section class="pet-stage compare-pet-stage" aria-label="Питомец">
+            <div class="pet-stage-empty">
+              <div class="empty-note">У профиля не выбран питомец.</div>
+            </div>
+          </section>
+        </section>
+      `;
+    }
+
+    const { pet, stats, effects } = petData;
+    const subtitle = app.normalizeText(pet.description_lines?.[0]) || `${pet.element} (${pet.variant})`;
+    const categoryLabel = app.PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label || pet.category;
+
+    return `
+      <section class="pet-column compare-stage-column">
+        <section class="pet-stage compare-pet-stage" aria-label="Питомец">
+          <article class="pet-card">
+            <div class="pet-card-head">
+              <div class="pet-card-portrait">
+                <img src="${app.escapeHtml(pet.image)}" alt="${app.escapeHtml(pet.name)}" loading="lazy">
+              </div>
+              <div class="pet-card-copy">
+                <div class="pet-card-kicker">${app.escapeHtml(categoryLabel)}</div>
+                <div class="pet-card-title-row">
+                  <h3>${app.escapeHtml(pet.name)}</h3>
+                </div>
+                <div class="pet-card-meta">${app.escapeHtml(subtitle)}</div>
+              </div>
+            </div>
+
+            <section class="pet-card-section">
+              <div class="stats-subtitle-row">
+                <h3>Параметры питомца</h3>
+              </div>
+              <div class="stat-list stat-list-secondary">
+                ${stats.length ? renderCompareStatRows(stats) : '<div class="empty-note">Питомец не даёт числовых параметров.</div>'}
+              </div>
+            </section>
+
+            ${renderComparePetMergeTable(profile)}
+
+            ${effects.length ? `
+              <section class="pet-card-section">
+                <div class="stats-subtitle-row">
+                  <h3>Особые эффекты</h3>
+                </div>
+                <div class="effects-list">
+                  ${effects.map((effect) => `<div class="effect-pill">${app.escapeHtml(effect)}</div>`).join("")}
+                </div>
+              </section>
+            ` : ""}
+          </article>
         </section>
       </section>
     `;
@@ -870,7 +1034,9 @@
     const classLabel = app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || "Класс";
     let stageHtml = renderCompareInventoryStage(editorKey, profile, editor);
 
-    if (editor.activeWorkspaceTab === "spheres") {
+    if (editor.activeWorkspaceTab === "pets") {
+      stageHtml = renderComparePetStage(profile);
+    } else if (editor.activeWorkspaceTab === "spheres") {
       stageHtml = renderCompareSphereStage(profile, editor);
     } else if (editor.activeWorkspaceTab === "trophies") {
       stageHtml = renderCompareTrophyStage(profile, editor);
@@ -900,20 +1066,17 @@
 
           <label class="class-field">
             <span class="summary-label">Уровень</span>
-            <input
-              class="class-control"
-              type="number"
-              min="1"
-              max="200"
-              step="1"
-              value="${app.escapeHtml(profile.classConfig.level)}"
-              data-compare-level-input="1"
-            >
+            <div class="class-level-stepper class-control" role="group" aria-label="Уровень персонажа">
+              <button class="class-level-stepper-btn" type="button" data-compare-level-delta="-1" ${profile.classConfig.level <= 1 ? "disabled" : ""} aria-label="Уменьшить уровень">-</button>
+              <input class="class-level-stepper-input" type="number" min="1" max="200" step="1" value="${app.escapeHtml(profile.classConfig.level)}" inputmode="numeric" data-compare-level-input="1" aria-label="Уровень персонажа">
+              <button class="class-level-stepper-btn" type="button" data-compare-level-delta="1" ${profile.classConfig.level >= 200 ? "disabled" : ""} aria-label="Увеличить уровень">+</button>
+            </div>
           </label>
         </section>
 
         <nav class="workspace-tabs compare-workspace-tabs" aria-label="Рабочая область профиля">
           <button class="workspace-tab ${editor.activeWorkspaceTab === "inventory" ? "is-active" : ""}" type="button" data-compare-workspace-tab="inventory">Инвентарь</button>
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "pets" ? "is-active" : ""}" type="button" data-compare-workspace-tab="pets">Питомцы</button>
           <button class="workspace-tab ${editor.activeWorkspaceTab === "spheres" ? "is-active" : ""}" type="button" data-compare-workspace-tab="spheres">Сферы</button>
           <button class="workspace-tab ${editor.activeWorkspaceTab === "trophies" ? "is-active" : ""}" type="button" data-compare-workspace-tab="trophies">Трофеи</button>
         </nav>
@@ -1019,6 +1182,7 @@
     }
 
     renderSummary(primaryProfile, secondaryProfile);
+    restorePendingLevelInputFocus();
   }
 
   function setPrimaryProfile(profileId) {
@@ -1047,6 +1211,89 @@
     const workspaceTabButton = event.target.closest("[data-compare-workspace-tab]");
     if (workspaceTabButton) {
       compareState.editors[editorKey].activeWorkspaceTab = workspaceTabButton.dataset.compareWorkspaceTab;
+      renderComparePage();
+      return;
+    }
+
+    const upgradeButton = event.target.closest("[data-compare-upgrade-type][data-upgrade-delta]");
+    if (upgradeButton) {
+      const slotKey = upgradeButton.dataset.slotKey;
+      const upgradeType = upgradeButton.dataset.compareUpgradeType;
+      const delta = Number(upgradeButton.dataset.upgradeDelta || 0);
+
+      mutateProfile(editorKey, (profile) => {
+        if (upgradeType === "inventory") {
+          const selected = profile.equipped[slotKey];
+          const item = selected ? app.state.itemsById.get(selected.itemId) : null;
+          if (selected && item) {
+            selected.upgradeLevel = app.getAdjacentUpgradeLevel(item, selected.upgradeLevel, delta);
+          }
+          return;
+        }
+        if (upgradeType === "sphere") {
+          const selected = profile.sphereEquipped[slotKey];
+          const item = selected ? app.state.sphereItemsById.get(selected.itemId) : null;
+          if (selected && item) {
+            selected.upgradeLevel = app.getAdjacentUpgradeLevel(item, selected.upgradeLevel, delta);
+          }
+          return;
+        }
+        if (upgradeType === "trophy") {
+          const selected = profile.trophyEquipped[slotKey];
+          const item = selected ? app.state.trophyItemsById.get(selected.itemId) : null;
+          if (selected && item) {
+            selected.upgradeLevel = app.getAdjacentUpgradeLevel(item, selected.upgradeLevel, delta);
+          }
+        }
+      });
+
+      renderComparePage();
+      return;
+    }
+
+    const levelButton = event.target.closest("[data-compare-level-delta]");
+    if (levelButton) {
+      queueLevelInputFocus(editorKey, event.target.closest(".class-level-stepper")?.querySelector("[data-compare-level-input]"));
+      mutateProfile(editorKey, (profile) => {
+        profile.classConfig.level = app.sanitizeClassLevel(profile.classConfig.level + Number(levelButton.dataset.compareLevelDelta || 0));
+      });
+      renderComparePage();
+      return;
+    }
+
+    const petMergeButton = event.target.closest("[data-compare-pet-merge-key]");
+    if (petMergeButton) {
+      const mergeKey = petMergeButton.dataset.comparePetMergeKey;
+      const delta = Number(petMergeButton.dataset.comparePetMergeDelta || 0);
+
+      mutateProfile(editorKey, (profile) => {
+        const pet = profile.petEquipped ? app.state.petItemsById.get(String(profile.petEquipped.itemId)) : null;
+        const mergeConfig = app.PET_MERGE_CONFIG.find((entry) => entry.key === mergeKey);
+        if (!pet || !mergeConfig) {
+          return;
+        }
+
+        const currentCounts = app.getPetMergeCounts(profile.petEquipped);
+        const currentValue = currentCounts[mergeKey] || 0;
+        const totalWithoutCurrent = app.getPetMergeTotal(currentCounts) - currentValue;
+        const nextValue = Math.min(
+          app.PET_MERGE_TOTAL_LIMIT,
+          Math.max(0, currentValue + delta),
+        );
+        const cappedValue = Math.min(nextValue, app.PET_MERGE_TOTAL_LIMIT - totalWithoutCurrent);
+
+        if (cappedValue > 0) {
+          currentCounts[mergeKey] = cappedValue;
+        } else {
+          delete currentCounts[mergeKey];
+        }
+
+        profile.petEquipped = {
+          itemId: String(pet.uid),
+          mergeCounts: currentCounts,
+        };
+      });
+
       renderComparePage();
       return;
     }
@@ -1087,15 +1334,7 @@
       return;
     }
 
-    if (event.target.matches("[data-compare-level-input]")) {
-      mutateProfile(editorKey, (profile) => {
-        profile.classConfig.level = app.sanitizeClassLevel(event.target.value);
-      });
-      renderComparePage();
-      return;
-    }
-
-    if (event.target.matches("[data-compare-upgrade-type]")) {
+    if (event.target.matches("select[data-compare-upgrade-type]")) {
       const slotKey = event.target.dataset.slotKey;
       const upgradeType = event.target.dataset.compareUpgradeType;
 
@@ -1127,6 +1366,40 @@
 
       renderComparePage();
     }
+
+    if (event.target.matches("[data-compare-level-input]")) {
+      queueLevelInputFocus(editorKey, event.target);
+      mutateProfile(editorKey, (profile) => {
+        profile.classConfig.level = app.sanitizeClassLevel(event.target.value);
+      });
+      renderComparePage();
+    }
+  }
+
+  function handleEditorKeydown(editorKey, event) {
+    if (!event.target.matches("[data-compare-level-input]")) {
+      return;
+    }
+
+    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const delta = event.key === "ArrowUp" ? 1 : -1;
+      queueLevelInputFocus(editorKey, event.target);
+      mutateProfile(editorKey, (profile) => {
+        profile.classConfig.level = app.sanitizeClassLevel(profile.classConfig.level + delta);
+      });
+      renderComparePage();
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      queueLevelInputFocus(editorKey, event.target);
+      mutateProfile(editorKey, (profile) => {
+        profile.classConfig.level = app.sanitizeClassLevel(event.target.value);
+      });
+      renderComparePage();
+    }
   }
 
   function bindEditor(editorKey, containerId) {
@@ -1138,6 +1411,7 @@
     container.dataset.bound = "1";
     container.addEventListener("click", (event) => handleEditorClick(editorKey, event));
     container.addEventListener("change", (event) => handleEditorChange(editorKey, event));
+    container.addEventListener("keydown", (event) => handleEditorKeydown(editorKey, event));
   }
 
   function bindTopbar() {

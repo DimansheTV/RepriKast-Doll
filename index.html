@@ -52,11 +52,6 @@
 
       <div class="sidebar-panels">
         <section class="sidebar-panel is-active" data-tab-panel="class">
-          <div class="section-title-row">
-            <h2>Класс</h2>
-            <span class="section-note">Базовые данные</span>
-          </div>
-
           <section class="class-controls">
             <label class="class-field">
               <span class="summary-label">Класс</span>
@@ -71,7 +66,11 @@
 
             <label class="class-field">
               <span class="summary-label">Уровень</span>
-              <input id="class-level-input" class="class-control" type="number" min="1" max="200" step="1" value="1">
+              <div id="class-level-stepper" class="class-level-stepper class-control" role="group" aria-label="Уровень персонажа">
+                <button id="class-level-decrease" class="class-level-stepper-btn" type="button" aria-label="Уменьшить уровень">-</button>
+                <input id="class-level-input" class="class-level-stepper-input" type="number" min="1" max="200" step="1" value="1" inputmode="numeric" aria-label="Уровень персонажа">
+                <button id="class-level-increase" class="class-level-stepper-btn" type="button" aria-label="Увеличить уровень">+</button>
+              </div>
             </label>
           </section>
 
@@ -91,11 +90,6 @@
         </section>
 
         <section class="sidebar-panel" data-tab-panel="stats">
-          <div class="section-title-row">
-            <h2>Параметры экипировки</h2>
-            <span class="section-note">Переключение по источникам</span>
-          </div>
-
           <nav class="stats-source-tabs" aria-label="Источники параметров">
             <button class="stats-source-tab is-active" type="button" data-stats-tab="inventory">Инвентарь</button>
             <button class="stats-source-tab" type="button" data-stats-tab="pets">Питомцы</button>
@@ -222,16 +216,6 @@
     </main>
 
     <aside class="panel panel-right">
-      <div class="section-title-row">
-        <h2>Каталог</h2>
-        <div class="catalog-context" aria-label="Контекст каталога">
-          <span class="catalog-context-item is-active" data-catalog-context="inventory">Экипировка</span>
-          <span class="catalog-context-item" data-catalog-context="pet">Питомцы</span>
-          <span class="catalog-context-item" data-catalog-context="spheres">Сферы</span>
-          <span class="catalog-context-item" data-catalog-context="trophies">Трофеи</span>
-        </div>
-      </div>
-
       <div id="category-list" class="category-list"></div>
     </aside>
   </div>

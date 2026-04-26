@@ -632,6 +632,42 @@ function getValidUpgradeLevel(item, level) {
   return levels.includes(level) ? level : getDefaultUpgradeLevel(item);
 }
 
+function getAdjacentUpgradeLevel(item, level, delta) {
+  const levels = getLevelKeys(item);
+  if (!levels.length) {
+    return "+0";
+  }
+
+  const currentLevel = getValidUpgradeLevel(item, level);
+  const currentIndex = Math.max(0, levels.indexOf(currentLevel));
+  const nextIndex = Math.min(levels.length - 1, Math.max(0, currentIndex + Number(delta || 0)));
+  return levels[nextIndex];
+}
+
+function renderUpgradeStepperControl(controlClass, item, level, dataAttributes, ariaLabel) {
+  const normalizedLevel = getValidUpgradeLevel(item, level);
+  const levels = getLevelKeys(item);
+  if (levels.length > 1) {
+    const currentIndex = Math.max(0, levels.indexOf(normalizedLevel));
+    const buttonData = Object.entries(dataAttributes || {})
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .map(([key, value]) => `data-${key}="${escapeHtml(value)}"`)
+      .join(" ");
+
+    return `
+      <div class="${controlClass} upgrade-stepper" role="group" aria-label="${escapeHtml(ariaLabel)}">
+        <button type="button" class="upgrade-stepper-btn" ${buttonData} data-upgrade-delta="-1" ${currentIndex === 0 ? "disabled" : ""} aria-label="${escapeHtml(`${ariaLabel}: уменьшить`)}">-</button>
+        <span class="upgrade-stepper-value">${escapeHtml(normalizedLevel)}</span>
+        <button type="button" class="upgrade-stepper-btn" ${buttonData} data-upgrade-delta="1" ${currentIndex === levels.length - 1 ? "disabled" : ""} aria-label="${escapeHtml(`${ariaLabel}: увеличить`)}">+</button>
+      </div>
+    `;
+  }
+
+  return shouldDisplayUpgradeLevel(normalizedLevel)
+    ? `<span class="${controlClass} upgrade-stepper upgrade-stepper-static"><span class="upgrade-stepper-value">${escapeHtml(normalizedLevel)}</span></span>`
+    : "";
+}
+
 function shouldDisplayUpgradeLevel(level) {
   const normalizedLevel = normalizeText(level);
   return Boolean(normalizedLevel && normalizedLevel !== "+0");
@@ -1838,16 +1874,21 @@ function getClassPanelData() {
 
 function renderClassPanel() {
   const select = document.getElementById("class-select");
+  const levelStepper = document.getElementById("class-level-stepper");
   const levelInput = document.getElementById("class-level-input");
+  const decreaseButton = document.getElementById("class-level-decrease");
+  const increaseButton = document.getElementById("class-level-increase");
   const baseStatsContainer = document.getElementById("class-base-stats");
   const derivedStatsContainer = document.getElementById("class-derived-stats");
-  if (!select || !levelInput || !baseStatsContainer || !derivedStatsContainer) {
+  if (!select || !levelStepper || !levelInput || !decreaseButton || !increaseButton || !baseStatsContainer || !derivedStatsContainer) {
     return;
   }
 
   const { config, baseStats, derivedStats } = getClassPanelData();
   select.value = state.classConfig.classKey;
   levelInput.value = String(state.classConfig.level);
+  decreaseButton.disabled = state.classConfig.level <= 1;
+  increaseButton.disabled = state.classConfig.level >= 200;
 
   baseStatsContainer.innerHTML = renderStatRows(baseStats);
   derivedStatsContainer.innerHTML = renderStatRows(derivedStats);
@@ -1923,9 +1964,18 @@ function renderBoardTotalStats() {
 function bindClassControls() {
   const select = document.getElementById("class-select");
   const levelInput = document.getElementById("class-level-input");
-  if (!select || !levelInput) {
+  const decreaseButton = document.getElementById("class-level-decrease");
+  const increaseButton = document.getElementById("class-level-increase");
+  if (!select || !levelInput || !decreaseButton || !increaseButton) {
     return;
   }
+
+  const applyClassLevel = (nextLevel) => {
+    state.classConfig.level = sanitizeClassLevel(nextLevel);
+    saveClassState();
+    renderClassPanel();
+    renderBoardTotalStats();
+  };
 
   select.addEventListener("change", () => {
     state.classConfig.classKey = CLASS_CONFIGS[select.value] ? select.value : "knight";
@@ -1934,11 +1984,28 @@ function bindClassControls() {
     renderBoardTotalStats();
   });
 
-  levelInput.addEventListener("input", () => {
-    state.classConfig.level = sanitizeClassLevel(levelInput.value);
-    saveClassState();
-    renderClassPanel();
-    renderBoardTotalStats();
+  decreaseButton.addEventListener("click", () => applyClassLevel(state.classConfig.level - 1));
+  increaseButton.addEventListener("click", () => applyClassLevel(state.classConfig.level + 1));
+
+  levelInput.addEventListener("change", () => applyClassLevel(levelInput.value));
+  levelInput.addEventListener("blur", () => applyClassLevel(levelInput.value));
+  levelInput.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      applyClassLevel(state.classConfig.level + 1);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      applyClassLevel(state.classConfig.level - 1);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      applyClassLevel(levelInput.value);
+    }
   });
 }
 
@@ -2355,6 +2422,23 @@ function setUpgradeLevel(slotKey, level) {
   }
 }
 
+function stepUpgradeLevel(slotKey, delta) {
+  const selected = state.equipped[slotKey];
+  if (!selected) {
+    return;
+  }
+
+  const item = state.itemsById.get(selected.itemId);
+  if (!item) {
+    return;
+  }
+
+  const nextLevel = getAdjacentUpgradeLevel(item, selected.upgradeLevel, delta);
+  if (nextLevel !== selected.upgradeLevel) {
+    setUpgradeLevel(slotKey, nextLevel);
+  }
+}
+
 function handleSlotPress(event, slotKey) {
   if (event.key !== "Enter" && event.key !== " ") {
     return;
@@ -2438,15 +2522,15 @@ function renderDollSlots() {
     const imageHtml = item?.image
       ? `<img class="slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">`
       : "";
-    const upgradeControl = item && levels.length > 1
-      ? `
-        <select class="slot-upgrade-select" data-slot="${slot.key}" aria-label="Уровень заточки ${escapeHtml(slot.label)}">
-          ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
-        </select>
-      `
-      : item && shouldDisplayUpgradeLevel(level)
-        ? `<span class="slot-upgrade-select is-static">${escapeHtml(level)}</span>`
-        : "";
+    const upgradeControl = item
+      ? renderUpgradeStepperControl(
+          "slot-upgrade-select",
+          item,
+          level,
+          { "upgrade-type": "inventory", slot: slot.key },
+          `Уровень заточки ${slot.label}`,
+        )
+      : "";
     const descriptionHtml = item
       ? `<div class="equipment-description">${renderEquipmentDescription(slot, item, level)}</div>`
       : "";
@@ -2488,12 +2572,15 @@ function renderDollSlots() {
     });
   });
 
+  container.querySelectorAll('[data-upgrade-type="inventory"][data-upgrade-delta]').forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      stepUpgradeLevel(button.dataset.slot, Number(button.dataset.upgradeDelta || 0));
+    });
+  });
   container.querySelectorAll(".slot-upgrade-select").forEach((control) => {
     control.addEventListener("click", (event) => event.stopPropagation());
     control.addEventListener("keydown", (event) => event.stopPropagation());
-    if (control.tagName === "SELECT") {
-      control.addEventListener("change", () => setUpgradeLevel(control.dataset.slot, control.value));
-    }
   });
 }
 
@@ -2534,15 +2621,15 @@ function renderPassiveMorphRingSlot() {
   const imageHtml = item?.image
     ? `<img class="slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">`
     : "";
-  const upgradeControl = item && levels.length > 1
-    ? `
-      <select class="slot-upgrade-select" data-slot="${slot.key}" aria-label="Уровень заточки ${escapeHtml(slot.label)}">
-        ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
-      </select>
-    `
-    : item && shouldDisplayUpgradeLevel(level)
-      ? `<span class="slot-upgrade-select is-static">${escapeHtml(level)}</span>`
-      : "";
+  const upgradeControl = item
+    ? renderUpgradeStepperControl(
+        "slot-upgrade-select",
+        item,
+        level,
+        { "upgrade-type": "inventory", slot: slot.key },
+        `Уровень заточки ${slot.label}`,
+      )
+    : "";
   const descriptionHtml = item
     ? `<div class="equipment-description">${renderEquipmentDescription(slot, item, level)}</div>`
     : "";
@@ -2589,9 +2676,12 @@ function renderPassiveMorphRingSlot() {
   container.querySelectorAll(".slot-upgrade-select").forEach((control) => {
     control.addEventListener("click", (event) => event.stopPropagation());
     control.addEventListener("keydown", (event) => event.stopPropagation());
-    if (control.tagName === "SELECT") {
-      control.addEventListener("change", () => setUpgradeLevel(control.dataset.slot, control.value));
-    }
+  });
+  container.querySelectorAll('[data-upgrade-type="inventory"][data-upgrade-delta]').forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      stepUpgradeLevel(button.dataset.slot, Number(button.dataset.upgradeDelta || 0));
+    });
   });
 }
 
@@ -2866,6 +2956,23 @@ function setSphereUpgradeLevel(slotKey, level) {
   }
 }
 
+function stepSphereUpgradeLevel(slotKey, delta) {
+  const selected = state.sphereEquipped[slotKey];
+  if (!selected) {
+    return;
+  }
+
+  const item = state.sphereItemsById.get(selected.itemId);
+  if (!item) {
+    return;
+  }
+
+  const nextLevel = getAdjacentUpgradeLevel(item, selected.upgradeLevel, delta);
+  if (nextLevel !== selected.upgradeLevel) {
+    setSphereUpgradeLevel(slotKey, nextLevel);
+  }
+}
+
 function renderSphereSlots() {
   const container = document.getElementById("sphere-slot-grid");
   if (!container) {
@@ -2902,15 +3009,15 @@ function renderSphereSlots() {
     const descriptionHtml = item
       ? `<div class="equipment-description sphere-description">${renderSphereDescription(slot, item, level)}</div>`
       : "";
-    const upgradeControl = item && showUpgrade && levels.length > 1
-      ? `
-        <select class="sphere-upgrade-select" data-sphere-slot="${slot.key}" aria-label="Уровень сферы ${escapeHtml(slot.label)}">
-          ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
-        </select>
-      `
-      : item && showUpgrade && shouldDisplayUpgradeLevel(level)
-        ? `<span class="sphere-upgrade-select is-static">${escapeHtml(level)}</span>`
-        : "";
+    const upgradeControl = item && showUpgrade
+      ? renderUpgradeStepperControl(
+          "sphere-upgrade-select",
+          item,
+          level,
+          { "upgrade-type": "sphere", "sphere-slot": slot.key },
+          `Уровень сферы ${slot.label}`,
+        )
+      : "";
 
     return `
       <div class="${classes.join(" ")}" data-sphere-slot="${slot.key}">
@@ -2945,9 +3052,12 @@ function renderSphereSlots() {
   container.querySelectorAll(".sphere-upgrade-select").forEach((control) => {
     control.addEventListener("click", (event) => event.stopPropagation());
     control.addEventListener("keydown", (event) => event.stopPropagation());
-    if (control.tagName === "SELECT") {
-      control.addEventListener("change", () => setSphereUpgradeLevel(control.dataset.sphereSlot, control.value));
-    }
+  });
+  container.querySelectorAll('[data-upgrade-type="sphere"][data-upgrade-delta]').forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      stepSphereUpgradeLevel(button.dataset.sphereSlot, Number(button.dataset.upgradeDelta || 0));
+    });
   });
 }
 
@@ -3009,6 +3119,23 @@ function setTrophyUpgradeLevel(slotKey, level) {
   }
 }
 
+function stepTrophyUpgradeLevel(slotKey, delta) {
+  const selected = state.trophyEquipped[slotKey];
+  if (!selected) {
+    return;
+  }
+
+  const item = state.trophyItemsById.get(selected.itemId);
+  if (!item) {
+    return;
+  }
+
+  const nextLevel = getAdjacentUpgradeLevel(item, selected.upgradeLevel, delta);
+  if (nextLevel !== selected.upgradeLevel) {
+    setTrophyUpgradeLevel(slotKey, nextLevel);
+  }
+}
+
 function renderTrophySlots() {
   const container = document.getElementById("trophy-slot-grid");
   if (!container) {
@@ -3040,12 +3167,14 @@ function renderTrophySlots() {
     const descriptionHtml = item
       ? `<div class="equipment-description trophy-description">${renderTrophyDescription(slot, item, level)}</div>`
       : "";
-    const upgradeControl = item && levels.length > 1
-      ? `
-        <select class="trophy-upgrade-select" data-trophy-slot="${slot.key}" aria-label="Усиление трофея ${escapeHtml(slot.label)}">
-          ${levels.map((entry) => `<option value="${escapeHtml(entry)}" ${entry === level ? "selected" : ""}>${escapeHtml(entry)}</option>`).join("")}
-        </select>
-      `
+    const upgradeControl = item
+      ? renderUpgradeStepperControl(
+          "trophy-upgrade-select",
+          item,
+          level,
+          { "upgrade-type": "trophy", "trophy-slot": slot.key },
+          `Усиление трофея ${slot.label}`,
+        )
       : "";
 
     return `
@@ -3081,7 +3210,12 @@ function renderTrophySlots() {
   container.querySelectorAll(".trophy-upgrade-select").forEach((control) => {
     control.addEventListener("click", (event) => event.stopPropagation());
     control.addEventListener("keydown", (event) => event.stopPropagation());
-    control.addEventListener("change", () => setTrophyUpgradeLevel(control.dataset.trophySlot, control.value));
+  });
+  container.querySelectorAll('[data-upgrade-type="trophy"][data-upgrade-delta]').forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      stepTrophyUpgradeLevel(button.dataset.trophySlot, Number(button.dataset.upgradeDelta || 0));
+    });
   });
 }
 
@@ -3673,6 +3807,8 @@ window.r2App = {
   getLevelKeys,
   getDefaultUpgradeLevel,
   getValidUpgradeLevel,
+  getAdjacentUpgradeLevel,
+  renderUpgradeStepperControl,
   shouldDisplayUpgradeLevel,
   formatUpgradeSuffix,
   formatUpgradeTitleSuffix,
