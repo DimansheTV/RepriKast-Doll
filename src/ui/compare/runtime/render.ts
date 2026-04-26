@@ -41,7 +41,7 @@ export function createCompareRenderModule(deps) {
             item,
             level,
             { "compare-upgrade-type": "inventory", "slot-key": slot.key },
-            `РЈСЂРѕРІРµРЅСЊ Р·Р°С‚РѕС‡РєРё ${slot.label}`,
+            `Уровень заточки ${slot.label}`,
           )
         : "";
 
@@ -100,7 +100,7 @@ export function createCompareRenderModule(deps) {
 
     return `
       <section class="equipment-column compare-stage-column">
-        <section class="equipment-stage compare-equipment-stage" aria-label="РЎР»РѕС‚С‹ СЌРєРёРїРёСЂРѕРІРєРё">
+        <section class="equipment-stage compare-equipment-stage" aria-label="Слоты экипировки">
           <div class="slot-grid">${slotsHtml}</div>
         </section>
         ${passiveSlotHtml}
@@ -136,7 +136,7 @@ export function createCompareRenderModule(deps) {
             item,
             level,
             { "compare-upgrade-type": "sphere", "slot-key": slot.key },
-            `РЈСЂРѕРІРµРЅСЊ СЃС„РµСЂС‹ ${slot.label}`,
+            `Уровень сферы ${slot.label}`,
           )
         : "";
 
@@ -159,7 +159,7 @@ export function createCompareRenderModule(deps) {
 
     return `
       <section class="sphere-column compare-stage-column">
-        <section class="sphere-stage compare-sphere-stage" aria-label="РЎР»РѕС‚С‹ СЃС„РµСЂ">
+        <section class="sphere-stage compare-sphere-stage" aria-label="Слоты сфер">
           <div class="sphere-slot-grid">${slotsHtml}</div>
         </section>
       </section>
@@ -190,7 +190,7 @@ export function createCompareRenderModule(deps) {
             item,
             level,
             { "compare-upgrade-type": "trophy", "slot-key": slot.key },
-            `РЈСЃРёР»РµРЅРёРµ С‚СЂРѕС„РµСЏ ${slot.label}`,
+            `Усиление трофея ${slot.label}`,
           )
         : "";
 
@@ -213,7 +213,7 @@ export function createCompareRenderModule(deps) {
 
     return `
       <section class="trophy-column compare-stage-column">
-        <section class="trophy-stage compare-trophy-stage" aria-label="РЎР»РѕС‚С‹ С‚СЂРѕС„РµРµРІ">
+        <section class="trophy-stage compare-trophy-stage" aria-label="Слоты трофеев">
           <div class="trophy-slot-grid">${slotsHtml}</div>
         </section>
       </section>
@@ -260,8 +260,8 @@ export function createCompareRenderModule(deps) {
     return `
       <section class="pet-card-section">
         <div class="stats-subtitle-row stats-subtitle-row-split">
-          <h3>РЎР»РёСЏРЅРёРµ РїРёС‚РѕРјС†Р°</h3>
-          <span class="pet-merge-total-note">РСЃРїРѕР»СЊР·РѕРІР°РЅРѕ ${totalUsed}/${app.PET_MERGE_TOTAL_LIMIT}</span>
+          <h3>Слияние питомца</h3>
+          <span class="pet-merge-total-note">Использовано ${totalUsed}/${app.PET_MERGE_TOTAL_LIMIT}</span>
         </div>
         <div class="pet-merge-table-wrap">
           <table class="pet-merge-table">
@@ -279,9 +279,9 @@ export function createCompareRenderModule(deps) {
                     <td><div class="pet-merge-stat">${app.escapeHtml(entry.statLabel)}</div></td>
                     <td>
                       <div class="pet-merge-controls">
-                        <button type="button" class="pet-merge-btn" data-compare-pet-merge-key="${app.escapeHtml(entry.key)}" data-compare-pet-merge-delta="-1" ${canDecrease ? "" : "disabled"} aria-label="РЈРјРµРЅСЊС€РёС‚СЊ ${app.escapeHtml(entry.label)}">-</button>
+                        <button type="button" class="pet-merge-btn" data-compare-pet-merge-key="${app.escapeHtml(entry.key)}" data-compare-pet-merge-delta="-1" ${canDecrease ? "" : "disabled"} aria-label="Уменьшить ${app.escapeHtml(entry.label)}">-</button>
                         <span class="pet-merge-count">${count}</span>
-                        <button type="button" class="pet-merge-btn" data-compare-pet-merge-key="${app.escapeHtml(entry.key)}" data-compare-pet-merge-delta="1" ${canIncrease ? "" : "disabled"} aria-label="РЈРІРµР»РёС‡РёС‚СЊ ${app.escapeHtml(entry.label)}">+</button>
+                        <button type="button" class="pet-merge-btn" data-compare-pet-merge-key="${app.escapeHtml(entry.key)}" data-compare-pet-merge-delta="1" ${canIncrease ? "" : "disabled"} aria-label="Увеличить ${app.escapeHtml(entry.label)}">+</button>
                       </div>
                     </td>
                     <td><div class="pet-merge-bonus">${app.escapeHtml(app.formatStatValue(bonus, entry.unit))}</div></td>
@@ -300,9 +300,9 @@ export function createCompareRenderModule(deps) {
     if (!petData) {
       return `
         <section class="pet-column compare-stage-column">
-          <section class="pet-stage compare-pet-stage" aria-label="РџРёС‚РѕРјРµС†">
+          <section class="pet-stage compare-pet-stage" aria-label="Питомец">
             <div class="pet-stage-empty">
-              <div class="empty-note">РЈ РїСЂРѕС„РёР»СЏ РЅРµ РІС‹Р±СЂР°РЅ РїРёС‚РѕРјРµС†.</div>
+              <div class="empty-note">У профиля не выбран питомец.</div>
             </div>
           </section>
         </section>
@@ -315,7 +315,7 @@ export function createCompareRenderModule(deps) {
 
     return `
       <section class="pet-column compare-stage-column">
-        <section class="pet-stage compare-pet-stage" aria-label="РџРёС‚РѕРјРµС†">
+        <section class="pet-stage compare-pet-stage" aria-label="Питомец">
           <article class="pet-card">
             <div class="pet-card-head">
               <div class="pet-card-portrait">
@@ -332,10 +332,10 @@ export function createCompareRenderModule(deps) {
 
             <section class="pet-card-section">
               <div class="stats-subtitle-row">
-                <h3>РџР°СЂР°РјРµС‚СЂС‹ РїРёС‚РѕРјС†Р°</h3>
+                <h3>Параметры питомца</h3>
               </div>
               <div class="stat-list stat-list-secondary">
-                ${stats.length ? renderCompareStatRows(stats) : '<div class="empty-note">РџРёС‚РѕРјРµС† РЅРµ РґР°С‘С‚ С‡РёСЃР»РѕРІС‹С… РїР°СЂР°РјРµС‚СЂРѕРІ.</div>'}
+                ${stats.length ? renderCompareStatRows(stats) : '<div class="empty-note">Питомец не даёт числовых параметров.</div>'}
               </div>
             </section>
 
@@ -344,7 +344,7 @@ export function createCompareRenderModule(deps) {
             ${effects.length ? `
               <section class="pet-card-section">
                 <div class="stats-subtitle-row">
-                  <h3>РћСЃРѕР±С‹Рµ СЌС„С„РµРєС‚С‹</h3>
+                  <h3>Особые эффекты</h3>
                 </div>
                 <div class="effects-list">
                   ${effects.map((effect) => `<div class="effect-pill">${app.escapeHtml(effect)}</div>`).join("")}
@@ -361,9 +361,9 @@ export function createCompareRenderModule(deps) {
     const slot = app.getSlotConfig(editor.activeSlot);
     if (!slot) {
       return {
-        title: "РРЅРІРµРЅС‚Р°СЂСЊ",
+        title: "Инвентарь",
         count: 0,
-        body: '<div class="empty-note">Р’С‹Р±РµСЂРёС‚Рµ СЃР»РѕС‚ СЌРєРёРїРёСЂРѕРІРєРё.</div>',
+        body: '<div class="empty-note">Выберите слот экипировки.</div>',
       };
     }
 
@@ -373,7 +373,7 @@ export function createCompareRenderModule(deps) {
       ? items.map((item) => {
         const previewLevel = app.getDefaultUpgradeLevel(item);
         const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Р‘РµР· РїР°СЂР°РјРµС‚СЂРѕРІ";
+        const previewText = params[0] || "Без параметров";
         const isEquipped = String(item.uid) === String(selectedItemId || "");
 
         return `
@@ -382,7 +382,7 @@ export function createCompareRenderModule(deps) {
               ${app.renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} В· ${previewText}` : previewText)}</div>
+                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
               </div>
               <button
                 class="equip-btn ${isEquipped ? "is-selected" : ""}"
@@ -391,13 +391,13 @@ export function createCompareRenderModule(deps) {
                 data-slot-key="${slot.key}"
                 data-item-id="${app.escapeHtml(item.uid)}"
               >
-                ${isEquipped ? "РЎРЅСЏС‚СЊ" : "РќР°РґРµС‚СЊ"}
+                ${isEquipped ? "Снять" : "Надеть"}
               </button>
             </div>
           </div>
         `;
       }).join("")
-      : '<div class="empty-note">Р”Р»СЏ СЌС‚РѕРіРѕ СЃР»РѕС‚Р° РїРѕРєР° РЅРµС‚ РїСЂРµРґРјРµС‚РѕРІ.</div>';
+      : '<div class="empty-note">Для этого слота пока нет предметов.</div>';
 
     return {
       title: slot.catalogLabel || slot.label,
@@ -410,9 +410,9 @@ export function createCompareRenderModule(deps) {
     const slot = app.getSphereSlotConfig(editor.activeSphereSlot);
     if (!slot) {
       return {
-        title: "РЎС„РµСЂС‹",
+        title: "Сферы",
         count: 0,
-        body: '<div class="empty-note">Р’С‹Р±РµСЂРёС‚Рµ СЃР»РѕС‚ СЃС„РµСЂС‹.</div>',
+        body: '<div class="empty-note">Выберите слот сферы.</div>',
       };
     }
 
@@ -422,7 +422,7 @@ export function createCompareRenderModule(deps) {
       ? items.map((item) => {
         const previewLevel = app.getDefaultUpgradeLevel(item);
         const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Р‘РµР· РїР°СЂР°РјРµС‚СЂРѕРІ";
+        const previewText = params[0] || "Без параметров";
         const showUpgrade = slot.categoryKey === "sphere_type_1";
         const isEquipped = String(item.uid) === String(selectedItemId || "");
         const metaParts = [previewText];
@@ -437,7 +437,7 @@ export function createCompareRenderModule(deps) {
               ${app.renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(metaParts.join(" В· "))}</div>
+                <div class="item-meta">${app.escapeHtml(metaParts.join(" · "))}</div>
               </div>
               <button
                 class="equip-btn ${isEquipped ? "is-selected" : ""}"
@@ -446,13 +446,13 @@ export function createCompareRenderModule(deps) {
                 data-slot-key="${slot.key}"
                 data-item-id="${app.escapeHtml(item.uid)}"
               >
-                ${isEquipped ? "РЎРЅСЏС‚СЊ" : "РќР°РґРµС‚СЊ"}
+                ${isEquipped ? "Снять" : "Надеть"}
               </button>
             </div>
           </div>
         `;
       }).join("")
-      : '<div class="empty-note">Р”Р»СЏ СЌС‚РѕРіРѕ СЃР»РѕС‚Р° РїРѕРєР° РЅРµС‚ СЃС„РµСЂ.</div>';
+      : '<div class="empty-note">Для этого слота пока нет сфер.</div>';
 
     return {
       title: slot.label,
@@ -465,9 +465,9 @@ export function createCompareRenderModule(deps) {
     const slot = app.getTrophySlotConfig(editor.activeTrophySlot);
     if (!slot) {
       return {
-        title: "РўСЂРѕС„РµРё",
+        title: "Трофеи",
         count: 0,
-        body: '<div class="empty-note">Р’С‹Р±РµСЂРёС‚Рµ СЃР»РѕС‚ С‚СЂРѕС„РµСЏ.</div>',
+        body: '<div class="empty-note">Выберите слот трофея.</div>',
       };
     }
 
@@ -477,7 +477,7 @@ export function createCompareRenderModule(deps) {
       ? items.map((item) => {
         const previewLevel = app.getDefaultUpgradeLevel(item);
         const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Р‘РµР· РїР°СЂР°РјРµС‚СЂРѕРІ";
+        const previewText = params[0] || "Без параметров";
         const isEquipped = String(item.uid) === String(selectedItemId || "");
 
         return `
@@ -486,7 +486,7 @@ export function createCompareRenderModule(deps) {
               ${app.renderItemIcon(item)}
               <div class="item-info">
                 <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} В· ${previewText}` : previewText)}</div>
+                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
               </div>
               <button
                 class="equip-btn ${isEquipped ? "is-selected" : ""}"
@@ -495,16 +495,16 @@ export function createCompareRenderModule(deps) {
                 data-slot-key="${slot.key}"
                 data-item-id="${app.escapeHtml(item.uid)}"
               >
-                ${isEquipped ? "РЎРЅСЏС‚СЊ" : "РќР°РґРµС‚СЊ"}
+                ${isEquipped ? "Снять" : "Надеть"}
               </button>
             </div>
           </div>
         `;
       }).join("")
-      : '<div class="empty-note">Р”Р»СЏ СЌС‚РѕРіРѕ СЃР»РѕС‚Р° РїРѕРєР° РЅРµС‚ С‚СЂРѕС„РµРµРІ.</div>';
+      : '<div class="empty-note">Для этого слота пока нет трофеев.</div>';
 
     return {
-      title: `${slot.label} В· ${slot.statLabel}`,
+      title: `${slot.label} · ${slot.statLabel}`,
       count: items.length,
       body,
     };
@@ -523,7 +523,7 @@ export function createCompareRenderModule(deps) {
           ? group.items.map((item) => {
             const previewLevel = app.getDefaultUpgradeLevel(item);
             const params = app.getParamsForLevel(item, previewLevel);
-            const previewText = params[0] || app.normalizeText(item.description_lines?.[0]) || "Р‘РµР· РїР°СЂР°РјРµС‚СЂРѕРІ";
+            const previewText = params[0] || app.normalizeText(item.description_lines?.[0]) || "Без параметров";
             const isEquipped = String(item.uid) === String(selectedItemId);
             const subtitle = app.normalizeText(item.description_lines?.[0]);
             const metaParts = [];
@@ -539,7 +539,7 @@ export function createCompareRenderModule(deps) {
                   ${app.renderItemIcon(item)}
                   <div class="item-info">
                     <div class="item-name">${app.escapeHtml(item.name)}</div>
-                    <div class="item-meta">${app.escapeHtml(metaParts.join(" В· "))}</div>
+                    <div class="item-meta">${app.escapeHtml(metaParts.join(" · "))}</div>
                   </div>
                   <button
                     class="equip-btn ${isEquipped ? "is-selected" : ""}"
@@ -547,13 +547,13 @@ export function createCompareRenderModule(deps) {
                     data-compare-list-action="${isEquipped ? "pet-remove" : "pet-equip"}"
                     data-item-id="${app.escapeHtml(item.uid)}"
                   >
-                    ${isEquipped ? "РЎРЅСЏС‚СЊ" : "РќР°РґРµС‚СЊ"}
+                    ${isEquipped ? "Снять" : "Надеть"}
                   </button>
                 </div>
               </div>
             `;
           }).join("")
-          : '<div class="empty-note">Р”Р»СЏ СЌС‚РѕР№ РіСЂСѓРїРїС‹ РїРёС‚РѕРјС†РµРІ РїРѕРєР° РЅРµС‚ РґР°РЅРЅС‹С….</div>';
+          : '<div class="empty-note">Для этой группы питомцев пока нет данных.</div>';
 
         return `
           <section class="compare-pet-catalog-group">
@@ -566,10 +566,10 @@ export function createCompareRenderModule(deps) {
           </section>
         `;
       }).join("")
-      : '<div class="empty-note">РџРёС‚РѕРјС†С‹ РїРѕРєР° РЅРµ Р·Р°РіСЂСѓР¶РµРЅС‹.</div>';
+      : '<div class="empty-note">Питомцы пока не загружены.</div>';
 
     return {
-      title: "РџРёС‚РѕРјС†С‹",
+      title: "Питомцы",
       count,
       body,
     };
@@ -599,7 +599,7 @@ export function createCompareRenderModule(deps) {
 
     ensureEditorState(editorKey, profile);
     const editor = compareState.editors[editorKey];
-    const classLabel = app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || "РљР»Р°СЃСЃ";
+    const classLabel = app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || "Класс";
     let stageHtml = renderCompareInventoryStage(editorKey, profile, editor);
 
     if (editor.activeWorkspaceTab === "pets") {
@@ -617,13 +617,13 @@ export function createCompareRenderModule(deps) {
           <div class="compare-editor-headline">
             <span class="compare-editor-tag">${app.escapeHtml(title)}</span>
             <h2>${app.escapeHtml(profile.name)}</h2>
-            <span class="section-note">${app.escapeHtml(classLabel)} В· РЈСЂ. ${app.escapeHtml(profile.classConfig.level)}</span>
+            <span class="section-note">${app.escapeHtml(classLabel)} · Ур. ${app.escapeHtml(profile.classConfig.level)}</span>
           </div>
         </div>
 
         <section class="compare-editor-controls">
           <label class="class-field">
-            <span class="summary-label">РљР»Р°СЃСЃ</span>
+            <span class="summary-label">Класс</span>
             <select class="class-control" data-compare-class-select="1">
               ${Object.entries(app.CLASS_CONFIGS).map(([key, config]) => `
                 <option value="${app.escapeHtml(key)}" ${profile.classConfig.classKey === key ? "selected" : ""}>
@@ -634,20 +634,20 @@ export function createCompareRenderModule(deps) {
           </label>
 
           <label class="class-field">
-            <span class="summary-label">РЈСЂРѕРІРµРЅСЊ</span>
-            <div class="class-level-stepper class-control" role="group" aria-label="РЈСЂРѕРІРµРЅСЊ РїРµСЂСЃРѕРЅР°Р¶Р°">
-              <button class="class-level-stepper-btn" type="button" data-compare-level-delta="-1" ${profile.classConfig.level <= 1 ? "disabled" : ""} aria-label="РЈРјРµРЅСЊС€РёС‚СЊ СѓСЂРѕРІРµРЅСЊ">-</button>
-              <input class="class-level-stepper-input" type="number" min="1" max="200" step="1" value="${app.escapeHtml(profile.classConfig.level)}" inputmode="numeric" data-compare-level-input="1" aria-label="РЈСЂРѕРІРµРЅСЊ РїРµСЂСЃРѕРЅР°Р¶Р°">
-              <button class="class-level-stepper-btn" type="button" data-compare-level-delta="1" ${profile.classConfig.level >= 200 ? "disabled" : ""} aria-label="РЈРІРµР»РёС‡РёС‚СЊ СѓСЂРѕРІРµРЅСЊ">+</button>
+            <span class="summary-label">Уровень</span>
+            <div class="class-level-stepper class-control" role="group" aria-label="Уровень персонажа">
+              <button class="class-level-stepper-btn" type="button" data-compare-level-delta="-1" ${profile.classConfig.level <= 1 ? "disabled" : ""} aria-label="Уменьшить уровень">-</button>
+              <input class="class-level-stepper-input" type="number" min="1" max="200" step="1" value="${app.escapeHtml(profile.classConfig.level)}" inputmode="numeric" data-compare-level-input="1" aria-label="Уровень персонажа">
+              <button class="class-level-stepper-btn" type="button" data-compare-level-delta="1" ${profile.classConfig.level >= 200 ? "disabled" : ""} aria-label="Увеличить уровень">+</button>
             </div>
           </label>
         </section>
 
-        <nav class="workspace-tabs compare-workspace-tabs" aria-label="Р Р°Р±РѕС‡Р°СЏ РѕР±Р»Р°СЃС‚СЊ РїСЂРѕС„РёР»СЏ">
-          <button class="workspace-tab ${editor.activeWorkspaceTab === "inventory" ? "is-active" : ""}" type="button" data-compare-workspace-tab="inventory">РРЅРІРµРЅС‚Р°СЂСЊ</button>
-          <button class="workspace-tab ${editor.activeWorkspaceTab === "pets" ? "is-active" : ""}" type="button" data-compare-workspace-tab="pets">РџРёС‚РѕРјС†С‹</button>
-          <button class="workspace-tab ${editor.activeWorkspaceTab === "spheres" ? "is-active" : ""}" type="button" data-compare-workspace-tab="spheres">РЎС„РµСЂС‹</button>
-          <button class="workspace-tab ${editor.activeWorkspaceTab === "trophies" ? "is-active" : ""}" type="button" data-compare-workspace-tab="trophies">РўСЂРѕС„РµРё</button>
+        <nav class="workspace-tabs compare-workspace-tabs" aria-label="Рабочая область профиля">
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "inventory" ? "is-active" : ""}" type="button" data-compare-workspace-tab="inventory">Инвентарь</button>
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "pets" ? "is-active" : ""}" type="button" data-compare-workspace-tab="pets">Питомцы</button>
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "spheres" ? "is-active" : ""}" type="button" data-compare-workspace-tab="spheres">Сферы</button>
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "trophies" ? "is-active" : ""}" type="button" data-compare-workspace-tab="trophies">Трофеи</button>
         </nav>
 
         <section class="compare-editor-stage">
@@ -657,7 +657,7 @@ export function createCompareRenderModule(deps) {
           <aside class="compare-editor-catalog">
             <div class="compare-editor-catalog-title">
               <h3>${app.escapeHtml(catalog.title)}</h3>
-              <span class="section-note">${app.escapeHtml(catalog.count)} С€С‚.</span>
+              <span class="section-note">${app.escapeHtml(catalog.count)} шт.</span>
             </div>
             <div class="category-list compare-category-list">
               ${catalog.body}
@@ -675,7 +675,7 @@ export function createCompareRenderModule(deps) {
     }
 
     if (!secondaryProfile) {
-      container.innerHTML = '<div class="empty-note">РЎРѕР·РґР°Р№С‚Рµ РёР»Рё РІС‹Р±РµСЂРёС‚Рµ РІС‚РѕСЂРѕР№ РїСЂРѕС„РёР»СЊ РґР»СЏ СЃСЂР°РІРЅРµРЅРёСЏ.</div>';
+      container.innerHTML = '<div class="empty-note">Создайте или выберите второй профиль для сравнения.</div>';
       return;
     }
 
@@ -688,24 +688,24 @@ export function createCompareRenderModule(deps) {
       <section class="compare-summary-shell">
         <div class="section-title-row compare-summary-heading">
           <div class="compare-summary-headline">
-            <span class="compare-editor-tag compare-editor-tag-summary">РђРЅР°Р»РёС‚РёРєР°</span>
-            <h2>РЎСЂР°РІРЅРµРЅРёРµ РїР°СЂР°РјРµС‚СЂРѕРІ</h2>
+            <span class="compare-editor-tag compare-editor-tag-summary">Аналитика</span>
+            <h2>Сравнение параметров</h2>
             <span class="section-note">${app.escapeHtml(primaryProfile.name)} vs ${app.escapeHtml(secondaryProfile.name)}</span>
           </div>
         </div>
 
         <div class="compare-summary-strip">
-          <div class="compare-summary-chip is-better">Р›СѓС‡С€Рµ: ${app.escapeHtml(betterCount)}</div>
-          <div class="compare-summary-chip is-worse">РҐСѓР¶Рµ: ${app.escapeHtml(worseCount)}</div>
-          <div class="compare-summary-chip is-neutral">Р Р°РІРЅРѕ: ${app.escapeHtml(equalCount)}</div>
+          <div class="compare-summary-chip is-better">Лучше: ${app.escapeHtml(betterCount)}</div>
+          <div class="compare-summary-chip is-worse">Хуже: ${app.escapeHtml(worseCount)}</div>
+          <div class="compare-summary-chip is-neutral">Равно: ${app.escapeHtml(equalCount)}</div>
         </div>
 
         <div class="compare-table-wrap">
           <div class="compare-table">
-            <div class="compare-table-header">РџР°СЂР°РјРµС‚СЂ</div>
+            <div class="compare-table-header">Параметр</div>
             <div class="compare-table-header">${app.escapeHtml(primaryProfile.name)}</div>
             <div class="compare-table-header">${app.escapeHtml(secondaryProfile.name)}</div>
-            <div class="compare-table-header">О”</div>
+            <div class="compare-table-header">Δ</div>
 
             ${rows.map((row) => `
               <div class="compare-table-cell compare-table-label">${app.escapeHtml(row.label)}</div>
@@ -750,14 +750,14 @@ export function createCompareRenderModule(deps) {
     const secondaryProfile = getSecondaryProfile();
 
     renderTopbar(primaryProfile, secondaryProfile);
-    renderProfileEditor("primary", primaryProfile, "compare-primary-editor", "РџСЂРѕС„РёР»СЊ 1");
+    renderProfileEditor("primary", primaryProfile, "compare-primary-editor", "Профиль 1");
 
     if (secondaryProfile) {
-      renderProfileEditor("secondary", secondaryProfile, "compare-secondary-editor", "РџСЂРѕС„РёР»СЊ 2");
+      renderProfileEditor("secondary", secondaryProfile, "compare-secondary-editor", "Профиль 2");
     } else {
       const secondaryContainer = document.getElementById("compare-secondary-editor");
       if (secondaryContainer) {
-        secondaryContainer.innerHTML = '<div class="empty-note">РЎРѕР·РґР°Р№С‚Рµ РІС‚РѕСЂРѕР№ РїСЂРѕС„РёР»СЊ, С‡С‚РѕР±С‹ СѓРІРёРґРµС‚СЊ РІС‚РѕСЂСѓСЋ СЃР±РѕСЂРєСѓ.</div>';
+        secondaryContainer.innerHTML = '<div class="empty-note">Создайте второй профиль, чтобы увидеть вторую сборку.</div>';
       }
     }
 

@@ -15,11 +15,11 @@ export function createCompareStatsModule(deps) {
   }
 
   function isBaphometSetItem(item) {
-    return /Р‘Р°С„РѕРјРµС‚[Р°]?/u.test(item?.name || "");
+    return /Бафомет[а]?/u.test(item?.name || "");
   }
 
   function isIfritSetItem(item) {
-    return /РС„СЂРёС‚[Р°]?/u.test(item?.name || "");
+    return /Ифрит[а]?/u.test(item?.name || "");
   }
 
   function collectEquipmentSetBonusForProfile(profile, { name, bonuses, isSetItem }) {
@@ -110,12 +110,12 @@ export function createCompareStatsModule(deps) {
 
     [
       collectEquipmentSetBonusForProfile(profile, {
-        name: "Р‘Р°С„РѕРјРµС‚Р°",
+        name: "Бафомета",
         bonuses: app.BAPHOMET_SET_BONUSES,
         isSetItem: isBaphometSetItem,
       }),
       collectEquipmentSetBonusForProfile(profile, {
-        name: "РС„СЂРёС‚Р°",
+        name: "Ифрита",
         bonuses: app.IFRIT_SET_BONUSES,
         isSetItem: isIfritSetItem,
       }),
@@ -170,7 +170,7 @@ export function createCompareStatsModule(deps) {
       ...baseStatMap,
     };
 
-    ["РЎРёР»Р°", "Р›РѕРІРєРѕСЃС‚СЊ", "РРЅС‚РµР»Р»РµРєС‚"].forEach((label) => {
+    ["Сила", "Ловкость", "Интеллект"].forEach((label) => {
       const bonus = numericStats.get(`${label}::`);
       if (bonus) {
         effectiveAttributeMap[label] = (effectiveAttributeMap[label] || 0) + bonus.value;

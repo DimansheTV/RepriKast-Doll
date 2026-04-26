@@ -20,7 +20,7 @@ export function createCompareStateModule({ app, uiStateRepository }) {
 
     return app.normalizeProfileRecord({
       id: "compare-primary",
-      name: "РџСЂРѕС„РёР»СЊ 1",
+      name: "Профиль 1",
       classConfig: app.state.classConfig,
       equipped: app.state.equipped,
       sphereEquipped: app.state.sphereEquipped,
@@ -157,7 +157,7 @@ export function createCompareStateModule({ app, uiStateRepository }) {
     if (app.getSphereSlotConfig(editor.activeSphereSlot)?.categoryKey === "sphere_type_1") {
       editor.activeSphereTypeOneTab = app.getSphereTypeOneTabForSlot(editor.activeSphereSlot);
     } else if (!app.SPHERE_TYPE_ONE_TABS.some((tab) => tab.category === editor.activeSphereTypeOneTab)) {
-      editor.activeSphereTypeOneTab = app.SPHERE_TYPE_ONE_TABS[0]?.category || "РЎС„РµСЂС‹ СЂР°Р·СЂСѓС€РµРЅРёСЏ";
+      editor.activeSphereTypeOneTab = app.SPHERE_TYPE_ONE_TABS[0]?.category || "Сферы разрушения";
     }
   }
 
