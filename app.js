@@ -644,7 +644,60 @@ function formatUpgradeTitleSuffix(level) {
 }
 
 function getParamsForLevel(item, level) {
-  return item?.upgrade_levels?.[level] || [];
+  const params = item?.upgrade_levels?.[level] || [];
+  return applyEquipmentDefenseUpgradeRules(item, level, params);
+}
+
+function applyEquipmentDefenseUpgradeRules(item, level, params) {
+  if (!Array.isArray(params) || !params.length) {
+    return params;
+  }
+
+  const defenseRule = [
+    { matches: isPlainVelkenOrMythrilDefenseItem, singleStepCap: 7 },
+    { matches: isCustomDefenseScaleItem, singleStepCap: 6 },
+    { matches: isMagicVelkenOrMythrilItem, singleStepCap: 6 },
+    { matches: isIfritSetItem, singleStepCap: 5 },
+    { matches: isBaphometSetItem, singleStepCap: 6 },
+    { matches: isDefaultDefenseScaleEquipmentItem, singleStepCap: 8 },
+  ].find((rule) => rule.matches(item));
+
+  if (!defenseRule) {
+    return params;
+  }
+
+  const baseDefense = getBaseDefenseForItem(item);
+  if (!Number.isFinite(baseDefense)) {
+    return params;
+  }
+
+  const defenseValue = getScaledDefenseValueForUpgrade(baseDefense, getUpgradeNumber(level), defenseRule.singleStepCap);
+  let replaced = false;
+
+  return params.map((line) => {
+    const parsed = parseNumericStat(line);
+    if (!replaced && parsed?.label === "Защита" && !parsed.unit) {
+      replaced = true;
+      return `Защита ${formatStatValue(defenseValue)}`;
+    }
+    return line;
+  });
+}
+
+function getBaseDefenseForItem(item) {
+  const baseParams = item?.upgrade_levels?.["+0"] || [];
+  const baseDefense = baseParams
+    .map((line) => parseNumericStat(line))
+    .find((stat) => stat?.label === "Защита" && !stat.unit);
+
+  return baseDefense?.value ?? null;
+}
+
+function getScaledDefenseValueForUpgrade(baseDefense, upgradeNumber, singleStepCap) {
+  const safeUpgrade = Math.max(0, Math.floor(Number(upgradeNumber) || 0));
+  const safeCap = Math.max(0, Math.floor(Number(singleStepCap) || 0));
+  const bonus = safeUpgrade <= safeCap ? safeUpgrade : safeCap + (safeUpgrade - safeCap) * 2;
+  return baseDefense + bonus;
 }
 
 function getSlotConfig(slotKey) {
@@ -1277,6 +1330,36 @@ function isBaphometSetItem(item) {
 
 function isIfritSetItem(item) {
   return /Ифрит[а]?/u.test(item?.name || "");
+}
+
+function isMagicVelkenOrMythrilItem(item) {
+  const name = item?.name || "";
+  return /магическ/u.test(name) && /(велкен|мифрил)/iu.test(name);
+}
+
+function isPlainVelkenOrMythrilDefenseItem(item) {
+  const name = item?.name || "";
+  const slot = item?.slot_code || "";
+
+  if (/магическ/u.test(name)) {
+    return false;
+  }
+
+  if (/(большой щит|мифриловый браслет хранителя)/iu.test(name)) {
+    return true;
+  }
+
+  return /(велкен|мифрил)/iu.test(name) && ["helmet", "cloak", "armor", "gloves", "boots"].includes(slot);
+}
+
+function isCustomDefenseScaleItem(item) {
+  const name = item?.name || "";
+  return /(щит стража|костяной щит|магический браслет хранителя)/iu.test(name);
+}
+
+function isDefaultDefenseScaleEquipmentItem(item) {
+  const slot = item?.slot_code || "";
+  return SLOT_CONFIG.some((entry) => entry.sourceSlot === slot);
 }
 
 function collectEquipmentSetBonus({ name, bonuses, isSetItem }) {
