@@ -325,7 +325,26 @@ test("compare page preserves baseline math and reverse-stat direction", async ({
   expect(reverseRow?.deltaClass).toContain("is-worse");
 });
 
-test("compare editor catalog equips, removes, merges and persists secondary profile", async ({ page }) => {
+test("compare inventory shows equipment upgrade as read-only", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
+  const inventoryStepper = page.locator('#slot-grid [data-upgrade-type="inventory"][data-upgrade-delta="1"]').first();
+  await expect(inventoryStepper).toBeVisible();
+  await inventoryStepper.click();
+  await page.locator("#profile-save-button").click();
+
+  await page.locator("#profile-new-button").click();
+  await page.locator("#profile-select").selectOption({ index: 0 });
+
+  await page.goto("/compare.html");
+
+  const readonlyBadge = page.locator("#compare-primary-editor .compare-equipment-stage .compare-readonly-upgrade-badge").first();
+  await expect(readonlyBadge).toBeVisible();
+  await expect(readonlyBadge.locator(".compare-readonly-upgrade-badge-value")).toHaveText("+1");
+});
+
+test("compare editor hides item selection on all workspace tabs", async ({ page }) => {
   await seedProfiles(
     page,
     [
@@ -357,53 +376,26 @@ test("compare editor catalog equips, removes, merges and persists secondary prof
   await page.goto("/compare.html");
 
   const secondary = page.locator("#compare-secondary-editor");
-  await expect(page.locator("#compare-primary-editor .compare-editor-catalog")).toBeVisible();
-  await expect(secondary.locator(".compare-editor-catalog")).toBeVisible();
-
-  await secondary.locator('[data-compare-list-action="inventory-equip"]').first().click();
-  await expect(secondary.locator(".compare-equipment-stage .slot-cell.is-filled")).toHaveCount(1);
-  await expect.poll(async () => (await readCompareRow(page, "HP"))?.secondaryText).not.toBe("707");
-  await expectCompareSecondaryStored(page, "(profile) => Boolean(profile?.equipped?.earring)");
-
-  await page.reload();
-  await expect(page.locator("#compare-secondary-editor .compare-equipment-stage .slot-cell.is-filled")).toHaveCount(1);
-  await page.locator('#compare-secondary-editor [data-compare-list-action="inventory-remove"]').first().click();
-  await expect(page.locator("#compare-secondary-editor .compare-equipment-stage .slot-cell.is-filled")).toHaveCount(0);
-  await expectCompareSecondaryStored(page, "(profile) => !profile?.equipped?.earring");
+  await expect(page.locator("#compare-primary-editor .compare-editor-catalog")).toHaveCount(0);
+  await expect(secondary.locator(".compare-editor-catalog")).toHaveCount(0);
+  await expect(page.locator("[data-compare-list-action]")).toHaveCount(0);
+  await expect(secondary.locator('[data-compare-list-action="inventory-equip"]')).toHaveCount(0);
+  await expect(secondary.locator('[data-compare-list-action="inventory-remove"]')).toHaveCount(0);
+  await expect(secondary.locator('.compare-equipment-stage [data-compare-upgrade-type="inventory"]')).toHaveCount(0);
 
   await page.locator('#compare-secondary-editor [data-compare-workspace-tab="spheres"]').click();
-  await page.locator('#compare-secondary-editor [data-compare-list-action="sphere-equip"]').first().click();
-  await expect(page.locator("#compare-secondary-editor .compare-sphere-stage .sphere-slot-cell.is-filled")).toHaveCount(1);
-  await expectCompareSecondaryStored(page, "(profile) => Object.keys(profile?.sphereEquipped || {}).length === 1");
+  await expect(secondary.locator(".compare-editor-catalog")).toHaveCount(0);
+  await expect(secondary.locator('[data-compare-list-action="sphere-equip"]')).toHaveCount(0);
+  await expect(secondary.locator('[data-compare-list-action="sphere-remove"]')).toHaveCount(0);
 
   await page.locator('#compare-secondary-editor [data-compare-workspace-tab="trophies"]').click();
-  await page.locator('#compare-secondary-editor [data-compare-list-action="trophy-equip"]').first().click();
-  await expect(page.locator("#compare-secondary-editor .compare-trophy-stage .trophy-slot-cell.is-filled")).toHaveCount(1);
-  await expectCompareSecondaryStored(page, "(profile) => Object.keys(profile?.trophyEquipped || {}).length === 1");
+  await expect(secondary.locator(".compare-editor-catalog")).toHaveCount(0);
+  await expect(secondary.locator('[data-compare-list-action="trophy-equip"]')).toHaveCount(0);
+  await expect(secondary.locator('[data-compare-list-action="trophy-remove"]')).toHaveCount(0);
 
   await page.locator('#compare-secondary-editor [data-compare-workspace-tab="pets"]').click();
-  await page.locator('#compare-secondary-editor [data-compare-list-action="pet-equip"]').first().click();
-  await expect(page.locator("#compare-secondary-editor .compare-pet-stage .pet-card")).toBeVisible();
-  await expect.poll(async () => (await readCompareRow(page, "HP"))?.secondaryText).not.toBe("707");
-
-  const mergeIncrease = page.locator('#compare-secondary-editor [data-compare-pet-merge-key="fire"][data-compare-pet-merge-delta="1"]');
-  await mergeIncrease.click();
-  await expect(page.locator("#compare-secondary-editor .pet-merge-count").first()).toHaveText("1");
-  await expect(page.locator("#compare-secondary-editor .pet-merge-bonus").first()).toHaveText("+4");
-  await mergeIncrease.click();
-  await mergeIncrease.click();
-  await mergeIncrease.click();
-  await mergeIncrease.click();
-  await expect(page.locator("#compare-secondary-editor .pet-merge-count").first()).toHaveText("5");
-  await expect(mergeIncrease).toBeDisabled();
-  await expectCompareSecondaryStored(page, "(profile) => profile?.petEquipped?.mergeCounts?.fire === 5");
-
-  await page.reload();
-  await page.locator('#compare-secondary-editor [data-compare-workspace-tab="pets"]').click();
-  await expect(page.locator("#compare-secondary-editor .compare-pet-stage .pet-card")).toBeVisible();
-  await expect(page.locator("#compare-secondary-editor .pet-merge-count").first()).toHaveText("5");
-
-  await page.locator('#compare-secondary-editor [data-compare-list-action="pet-remove"]').first().click();
+  await expect(secondary.locator(".compare-editor-catalog")).toHaveCount(0);
+  await expect(secondary.locator('[data-compare-list-action="pet-equip"]')).toHaveCount(0);
+  await expect(secondary.locator('[data-compare-list-action="pet-remove"]')).toHaveCount(0);
   await expect(page.locator("#compare-secondary-editor .compare-pet-stage .pet-card")).toHaveCount(0);
-  await expectCompareSecondaryStored(page, "(profile) => profile?.petEquipped === null");
 });

@@ -12,7 +12,24 @@ export function createCompareRenderModule(deps) {
     formatAbsoluteStat,
   } = deps;
 
-  function renderCompareInventoryStage(editorKey, profile, editor) {
+  function renderReadOnlyUpgradeBadge(level, ariaLabel) {
+    if (!app.shouldDisplayUpgradeLevel(level)) {
+      return "";
+    }
+
+    const displayValue = String(level);
+    return `
+      <span
+        class="compare-readonly-upgrade-badge"
+        aria-label="${app.escapeHtml(`${ariaLabel}: ${level}`)}"
+        title="${app.escapeHtml(String(level))}"
+      >
+        <span class="compare-readonly-upgrade-badge-value">${app.escapeHtml(displayValue)}</span>
+      </span>
+    `;
+  }
+
+  function renderCompareInventoryStage(profile) {
     const visibleSlots = app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
 
     const slotsHtml = visibleSlots.map((slot) => {
@@ -22,9 +39,6 @@ export function createCompareRenderModule(deps) {
       const level = item ? app.getValidUpgradeLevel(item, selected.upgradeLevel) : null;
       const classes = ["slot-cell"];
 
-      if (editor.activeSlot === slot.key) {
-        classes.push("is-active");
-      }
       if (item) {
         classes.push("is-filled");
       }
@@ -35,14 +49,11 @@ export function createCompareRenderModule(deps) {
       const imageHtml = item?.image
         ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
         : "";
+      const titleText = item
+        ? `${slot.label}: ${item.name}${app.formatUpgradeTitleSuffix(level)}`
+        : slot.label;
       const upgradeControl = item
-        ? app.renderUpgradeStepperControl(
-            "slot-upgrade-select",
-            item,
-            level,
-            { "compare-upgrade-type": "inventory", "slot-key": slot.key },
-            `Уровень заточки ${slot.label}`,
-          )
+        ? renderReadOnlyUpgradeBadge(level, `Уровень заточки ${slot.label}`)
         : "";
 
       return `
@@ -50,10 +61,9 @@ export function createCompareRenderModule(deps) {
           <button
             type="button"
             class="slot-pin"
-            data-compare-slot-pin="1"
-            data-compare-slot-type="inventory"
-            data-slot-key="${slot.key}"
-            aria-label="${app.escapeHtml(slot.label)}"
+            disabled
+            aria-label="${app.escapeHtml(titleText)}"
+            title="${app.escapeHtml(titleText)}"
           >
             <span class="slot-item-visual" aria-hidden="true">${imageHtml}</span>
           </button>
@@ -71,12 +81,12 @@ export function createCompareRenderModule(deps) {
     if (passiveItem) {
       passiveClasses.push("is-filled");
     }
-    if (editor.activeSlot === passiveSlot?.key) {
-      passiveClasses.push("is-active");
-    }
 
     const passiveImageHtml = passiveItem?.image
       ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(passiveItem.name)}" loading="lazy">`
+      : "";
+    const passiveUpgradeControl = passiveItem && passiveSlot
+      ? renderReadOnlyUpgradeBadge(passiveLevel, `Уровень заточки ${passiveSlot.label}`)
       : "";
     const passiveSlotHtml = passiveItem && passiveSlot
       ? `
@@ -85,14 +95,13 @@ export function createCompareRenderModule(deps) {
             <button
               type="button"
               class="slot-pin"
-              data-compare-slot-pin="1"
-              data-compare-slot-type="inventory"
-              data-slot-key="${passiveSlot.key}"
+              disabled
               aria-label="${app.escapeHtml(`${passiveSlot.label}: ${passiveItem.name}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
               title="${app.escapeHtml(`${passiveSlot.label}: ${passiveItem.name}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
             >
               <span class="slot-item-visual" aria-hidden="true">${passiveImageHtml}</span>
             </button>
+            ${passiveUpgradeControl}
           </div>
         </section>
       `
@@ -357,240 +366,6 @@ export function createCompareRenderModule(deps) {
     `;
   }
 
-  function renderCompareCatalogForInventory(profile, editor) {
-    const slot = app.getSlotConfig(editor.activeSlot);
-    if (!slot) {
-      return {
-        title: "Инвентарь",
-        count: 0,
-        body: '<div class="empty-note">Выберите слот экипировки.</div>',
-      };
-    }
-
-    const items = app.getItemsForEquipmentSlot(slot);
-    const selectedItemId = profile.equipped[slot.key]?.itemId;
-    const body = items.length
-      ? items.map((item) => {
-        const previewLevel = app.getDefaultUpgradeLevel(item);
-        const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Без параметров";
-        const isEquipped = String(item.uid) === String(selectedItemId || "");
-
-        return `
-          <div class="catalog-item ${isEquipped ? "is-selected" : ""}">
-            <div class="item-row">
-              ${app.renderItemIcon(item)}
-              <div class="item-info">
-                <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
-              </div>
-              <button
-                class="equip-btn ${isEquipped ? "is-selected" : ""}"
-                type="button"
-                data-compare-list-action="${isEquipped ? "inventory-remove" : "inventory-equip"}"
-                data-slot-key="${slot.key}"
-                data-item-id="${app.escapeHtml(item.uid)}"
-              >
-                ${isEquipped ? "Снять" : "Надеть"}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join("")
-      : '<div class="empty-note">Для этого слота пока нет предметов.</div>';
-
-    return {
-      title: slot.catalogLabel || slot.label,
-      count: items.length,
-      body,
-    };
-  }
-
-  function renderCompareCatalogForSphere(profile, editor) {
-    const slot = app.getSphereSlotConfig(editor.activeSphereSlot);
-    if (!slot) {
-      return {
-        title: "Сферы",
-        count: 0,
-        body: '<div class="empty-note">Выберите слот сферы.</div>',
-      };
-    }
-
-    const items = app.getSphereItemsForSlot(slot.key);
-    const selectedItemId = profile.sphereEquipped[slot.key]?.itemId;
-    const body = items.length
-      ? items.map((item) => {
-        const previewLevel = app.getDefaultUpgradeLevel(item);
-        const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Без параметров";
-        const showUpgrade = slot.categoryKey === "sphere_type_1";
-        const isEquipped = String(item.uid) === String(selectedItemId || "");
-        const metaParts = [previewText];
-
-        if (showUpgrade && app.shouldDisplayUpgradeLevel(previewLevel)) {
-          metaParts.unshift(previewLevel);
-        }
-
-        return `
-          <div class="catalog-item ${isEquipped ? "is-selected" : ""}">
-            <div class="item-row">
-              ${app.renderItemIcon(item)}
-              <div class="item-info">
-                <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(metaParts.join(" · "))}</div>
-              </div>
-              <button
-                class="equip-btn ${isEquipped ? "is-selected" : ""}"
-                type="button"
-                data-compare-list-action="${isEquipped ? "sphere-remove" : "sphere-equip"}"
-                data-slot-key="${slot.key}"
-                data-item-id="${app.escapeHtml(item.uid)}"
-              >
-                ${isEquipped ? "Снять" : "Надеть"}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join("")
-      : '<div class="empty-note">Для этого слота пока нет сфер.</div>';
-
-    return {
-      title: slot.label,
-      count: items.length,
-      body,
-    };
-  }
-
-  function renderCompareCatalogForTrophy(profile, editor) {
-    const slot = app.getTrophySlotConfig(editor.activeTrophySlot);
-    if (!slot) {
-      return {
-        title: "Трофеи",
-        count: 0,
-        body: '<div class="empty-note">Выберите слот трофея.</div>',
-      };
-    }
-
-    const items = app.getTrophyItemsForSlot(slot.key);
-    const selectedItemId = profile.trophyEquipped[slot.key]?.itemId;
-    const body = items.length
-      ? items.map((item) => {
-        const previewLevel = app.getDefaultUpgradeLevel(item);
-        const params = app.getParamsForLevel(item, previewLevel);
-        const previewText = params[0] || "Без параметров";
-        const isEquipped = String(item.uid) === String(selectedItemId || "");
-
-        return `
-          <div class="catalog-item ${isEquipped ? "is-selected" : ""}">
-            <div class="item-row">
-              ${app.renderItemIcon(item)}
-              <div class="item-info">
-                <div class="item-name">${app.escapeHtml(item.name)}</div>
-                <div class="item-meta">${app.escapeHtml(app.shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
-              </div>
-              <button
-                class="equip-btn ${isEquipped ? "is-selected" : ""}"
-                type="button"
-                data-compare-list-action="${isEquipped ? "trophy-remove" : "trophy-equip"}"
-                data-slot-key="${slot.key}"
-                data-item-id="${app.escapeHtml(item.uid)}"
-              >
-                ${isEquipped ? "Снять" : "Надеть"}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join("")
-      : '<div class="empty-note">Для этого слота пока нет трофеев.</div>';
-
-    return {
-      title: `${slot.label} · ${slot.statLabel}`,
-      count: items.length,
-      body,
-    };
-  }
-
-  function renderCompareCatalogForPet(profile) {
-    const selectedItemId = profile.petEquipped?.itemId || "";
-    const groups = app.PET_CATEGORY_CONFIG.map((group) => ({
-      ...group,
-      items: app.getPetItemsForCategory(group.key),
-    }));
-    const count = groups.reduce((total, group) => total + group.items.length, 0);
-    const body = count
-      ? groups.map((group) => {
-        const itemsHtml = group.items.length
-          ? group.items.map((item) => {
-            const previewLevel = app.getDefaultUpgradeLevel(item);
-            const params = app.getParamsForLevel(item, previewLevel);
-            const previewText = params[0] || app.normalizeText(item.description_lines?.[0]) || "Без параметров";
-            const isEquipped = String(item.uid) === String(selectedItemId);
-            const subtitle = app.normalizeText(item.description_lines?.[0]);
-            const metaParts = [];
-
-            if (subtitle) {
-              metaParts.push(subtitle);
-            }
-            metaParts.push(previewText);
-
-            return `
-              <div class="catalog-item catalog-item-pet ${isEquipped ? "is-selected" : ""}">
-                <div class="item-row">
-                  ${app.renderItemIcon(item)}
-                  <div class="item-info">
-                    <div class="item-name">${app.escapeHtml(item.name)}</div>
-                    <div class="item-meta">${app.escapeHtml(metaParts.join(" · "))}</div>
-                  </div>
-                  <button
-                    class="equip-btn ${isEquipped ? "is-selected" : ""}"
-                    type="button"
-                    data-compare-list-action="${isEquipped ? "pet-remove" : "pet-equip"}"
-                    data-item-id="${app.escapeHtml(item.uid)}"
-                  >
-                    ${isEquipped ? "Снять" : "Надеть"}
-                  </button>
-                </div>
-              </div>
-            `;
-          }).join("")
-          : '<div class="empty-note">Для этой группы питомцев пока нет данных.</div>';
-
-        return `
-          <section class="compare-pet-catalog-group">
-            <div class="compare-editor-catalog-title">
-              <span class="section-note">${app.escapeHtml(group.label)}</span>
-            </div>
-            <div class="category-list compare-category-list">
-              ${itemsHtml}
-            </div>
-          </section>
-        `;
-      }).join("")
-      : '<div class="empty-note">Питомцы пока не загружены.</div>';
-
-    return {
-      title: "Питомцы",
-      count,
-      body,
-    };
-  }
-
-  function renderCompareCatalog(profile, editor) {
-    if (editor.activeWorkspaceTab === "pets") {
-      return renderCompareCatalogForPet(profile);
-    }
-
-    if (editor.activeWorkspaceTab === "spheres") {
-      return renderCompareCatalogForSphere(profile, editor);
-    }
-
-    if (editor.activeWorkspaceTab === "trophies") {
-      return renderCompareCatalogForTrophy(profile, editor);
-    }
-
-    return renderCompareCatalogForInventory(profile, editor);
-  }
-
   function renderProfileEditor(editorKey, profile, containerId, title) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -600,7 +375,7 @@ export function createCompareRenderModule(deps) {
     ensureEditorState(editorKey, profile);
     const editor = compareState.editors[editorKey];
     const classLabel = app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || "Класс";
-    let stageHtml = renderCompareInventoryStage(editorKey, profile, editor);
+    let stageHtml = renderCompareInventoryStage(profile);
 
     if (editor.activeWorkspaceTab === "pets") {
       stageHtml = renderComparePetStage(profile);
@@ -609,8 +384,6 @@ export function createCompareRenderModule(deps) {
     } else if (editor.activeWorkspaceTab === "trophies") {
       stageHtml = renderCompareTrophyStage(profile, editor);
     }
-    const catalog = renderCompareCatalog(profile, editor);
-
     container.innerHTML = `
       <section class="compare-editor-shell">
         <div class="section-title-row compare-editor-heading">
@@ -654,15 +427,6 @@ export function createCompareRenderModule(deps) {
           <div class="compare-editor-stage-view">
             ${stageHtml}
           </div>
-          <aside class="compare-editor-catalog">
-            <div class="compare-editor-catalog-title">
-              <h3>${app.escapeHtml(catalog.title)}</h3>
-              <span class="section-note">${app.escapeHtml(catalog.count)} шт.</span>
-            </div>
-            <div class="category-list compare-category-list">
-              ${catalog.body}
-            </div>
-          </aside>
         </section>
       </section>
     `;
