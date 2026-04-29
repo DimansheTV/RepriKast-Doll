@@ -11,6 +11,7 @@ export function createMainRenderModule(deps) {
     startBuildNameEditing,
     finishBuildNameEditing,
     cancelBuildNameEditing,
+    cancelActiveBuildEdits,
     toggleBuildMenu,
     closeBuildMenu,
     saveActiveProfileExplicitly,
@@ -39,6 +40,7 @@ export function createMainRenderModule(deps) {
   } = deps;
   const CLASS_CONFIGS = runtimeClassConfigs;
   let toastTimer = 0;
+  let suppressBuildNameBlur = false;
 
 
 function renderStatRows(stats) {
@@ -386,11 +388,10 @@ function renderProfileBar() {
     return;
   }
 
-  const activeProfile = getActiveProfile();
   const selectedSavedId = state.activeDraftSourceProfileId || state.activeProfileId;
   const canOpenMenu = !state.isBuildDirty && !state.isBuildNameEditing;
-  const canCopyOrDelete = !state.isBuildDirty && state.activeDraftMode === "existing";
-  const canDelete = canCopyOrDelete && state.profiles.length > 1;
+  const canCopy = !state.isBuildDirty && !state.isBuildNameEditing && state.activeDraftMode === "existing";
+  const canDelete = canCopy && state.profiles.length > 1;
   const title = escapeHtml(getActiveDraftDisplayName());
   const menuHtml = state.isBuildMenuOpen && canOpenMenu
     ? `
@@ -405,6 +406,21 @@ function renderProfileBar() {
           </button>
         `).join("")}
       </div>
+    `
+    : "";
+
+  const copyButtonHtml = canCopy
+    ? `
+      <button type="button" class="build-picker-icon-button" aria-label="Скопировать сборку" title="Скопировать сборку" data-build-copy>
+        <svg viewBox="0 0 16 16" focusable="false"><rect x="5.5" y="3.5" width="7" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3.5 11.5h-.8A1.2 1.2 0 0 1 1.5 10.3V3.7A1.2 1.2 0 0 1 2.7 2.5h5.6A1.2 1.2 0 0 1 9.5 3.7v.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    `
+    : "";
+  const deleteButtonHtml = canDelete
+    ? `
+      <button type="button" class="build-picker-icon-button build-picker-icon-button-danger" aria-label="Удалить сборку" title="Удалить сборку" data-build-delete>
+        <svg viewBox="0 0 16 16" focusable="false"><path d="M3 4.5h10m-8.2 0V3.3c0-.7.6-1.3 1.3-1.3h3.8c.7 0 1.3.6 1.3 1.3v1.2m-6 0v7.2c0 .8.6 1.3 1.3 1.3h3.4c.8 0 1.3-.5 1.3-1.3V4.5M6.6 6.8v3.8m2.8-3.8v3.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.2"/></svg>
+      </button>
     `
     : "";
 
@@ -446,12 +462,8 @@ function renderProfileBar() {
           <button type="button" class="build-picker-icon-button" aria-label="Переименовать сборку" title="Переименовать сборку" data-build-edit>
             <svg viewBox="0 0 16 16" focusable="false"><path d="m10.9 2.2 2.9 2.9-7.6 7.6-3.6.7.7-3.6 7.6-7.6Zm0 0 1.2-1.2a1.4 1.4 0 0 1 2 0l.9.9a1.4 1.4 0 0 1 0 2l-1.2 1.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"/></svg>
           </button>
-          <button type="button" class="build-picker-icon-button" aria-label="Скопировать сборку" title="Скопировать сборку" ${canCopyOrDelete ? "" : "disabled"} data-build-copy>
-            <svg viewBox="0 0 16 16" focusable="false"><rect x="5.5" y="3.5" width="7" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3.5 11.5h-.8A1.2 1.2 0 0 1 1.5 10.3V3.7A1.2 1.2 0 0 1 2.7 2.5h5.6A1.2 1.2 0 0 1 9.5 3.7v.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-          </button>
-          <button type="button" class="build-picker-icon-button build-picker-icon-button-danger" aria-label="Удалить сборку" title="Удалить сборку" ${canDelete ? "" : "disabled"} data-build-delete>
-            <svg viewBox="0 0 16 16" focusable="false"><path d="M3 4.5h10m-8.2 0V3.3c0-.7.6-1.3 1.3-1.3h3.8c.7 0 1.3.6 1.3 1.3v1.2m-6 0v7.2c0 .8.6 1.3 1.3 1.3h3.4c.8 0 1.3-.5 1.3-1.3V4.5M6.6 6.8v3.8m2.8-3.8v3.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.2"/></svg>
-          </button>
+          ${copyButtonHtml}
+          ${deleteButtonHtml}
         </div>
       </div>
       ${menuHtml}
@@ -477,8 +489,6 @@ function syncBuildToolbarState() {
   }
 
   const canOpenMenu = !state.isBuildDirty && !state.isBuildNameEditing;
-  const canCopyOrDelete = !state.isBuildDirty && state.activeDraftMode === "existing";
-  const canDelete = canCopyOrDelete && state.profiles.length > 1;
   const activeProfile = getActiveProfile();
 
   buildPicker.querySelector(".build-picker-shell")?.classList.toggle("is-dirty", state.isBuildDirty);
@@ -488,21 +498,20 @@ function syncBuildToolbarState() {
     trigger.disabled = !canOpenMenu;
   }
 
-  const copyButton = buildPicker.querySelector("[data-build-copy]");
-  if (copyButton) {
-    copyButton.disabled = !canCopyOrDelete;
+  saveButton.disabled = state.isBuildNameEditing || !state.isBuildDirty || !activeProfile;
+  const shouldShowCancel = state.isBuildDirty || state.isBuildNameEditing;
+  newButton.textContent = shouldShowCancel ? "\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c" : "\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430";
+  if (shouldShowCancel) {
+    newButton.setAttribute("data-build-cancel", "");
+    newButton.removeAttribute("data-build-new");
+  } else {
+    newButton.setAttribute("data-build-new", "");
+    newButton.removeAttribute("data-build-cancel");
   }
-
-  const deleteButton = buildPicker.querySelector("[data-build-delete]");
-  if (deleteButton) {
-    deleteButton.disabled = !canDelete;
-  }
-
-  saveButton.disabled = !state.isBuildDirty || !activeProfile;
-  newButton.disabled = state.isBuildDirty;
-  compareLink.classList.toggle("is-disabled", state.isBuildDirty);
-  compareLink.setAttribute("aria-disabled", state.isBuildDirty ? "true" : "false");
-  compareLink.tabIndex = state.isBuildDirty ? -1 : 0;
+  const isCompareDisabled = state.isBuildDirty || state.isBuildNameEditing;
+  compareLink.classList.toggle("is-disabled", isCompareDisabled);
+  compareLink.setAttribute("aria-disabled", isCompareDisabled ? "true" : "false");
+  compareLink.tabIndex = isCompareDisabled ? -1 : 0;
 }
 
 function bindProfileControls() {
@@ -584,6 +593,12 @@ function bindProfileControls() {
         return;
       }
 
+      if (suppressBuildNameBlur) {
+        suppressBuildNameBlur = false;
+        target.focus();
+        return;
+      }
+
       const nextTarget = event.relatedTarget;
       if (nextTarget instanceof Element && buildPicker.contains(nextTarget)) {
         return;
@@ -601,22 +616,69 @@ function bindProfileControls() {
 
       closeBuildMenu();
     });
+
+    const preventBlockedBuildActionBlur = (event) => {
+        const rawTarget = event.target;
+        const target = rawTarget instanceof Element
+          ? rawTarget
+          : rawTarget instanceof Node
+            ? rawTarget.parentElement
+            : null;
+        if (!target || !state.isBuildNameEditing) {
+          suppressBuildNameBlur = false;
+          return;
+        }
+
+        if (!saveButton.contains(target) && !compareLink.contains(target)) {
+          suppressBuildNameBlur = false;
+          return;
+        }
+
+        suppressBuildNameBlur = true;
+        event.preventDefault();
+      };
+    document.addEventListener("pointerdown", preventBlockedBuildActionBlur, true);
+    document.addEventListener("mousedown", preventBlockedBuildActionBlur, true);
   }
 
   if (saveButton.dataset.bound !== "1") {
     saveButton.dataset.bound = "1";
-    saveButton.addEventListener("click", saveActiveProfileExplicitly);
+    saveButton.addEventListener("mousedown", (event) => {
+      if (state.isBuildNameEditing) {
+        event.preventDefault();
+      }
+    });
+    saveButton.addEventListener("click", (event) => {
+      if (state.isBuildNameEditing) {
+        event.preventDefault();
+        return;
+      }
+
+      saveActiveProfileExplicitly();
+    });
   }
 
   if (newButton.dataset.bound !== "1") {
     newButton.dataset.bound = "1";
-    newButton.addEventListener("click", createNewProfile);
+    newButton.addEventListener("click", () => {
+      if (state.isBuildDirty) {
+        cancelActiveBuildEdits();
+        return;
+      }
+
+      createNewProfile();
+    });
   }
 
   if (compareLink.dataset.bound !== "1") {
     compareLink.dataset.bound = "1";
+    compareLink.addEventListener("mousedown", (event) => {
+      if (state.isBuildDirty || state.isBuildNameEditing) {
+        event.preventDefault();
+      }
+    });
     compareLink.addEventListener("click", (event) => {
-      if (state.isBuildDirty) {
+      if (state.isBuildDirty || state.isBuildNameEditing) {
         event.preventDefault();
       }
     });

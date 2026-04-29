@@ -91,6 +91,7 @@ export function createAppRuntime(context) {
     startBuildNameEditing: profilesModule.startBuildNameEditing,
     finishBuildNameEditing: profilesModule.finishBuildNameEditing,
     cancelBuildNameEditing: profilesModule.cancelBuildNameEditing,
+    cancelActiveBuildEdits: profilesModule.cancelActiveBuildEdits,
     toggleBuildMenu: profilesModule.toggleBuildMenu,
     closeBuildMenu: profilesModule.closeBuildMenu,
     saveActiveProfileExplicitly: profilesModule.saveActiveProfileExplicitly,
@@ -214,7 +215,7 @@ export function createAppRuntime(context) {
     } catch (err) {
       const categoryList = document.getElementById("category-list");
       if (categoryList) {
-        categoryList.innerHTML = '<div class="error-note">?????? ???????? ??????: ' + escapeHtml(err.message) + '</div>';
+        categoryList.innerHTML = '<div class="error-note">\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435: ' + escapeHtml(err.message) + '</div>';
       }
       const slotGrid = document.getElementById("slot-grid");
       if (slotGrid) {
@@ -232,7 +233,7 @@ export function createAppRuntime(context) {
       if (petStage) {
         petStage.innerHTML = "";
       }
-      refs.setLastAction("??????? ?? ??????????.");
+      refs.setLastAction("\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u043d\u0435 \u0443\u0434\u0430\u043b\u0430\u0441\u044c.");
     }
   }
 

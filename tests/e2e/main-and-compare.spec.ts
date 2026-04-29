@@ -235,14 +235,16 @@ test("main page keeps explicit build save flow and dirty-state controls", async 
   await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
 
   await expect(page.locator("[data-build-trigger]")).toBeDisabled();
-  await expect(page.locator("#profile-new-button")).toBeDisabled();
-  await expect(page.locator("[data-build-copy]")).toBeDisabled();
-  await expect(page.locator("[data-build-delete]")).toBeDisabled();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-cancel]")).toBeVisible();
+  await expect(page.locator("[data-build-copy]")).toHaveCount(0);
+  await expect(page.locator("[data-build-delete]")).toHaveCount(0);
   await expect(page.locator("#profile-compare-link")).toHaveAttribute("aria-disabled", "true");
 
   await page.locator("#profile-save-button").click();
   await expect(page.locator("[data-build-toast]")).toHaveText("Сборка успешно сохранена");
   await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
   await expectSavedBuildCount(page, 1);
 
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
@@ -253,8 +255,10 @@ test("main page keeps explicit build save flow and dirty-state controls", async 
 
   await page.locator("#profile-new-button").click();
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(0);
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
   await expect(page.locator("[data-build-trigger]")).toBeDisabled();
   await page.locator("#profile-save-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
   await expectSavedBuildCount(page, 2);
 
   await page.locator("[data-build-delete]").click();
@@ -263,9 +267,11 @@ test("main page keeps explicit build save flow and dirty-state controls", async 
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
 
   await page.locator("[data-build-copy]").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
   await expect(page.locator("[data-build-trigger]")).toBeDisabled();
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
   await page.locator("#profile-save-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
   await expectSavedBuildCount(page, 2);
 
   await page.locator("[data-build-delete]").click();
@@ -273,6 +279,92 @@ test("main page keeps explicit build save flow and dirty-state controls", async 
   await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
 });
 
+
+test("cancel button restores the previous clean build state", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await renameActiveBuild(page, "Saved build");
+  await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
+  await page.locator("#profile-save-button").click();
+
+  await renameActiveBuild(page, "Changed build");
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-copy]")).toHaveCount(0);
+  await expect(page.locator("[data-build-delete]")).toHaveCount(0);
+
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Saved build");
+  await expect(page.locator("[data-build-copy]")).toHaveCount(1);
+  await expect(page.locator("[data-build-delete]")).toHaveCount(0);
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+});
+
+test("entering name edit mode immediately blocks copy and delete and swaps new to cancel", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("[data-build-edit]").click();
+  await expect(page.locator("[data-build-name-input]")).toBeVisible();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-copy]")).toHaveCount(0);
+  await expect(page.locator("[data-build-delete]")).toHaveCount(0);
+  await expect(page.locator("[data-build-trigger]")).toHaveCount(0);
+  await expect(page.locator("#profile-compare-link")).toHaveAttribute("aria-disabled", "true");
+  await expect(page.locator("#profile-compare-link")).toHaveClass(/is-disabled/);
+
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("[data-build-name-input]")).toHaveCount(0);
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expect(page.locator("[data-build-copy]")).toHaveCount(1);
+});
+
+test("save button stays inactive and does not save while name edit mode is open", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("[data-build-edit]").click();
+  const input = page.locator("[data-build-name-input]");
+  await expect(input).toBeVisible();
+  await input.fill("Draft name");
+
+  const saveButton = page.locator("#profile-save-button");
+  await expect(saveButton).toBeDisabled();
+
+  const box = await saveButton.boundingBox();
+  if (!box) {
+    throw new Error("Save button has no bounding box");
+  }
+
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator("[data-build-name-input]")).toBeVisible();
+  await expect(page.locator("[data-build-toast]")).not.toHaveText("Сборка успешно сохранена");
+});
+
+test("cancel button discards new and copied drafts back to the previous saved build", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await renameActiveBuild(page, "Base build");
+  await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
+  await page.locator("#profile-save-button").click();
+
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(0);
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Base build");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await expectSavedBuildCount(page, 1);
+
+  await page.locator("[data-build-copy]").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toContainText("Base build");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Base build");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await expectSavedBuildCount(page, 1);
+});
 test("build dropdown opens above layout, closes outside, and switches saved builds", async ({ page }) => {
   await page.goto("/index.html");
 

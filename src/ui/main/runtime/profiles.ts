@@ -113,6 +113,25 @@ export function createProfilesModule(deps) {
     }, state.profiles.length);
   }
 
+  function setCleanBuildSnapshot(profile) {
+    if (!profile) {
+      state.cleanBuildSnapshot = null;
+      return null;
+    }
+
+    const snapshot = normalizeProfileRecord(profile);
+    state.cleanBuildSnapshot = deepClone(snapshot);
+    return snapshot;
+  }
+
+  function getCleanBuildSnapshot() {
+    if (!state.cleanBuildSnapshot) {
+      return null;
+    }
+
+    return normalizeProfileRecord(deepClone(state.cleanBuildSnapshot));
+  }
+
   function createEmptyProfile(name = getProfileFallbackName()) {
     return normalizeProfileRecord({
       id: createProfileId(),
@@ -212,7 +231,14 @@ export function createProfilesModule(deps) {
     sanitizeTrophyEquippedState();
     sanitizePetEquippedState();
     initializeUiState();
-    syncDraftMeta(profile, { mode: "existing", sourceProfileId: profile.id, isDirty: false });
+    const cleanProfile = createProfileSnapshot({
+      id: profile.id,
+      name: profile.name,
+      createdAt: profile.createdAt,
+      sourceProfileId: profile.id,
+    });
+    setCleanBuildSnapshot(cleanProfile);
+    syncDraftMeta(cleanProfile, { mode: "existing", sourceProfileId: profile.id, isDirty: false });
     saveActiveProfileIdState();
     renderAll();
     if (announce) {
@@ -237,6 +263,7 @@ export function createProfilesModule(deps) {
       });
 
       state.profiles = [migratedProfile];
+      setCleanBuildSnapshot(migratedProfile);
       syncDraftMeta(migratedProfile, { mode: "existing", sourceProfileId: migratedProfile.id, isDirty: false });
       saveProfilesState();
       applyProfileToState(migratedProfile);
@@ -327,9 +354,13 @@ export function createProfilesModule(deps) {
       return;
     }
 
+    const cleanSnapshot = getCleanBuildSnapshot();
     const profile = createEmptyProfile(getNextProfileName());
     applyProfileToState(profile);
     initializeUiState();
+    if (cleanSnapshot) {
+      state.cleanBuildSnapshot = deepClone(cleanSnapshot);
+    }
     syncDraftMeta(profile, { mode: "new", sourceProfileId: "", isDirty: true });
     renderAll();
     setLastAction(`Создана новая сборка "${profile.name}".`);
@@ -359,6 +390,7 @@ export function createProfilesModule(deps) {
     state.profiles = state.profiles.map((profile, index) => normalizeProfileRecord(profile, index));
     const persistedProfile = state.profiles.find((profile) => profile.id === savedProfile.id) || savedProfile;
 
+    setCleanBuildSnapshot(persistedProfile);
     syncDraftMeta(persistedProfile, {
       mode: "existing",
       sourceProfileId: persistedProfile.id,
@@ -377,6 +409,7 @@ export function createProfilesModule(deps) {
       return;
     }
 
+    const cleanSnapshot = getCleanBuildSnapshot();
     const sourceProfile = getActiveProfile();
     if (!sourceProfile) {
       return;
@@ -390,6 +423,9 @@ export function createProfilesModule(deps) {
 
     applyProfileToState(profile);
     initializeUiState();
+    if (cleanSnapshot) {
+      state.cleanBuildSnapshot = deepClone(cleanSnapshot);
+    }
     syncDraftMeta(profile, {
       mode: "copy",
       sourceProfileId: sourceProfile.id,
@@ -397,6 +433,33 @@ export function createProfilesModule(deps) {
     });
     renderAll();
     setLastAction(`Создана копия сборки "${profile.name}".`);
+  }
+
+  function cancelActiveBuildEdits() {
+    if (!state.isBuildDirty) {
+      cancelBuildNameEditing();
+      return;
+    }
+
+    const cleanSnapshot = getCleanBuildSnapshot() || getSavedProfileById(state.activeDraftSourceProfileId) || state.profiles[0] || null;
+    if (!cleanSnapshot) {
+      return;
+    }
+
+    applyProfileToState(cleanSnapshot);
+    sanitizeEquippedState();
+    sanitizeSphereEquippedState();
+    sanitizeTrophyEquippedState();
+    sanitizePetEquippedState();
+    initializeUiState();
+    setCleanBuildSnapshot(cleanSnapshot);
+    syncDraftMeta(cleanSnapshot, {
+      mode: "existing",
+      sourceProfileId: cleanSnapshot.id,
+      isDirty: false,
+    });
+    renderAll();
+    setLastAction(`Изменения сборки "${cleanSnapshot.name}" отменены.`);
   }
 
   function deleteActiveProfile() {
@@ -437,6 +500,7 @@ export function createProfilesModule(deps) {
     startBuildNameEditing,
     finishBuildNameEditing,
     cancelBuildNameEditing,
+    cancelActiveBuildEdits,
     toggleBuildMenu,
     closeBuildMenu,
     createNewProfile,

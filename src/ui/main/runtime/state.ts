@@ -64,6 +64,7 @@ export function createRuntimeState(deps) {
     activeDraftName: "",
     activeDraftSourceProfileId: "",
     activeDraftMode: "existing",
+    cleanBuildSnapshot: null,
     isBuildDirty: false,
     isBuildNameEditing: false,
     isBuildMenuOpen: false,
