@@ -1,10 +1,12 @@
 // @ts-nocheck
+import { normalizeText as normalizeSharedText, deepClone as deepCloneShared, escapeHtml as escapeHtmlShared } from "../../../shared/text";
+
 export function normalizeText(value) {
-  return String(value || "").replace(/\s+/g, " ").trim();
+  return normalizeSharedText(value);
 }
 
 export function deepClone(value) {
-  return JSON.parse(JSON.stringify(value));
+  return deepCloneShared(value);
 }
 
 export function sanitizeClassLevel(level) {
@@ -17,10 +19,5 @@ export function sanitizeClassLevel(level) {
 }
 
 export function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return escapeHtmlShared(value ?? "");
 }

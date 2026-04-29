@@ -5,14 +5,19 @@ export function createMainRenderModule(deps) {
   const {
     state,
     getActiveProfile,
-    sanitizeProfileName,
-    renameActiveProfile,
+    getActiveDraftDisplayName,
     setActiveProfile,
+    setActiveDraftName,
+    startBuildNameEditing,
+    finishBuildNameEditing,
+    cancelBuildNameEditing,
+    cancelActiveBuildEdits,
+    toggleBuildMenu,
+    closeBuildMenu,
     saveActiveProfileExplicitly,
     copyActiveProfile,
     createNewProfile,
     deleteActiveProfile,
-    saveProfilesState,
     saveWorkspaceTabState,
     saveSidebarTabState,
     saveClassState,
@@ -32,8 +37,93 @@ export function createMainRenderModule(deps) {
     getLevelKeys,
     CLASS_CONFIGS: runtimeClassConfigs = CLASS_CONFIGS,
     sanitizeClassLevel,
+    t,
+    localizeText,
+    setLanguage,
   } = deps;
   const CLASS_CONFIGS = runtimeClassConfigs;
+  let toastTimer = 0;
+  let suppressBuildNameBlur = false;
+
+function localize(value) {
+  return localizeText(value);
+}
+
+function setTextContent(selector, value) {
+  const element = document.querySelector(selector);
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function setAttributeValue(selector, attribute, value) {
+  const element = document.querySelector(selector);
+  if (element) {
+    element.setAttribute(attribute, value);
+  }
+}
+
+function applyStaticLocalization() {
+  document.documentElement.lang = state.language || "ru";
+
+  setAttributeValue("body[data-page='main'] .panel-topbar", "aria-label", t("toolbar.buildPanel"));
+  setAttributeValue("#build-picker", "aria-label", t("toolbar.buildPicker"));
+  setAttributeValue("#language-switch", "aria-label", t("toolbar.languageSwitcher"));
+  setAttributeValue("#lang-ru-button", "aria-pressed", state.language === "ru" ? "true" : "false");
+  setAttributeValue("#lang-en-button", "aria-pressed", state.language === "en" ? "true" : "false");
+  document.getElementById("lang-ru-button")?.classList.toggle("is-active", state.language === "ru");
+  document.getElementById("lang-en-button")?.classList.toggle("is-active", state.language === "en");
+
+  setTextContent("#profile-save-button", t("button.save"));
+  setTextContent("#profile-compare-link", t("button.compare"));
+
+  setTextContent('.sidebar-tab-button[data-tab="class"]', t("class.class"));
+  setTextContent('.sidebar-tab-button[data-tab="stats"]', t("stats.equipmentStats"));
+
+  setTextContent('#class-select option[value="knight"]', localize("Рыцарь"));
+  setTextContent('#class-select option[value="ranger"]', localize("Рейнджер"));
+  setTextContent('#class-select option[value="mage"]', localize("Маг"));
+  setTextContent('#class-select option[value="summoner"]', localize("Призыватель"));
+  setTextContent('#class-select option[value="assassin"]', localize("Ассасин"));
+
+  setTextContent(".class-controls .class-field:nth-of-type(1) .summary-label", t("class.class"));
+  setTextContent(".class-controls .class-field:nth-of-type(2) .summary-label", t("class.level"));
+  setAttributeValue("#class-level-stepper", "aria-label", t("class.characterLevel"));
+  setAttributeValue("#class-level-decrease", "aria-label", t("class.decreaseLevel"));
+  setAttributeValue("#class-level-input", "aria-label", t("class.characterLevel"));
+  setAttributeValue("#class-level-increase", "aria-label", t("class.increaseLevel"));
+
+  setTextContent('[data-tab-panel="class"] .stats-section:nth-of-type(1) h3', t("stats.fromLevel"));
+  setTextContent('[data-tab-panel="class"] .stats-section:nth-of-type(2) h3', t("stats.derivedFromLevel"));
+
+  setAttributeValue(".stats-source-tabs", "aria-label", t("stats.sources"));
+  setTextContent('.stats-source-tab[data-stats-tab="inventory"]', t("stats.inventory"));
+  setTextContent('.stats-source-tab[data-stats-tab="pets"]', t("stats.pets"));
+  setTextContent('.stats-source-tab[data-stats-tab="spheres"]', t("stats.spheres"));
+  setTextContent('.stats-source-tab[data-stats-tab="trophies"]', t("stats.trophies"));
+  setTextContent('.stats-source-tab[data-stats-tab="sets"]', t("stats.sets"));
+  setTextContent('.stats-source-tab[data-stats-tab="effects"]', t("stats.effects"));
+
+  setTextContent('[data-stats-panel="inventory"] h3', t("stats.inventoryValues"));
+  setTextContent('[data-stats-panel="pets"] h3', t("stats.petValues"));
+  setTextContent('[data-stats-panel="spheres"] h3', t("stats.sphereValues"));
+  setTextContent('[data-stats-panel="trophies"] h3', t("stats.trophyValues"));
+  setTextContent('[data-stats-panel="sets"] h3', t("stats.setValues"));
+  setTextContent('[data-stats-panel="effects"] h3', t("stats.specialEffects"));
+
+  setAttributeValue(".panel-board", "aria-label", t("board.totalStats"));
+  setAttributeValue(".workspace-column", "aria-label", t("workspace.doll"));
+  setAttributeValue(".workspace-tabs", "aria-label", t("workspace.areas"));
+  setTextContent('.workspace-tab[data-workspace-tab="inventory"]', t("workspace.inventory"));
+  setTextContent('.workspace-tab[data-workspace-tab="pet"]', t("workspace.pet"));
+  setTextContent('.workspace-tab[data-workspace-tab="spheres"]', t("workspace.spheres"));
+  setTextContent('.workspace-tab[data-workspace-tab="trophies"]', t("workspace.trophies"));
+  setAttributeValue('.equipment-stage', "aria-label", t("workspace.equipmentSlots"));
+  setAttributeValue('.passive-slot-panel', "aria-label", t("workspace.passiveRing"));
+  setAttributeValue('.sphere-stage', "aria-label", t("workspace.sphereSlots"));
+  setAttributeValue('.pet-stage', "aria-label", t("workspace.petStage"));
+  setAttributeValue('.trophy-stage', "aria-label", t("workspace.trophySlots"));
+}
 
 
 function renderStatRows(stats) {
@@ -41,7 +131,7 @@ function renderStatRows(stats) {
     const rowClass = stat.value < 0 ? "is-negative" : "is-positive";
     return `
       <div class="stat-row ${rowClass}">
-        <span class="stat-name">${escapeHtml(stat.label)}</span>
+        <span class="stat-name">${escapeHtml(localize(stat.label))}</span>
         <span class="stat-value">${escapeHtml(formatStatValue(stat.value, stat.unit))}</span>
       </div>
     `;
@@ -50,13 +140,13 @@ function renderStatRows(stats) {
 
 function renderSetBonusRows(setBonuses) {
   if (!setBonuses.length) {
-    return '<div class="empty-note">Сетовые бонусы не активны.</div>';
+    return `<div class="empty-note">${escapeHtml(t("empty.setBonuses"))}</div>`;
   }
 
   return setBonuses.map((bonus) => `
     <div class="set-bonus-card">
-      <div class="set-bonus-title">${escapeHtml(bonus.name)}</div>
-      <div class="set-bonus-meta">${bonus.itemCount} предметов · минимальная заточка +${bonus.setLevel}</div>
+      <div class="set-bonus-title">${escapeHtml(localize(bonus.name))}</div>
+      <div class="set-bonus-meta">${escapeHtml(t("stats.setBonusMeta", { itemCount: bonus.itemCount, setLevel: bonus.setLevel }))}</div>
       <div class="stat-list stat-list-secondary">${renderStatRows(bonus.stats)}</div>
     </div>
   `).join("");
@@ -88,13 +178,13 @@ function renderEquipmentDescription(slot, item, level) {
     }),
   ];
   const paramsHtml = mergedLines.length
-    ? mergedLines.map((param) => `<li>${escapeHtml(param)}</li>`).join("")
-    : "<li>Без параметров</li>";
+    ? mergedLines.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
+    : `<li>${escapeHtml(t("empty.noParams"))}</li>`;
 
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(item.name)}${escapeHtml(formatUpgradeSuffix(level))}</div>
+        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(formatUpgradeSuffix(level))}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -127,8 +217,8 @@ function renderSphereDescription(slot, item, level) {
     }),
   ];
   const paramsHtml = mergedLines.length
-    ? mergedLines.map((param) => `<li>${escapeHtml(param)}</li>`).join("")
-    : "<li>Без параметров</li>";
+    ? mergedLines.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
+    : `<li>${escapeHtml(t("empty.noParams"))}</li>`;
   const displayLevel = shouldShowSphereUpgrade(item, slot) && getLevelKeys(item).length > 1
     ? formatUpgradeSuffix(level)
     : "";
@@ -136,7 +226,7 @@ function renderSphereDescription(slot, item, level) {
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(item.name)}${escapeHtml(displayLevel)}</div>
+        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(displayLevel)}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -150,12 +240,12 @@ function renderTrophyDescription(slot, item, level) {
 
   const params = getParamsForLevel(item, level);
   const paramsHtml = params.length
-    ? params.map((param) => `<li>${escapeHtml(param)}</li>`).join("")
-    : "<li>Без параметров</li>";
+    ? params.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
+    : `<li>${escapeHtml(t("empty.noParams"))}</li>`;
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(item.name)}${escapeHtml(formatUpgradeSuffix(level))}</div>
+        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(formatUpgradeSuffix(level))}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -196,20 +286,20 @@ function renderStatsPanel() {
 
   inventoryContainer.innerHTML = inventoryStats.length
     ? renderStatRows(inventoryStats)
-    : '<div class="empty-note">Инвентарь пока не даёт числовых параметров.</div>';
+    : `<div class="empty-note">${escapeHtml(t("empty.inventoryStats"))}</div>`;
   petContainer.innerHTML = petStats.length
     ? renderStatRows(petStats)
-    : '<div class="empty-note">Питомец пока не выбран.</div>';
+    : `<div class="empty-note">${escapeHtml(t("empty.petStats"))}</div>`;
   spheresContainer.innerHTML = sphereStats.length
     ? renderStatRows(sphereStats)
-    : '<div class="empty-note">Сферы пока не дают числовых параметров.</div>';
+    : `<div class="empty-note">${escapeHtml(t("empty.sphereStats"))}</div>`;
   trophiesContainer.innerHTML = trophyStats.length
     ? renderStatRows(trophyStats)
-    : '<div class="empty-note">Трофеи пока не дают числовых параметров.</div>';
+    : `<div class="empty-note">${escapeHtml(t("empty.trophyStats"))}</div>`;
   setContainer.innerHTML = renderSetBonusRows(setBonuses);
   effectsContainer.innerHTML = effects.length
-    ? effects.map((effect) => `<div class="effect-pill">${escapeHtml(effect)}</div>`).join("")
-    : '<div class="empty-note">Особые эффекты не найдены.</div>';
+    ? effects.map((effect) => `<div class="effect-pill">${escapeHtml(localize(effect))}</div>`).join("")
+    : `<div class="empty-note">${escapeHtml(t("empty.effects"))}</div>`;
 }
 
 function getClassPanelData() {
@@ -300,7 +390,7 @@ function renderBoardTotalStats() {
   const visibleSecondaryStats = secondaryStats.filter((stat) => stat.value !== 0);
 
   if (!visibleMainStats.length && !visibleSecondaryStats.length) {
-    mainContainer.innerHTML = '<div class="board-stats-empty">Надень предметы, чтобы увидеть итоговые параметры.</div>';
+    mainContainer.innerHTML = `<div class="board-stats-empty">${escapeHtml(t("empty.boardStats"))}</div>`;
     extraContainer.innerHTML = "";
     return;
   }
@@ -308,7 +398,7 @@ function renderBoardTotalStats() {
   mainContainer.innerHTML = visibleMainStats.length
     ? visibleMainStats.map((stat) => `
     <div class="board-stat-row board-stat-row-main">
-      <span class="board-stat-name">${escapeHtml(stat.label)}</span>
+      <span class="board-stat-name">${escapeHtml(localize(stat.label))}</span>
       <span class="board-stat-value">${escapeHtml(formatBoardPrimaryValue(stat))}</span>
     </div>
   `).join("")
@@ -317,11 +407,11 @@ function renderBoardTotalStats() {
   extraContainer.innerHTML = visibleSecondaryStats.length
     ? visibleSecondaryStats.map((stat) => `
     <div class="board-stat-row board-stat-row-extra">
-      <span class="board-stat-name">${escapeHtml(stat.label)}</span>
+      <span class="board-stat-name">${escapeHtml(localize(stat.label))}</span>
       <span class="board-stat-value">${escapeHtml(formatStatValue(stat.value, stat.unit))}</span>
     </div>
   `).join("")
-    : '<div class="board-stats-empty">Дополнительных параметров нет.</div>';
+    : `<div class="board-stats-empty">${escapeHtml(t("empty.extraStats"))}</div>`;
 }
 
 function bindClassControls() {
@@ -373,88 +463,347 @@ function bindClassControls() {
 }
 
 function renderProfileBar() {
-  const select = document.getElementById("profile-select");
-  const nameInput = document.getElementById("profile-name-input");
+  const buildPicker = document.getElementById("build-picker");
   const saveButton = document.getElementById("profile-save-button");
-  const copyButton = document.getElementById("profile-copy-button");
-  const deleteButton = document.getElementById("profile-delete-button");
-  if (!select || !nameInput || !deleteButton) {
+  const newButton = document.getElementById("profile-new-button");
+  const compareLink = document.getElementById("profile-compare-link");
+  if (!buildPicker || !saveButton || !newButton || !compareLink) {
     return;
   }
 
-  const activeProfile = getActiveProfile();
-  select.innerHTML = state.profiles.map((profile) => `
-    <option value="${escapeHtml(profile.id)}" ${profile.id === state.activeProfileId ? "selected" : ""}>
-      ${escapeHtml(profile.name)}
-    </option>
-  `).join("");
+  const selectedSavedId = state.activeDraftSourceProfileId || state.activeProfileId;
+  const canOpenMenu = !state.isBuildDirty && !state.isBuildNameEditing;
+  const canCopy = !state.isBuildDirty && !state.isBuildNameEditing && state.activeDraftMode === "existing";
+  const canDelete = canCopy && state.profiles.length > 1;
+  const title = escapeHtml(getActiveDraftDisplayName());
+  const saveStateLabel = state.isBuildDirty ? t("toolbar.unsaved") : t("toolbar.saved");
+  const menuHtml = state.isBuildMenuOpen && canOpenMenu
+    ? `
+      <div class="build-picker-menu" data-build-menu>
+        ${state.profiles.map((profile) => `
+          <button
+            type="button"
+            class="build-picker-option ${profile.id === selectedSavedId ? "is-active" : ""}"
+            data-build-option="${escapeHtml(profile.id)}"
+          >
+            <span class="build-picker-option-name">${escapeHtml(profile.name)}</span>
+          </button>
+        `).join("")}
+      </div>
+    `
+    : "";
 
-  nameInput.value = activeProfile?.name || "";
-  if (saveButton) {
-    saveButton.disabled = !activeProfile;
+  const copyButtonHtml = canCopy
+    ? `
+      <button type="button" class="build-picker-icon-button" aria-label="${escapeHtml(t("toolbar.copyBuild"))}" title="${escapeHtml(t("toolbar.copyBuild"))}" data-build-copy>
+        <svg viewBox="0 0 16 16" focusable="false"><rect x="5.5" y="3.5" width="7" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3.5 11.5h-.8A1.2 1.2 0 0 1 1.5 10.3V3.7A1.2 1.2 0 0 1 2.7 2.5h5.6A1.2 1.2 0 0 1 9.5 3.7v.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    `
+    : "";
+  const deleteButtonHtml = canDelete
+    ? `
+      <button type="button" class="build-picker-icon-button build-picker-icon-button-danger" aria-label="${escapeHtml(t("toolbar.deleteBuild"))}" title="${escapeHtml(t("toolbar.deleteBuild"))}" data-build-delete>
+        <svg viewBox="0 0 16 16" focusable="false"><path d="M3 4.5h10m-8.2 0V3.3c0-.7.6-1.3 1.3-1.3h3.8c.7 0 1.3.6 1.3 1.3v1.2m-6 0v7.2c0 .8.6 1.3 1.3 1.3h3.4c.8 0 1.3-.5 1.3-1.3V4.5M6.6 6.8v3.8m2.8-3.8v3.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.2"/></svg>
+      </button>
+    `
+    : "";
+
+  buildPicker.innerHTML = `
+    <div class="build-picker-shell ${state.isBuildDirty ? "is-dirty" : ""} ${state.isBuildMenuOpen ? "is-open" : ""}">
+      <div class="build-picker-main">
+        <div class="build-picker-name-slot">
+          ${state.isBuildNameEditing
+            ? `
+              <input
+                id="build-name-input"
+                class="build-picker-input"
+                type="text"
+                maxlength="40"
+                value="${title}"
+                aria-label="${escapeHtml(t("toolbar.buildName"))}"
+                data-build-name-input
+              >
+            `
+            : `
+              <button
+                type="button"
+                class="build-picker-trigger"
+                aria-expanded="${state.isBuildMenuOpen ? "true" : "false"}"
+                ${canOpenMenu ? "" : "disabled"}
+                data-build-trigger
+              >
+                <span class="build-picker-trigger-copy">
+                  <span class="build-picker-trigger-label">${title}</span>
+                  <span class="build-picker-trigger-state">${escapeHtml(saveStateLabel)}</span>
+                </span>
+                <span class="build-picker-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" focusable="false"><path d="M4 6.25 8 10.25 12 6.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"/></svg>
+                </span>
+              </button>
+            `}
+        </div>
+        <div class="build-picker-tools">
+          <button type="button" class="build-picker-icon-button" aria-label="${escapeHtml(t("toolbar.renameBuild"))}" title="${escapeHtml(t("toolbar.renameBuild"))}" data-build-edit>
+            <svg viewBox="0 0 16 16" focusable="false"><path d="m10.9 2.2 2.9 2.9-7.6 7.6-3.6.7.7-3.6 7.6-7.6Zm0 0 1.2-1.2a1.4 1.4 0 0 1 2 0l.9.9a1.4 1.4 0 0 1 0 2l-1.2 1.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"/></svg>
+          </button>
+          ${copyButtonHtml}
+          ${deleteButtonHtml}
+        </div>
+      </div>
+      ${menuHtml}
+    </div>
+  `;
+
+  syncBuildToolbarState();
+
+  if (state.isBuildNameEditing) {
+    const input = buildPicker.querySelector("[data-build-name-input]");
+    input?.focus();
+    input?.setSelectionRange?.(input.value.length, input.value.length);
   }
-  if (copyButton) {
-    copyButton.disabled = !activeProfile;
+}
+
+function syncBuildToolbarState() {
+  const buildPicker = document.getElementById("build-picker");
+  const saveButton = document.getElementById("profile-save-button");
+  const newButton = document.getElementById("profile-new-button");
+  const compareLink = document.getElementById("profile-compare-link");
+  if (!buildPicker || !saveButton || !newButton || !compareLink) {
+    return;
   }
-  deleteButton.disabled = state.profiles.length <= 1;
+
+  const canOpenMenu = !state.isBuildDirty && !state.isBuildNameEditing;
+  const activeProfile = getActiveProfile();
+
+  buildPicker.querySelector(".build-picker-shell")?.classList.toggle("is-dirty", state.isBuildDirty);
+
+  const trigger = buildPicker.querySelector("[data-build-trigger]");
+  if (trigger) {
+    trigger.disabled = !canOpenMenu;
+  }
+
+  saveButton.disabled = state.isBuildNameEditing || !state.isBuildDirty || !activeProfile;
+  const shouldShowCancel = state.isBuildDirty || state.isBuildNameEditing;
+  newButton.textContent = shouldShowCancel ? t("button.cancel") : t("button.newBuild");
+  if (shouldShowCancel) {
+    newButton.setAttribute("data-build-cancel", "");
+    newButton.removeAttribute("data-build-new");
+  } else {
+    newButton.setAttribute("data-build-new", "");
+    newButton.removeAttribute("data-build-cancel");
+  }
+  const isCompareDisabled = state.isBuildDirty || state.isBuildNameEditing;
+  compareLink.classList.toggle("is-disabled", isCompareDisabled);
+  compareLink.setAttribute("aria-disabled", isCompareDisabled ? "true" : "false");
+  compareLink.tabIndex = isCompareDisabled ? -1 : 0;
+  applyStaticLocalization();
 }
 
 function bindProfileControls() {
-  const select = document.getElementById("profile-select");
-  const nameInput = document.getElementById("profile-name-input");
+  const buildPicker = document.getElementById("build-picker");
   const saveButton = document.getElementById("profile-save-button");
-  const copyButton = document.getElementById("profile-copy-button");
   const newButton = document.getElementById("profile-new-button");
-  const deleteButton = document.getElementById("profile-delete-button");
+  const compareLink = document.getElementById("profile-compare-link");
+  const languageSwitch = document.getElementById("language-switch");
 
-  if (!select || !nameInput || !saveButton || !copyButton || !newButton || !deleteButton) {
+  if (!buildPicker || !saveButton || !newButton || !compareLink) {
     return;
   }
 
-  if (select.dataset.bound !== "1") {
-    select.dataset.bound = "1";
-    select.addEventListener("change", () => setActiveProfile(select.value));
-  }
-
-  if (nameInput.dataset.bound !== "1") {
-    nameInput.dataset.bound = "1";
-    nameInput.addEventListener("input", () => {
-      const profile = getActiveProfile();
-      if (!profile) {
+  if (languageSwitch && languageSwitch.dataset.bound !== "1") {
+    languageSwitch.dataset.bound = "1";
+    languageSwitch.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
         return;
       }
 
-      profile.name = sanitizeProfileName(nameInput.value, profile.name);
-      profile.updatedAt = Date.now();
-      saveProfilesState();
-      const option = select.selectedOptions[0];
-      if (option) {
-        option.textContent = profile.name;
+      const button = target.closest("[data-language]");
+      if (!button) {
+        return;
+      }
+
+      setLanguage(button.getAttribute("data-language") || "ru");
+    });
+  }
+
+  if (buildPicker.dataset.bound !== "1") {
+    buildPicker.dataset.bound = "1";
+
+    buildPicker.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+
+      const optionButton = target.closest("[data-build-option]");
+      if (optionButton) {
+        setActiveProfile(optionButton.dataset.buildOption);
+        return;
+      }
+
+      if (target.closest("[data-build-trigger]")) {
+        toggleBuildMenu();
+        return;
+      }
+
+      if (target.closest("[data-build-edit]")) {
+        startBuildNameEditing();
+        return;
+      }
+
+      if (target.closest("[data-build-copy]")) {
+        copyActiveProfile();
+        return;
+      }
+
+      if (target.closest("[data-build-delete]")) {
+        deleteActiveProfile();
       }
     });
-    nameInput.addEventListener("change", () => renameActiveProfile(nameInput.value));
-    nameInput.addEventListener("blur", () => renameActiveProfile(nameInput.value));
+
+    buildPicker.addEventListener("input", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || !target.matches("[data-build-name-input]")) {
+        return;
+      }
+
+      setActiveDraftName(target.value, { render: false });
+      syncBuildToolbarState();
+    });
+
+    buildPicker.addEventListener("keydown", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || !target.matches("[data-build-name-input]")) {
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        finishBuildNameEditing(target.value);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelBuildNameEditing();
+      }
+    });
+
+    buildPicker.addEventListener("focusout", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || !target.matches("[data-build-name-input]")) {
+        return;
+      }
+
+      if (suppressBuildNameBlur) {
+        suppressBuildNameBlur = false;
+        target.focus();
+        return;
+      }
+
+      const nextTarget = event.relatedTarget;
+      if (nextTarget instanceof Element && buildPicker.contains(nextTarget)) {
+        return;
+      }
+
+      finishBuildNameEditing(target.value);
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+      if (path.includes(buildPicker) || (target instanceof Element && buildPicker.contains(target))) {
+        return;
+      }
+
+      closeBuildMenu();
+    });
+
+    const preventBlockedBuildActionBlur = (event) => {
+        const rawTarget = event.target;
+        const target = rawTarget instanceof Element
+          ? rawTarget
+          : rawTarget instanceof Node
+            ? rawTarget.parentElement
+            : null;
+        if (!target || !state.isBuildNameEditing) {
+          suppressBuildNameBlur = false;
+          return;
+        }
+
+        if (!saveButton.contains(target) && !compareLink.contains(target)) {
+          suppressBuildNameBlur = false;
+          return;
+        }
+
+        suppressBuildNameBlur = true;
+        event.preventDefault();
+      };
+    document.addEventListener("pointerdown", preventBlockedBuildActionBlur, true);
+    document.addEventListener("mousedown", preventBlockedBuildActionBlur, true);
   }
 
   if (saveButton.dataset.bound !== "1") {
     saveButton.dataset.bound = "1";
-    saveButton.addEventListener("click", saveActiveProfileExplicitly);
-  }
+    saveButton.addEventListener("mousedown", (event) => {
+      if (state.isBuildNameEditing) {
+        event.preventDefault();
+      }
+    });
+    saveButton.addEventListener("click", (event) => {
+      if (state.isBuildNameEditing) {
+        event.preventDefault();
+        return;
+      }
 
-  if (copyButton.dataset.bound !== "1") {
-    copyButton.dataset.bound = "1";
-    copyButton.addEventListener("click", copyActiveProfile);
+      saveActiveProfileExplicitly();
+    });
   }
 
   if (newButton.dataset.bound !== "1") {
     newButton.dataset.bound = "1";
-    newButton.addEventListener("click", createNewProfile);
+    newButton.addEventListener("click", () => {
+      if (state.isBuildDirty) {
+        cancelActiveBuildEdits();
+        return;
+      }
+
+      createNewProfile();
+    });
   }
 
-  if (deleteButton.dataset.bound !== "1") {
-    deleteButton.dataset.bound = "1";
-    deleteButton.addEventListener("click", deleteActiveProfile);
+  if (compareLink.dataset.bound !== "1") {
+    compareLink.dataset.bound = "1";
+    compareLink.addEventListener("mousedown", (event) => {
+      if (state.isBuildDirty || state.isBuildNameEditing) {
+        event.preventDefault();
+      }
+    });
+    compareLink.addEventListener("click", (event) => {
+      if (state.isBuildDirty || state.isBuildNameEditing) {
+        event.preventDefault();
+      }
+    });
   }
+}
+
+function showBuildToast(message) {
+  const toast = document.getElementById("build-save-toast");
+  if (!toast) {
+    return;
+  }
+
+  toast.textContent = message;
+  toast.classList.add("is-visible");
+
+  if (toastTimer) {
+    window.clearTimeout(toastTimer);
+  }
+
+  toastTimer = window.setTimeout(() => {
+    toast.classList.remove("is-visible");
+  }, 2400);
 }
 
 function setLastAction(message) {
@@ -566,6 +915,7 @@ function bindWorkspaceTabs() {
     bindClassControls,
     renderProfileBar,
     bindProfileControls,
+    showBuildToast,
     setLastAction,
     renderSidebarTabs,
     renderWorkspaceTabs,

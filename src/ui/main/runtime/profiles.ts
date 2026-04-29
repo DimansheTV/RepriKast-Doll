@@ -19,292 +19,467 @@ export function createProfilesModule(deps) {
     sanitizeTrophyEquippedState,
     sanitizePetEquippedState,
     initializeUiState,
-    syncActiveProfileFromState,
     renderAll,
     renderProfileBar,
+    showBuildToast,
     setLastAction,
+    t,
   } = deps;
 
-function createProfileId() {
-  return `profile-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-}
+  function createProfileId() {
+    return `profile-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  }
 
-function getProfileFallbackName(index = state.profiles.length) {
-  return `Профиль ${index + 1}`;
-}
+  function getProfileFallbackName(index = state.profiles.length) {
+    return t("build.defaultName", { index: index + 1 });
+  }
 
-function sanitizeProfileName(name, fallbackName = getProfileFallbackName()) {
-  const normalized = normalizeText(name).slice(0, 40);
-  return normalized || fallbackName;
-}
+  function sanitizeProfileName(name, fallbackName = getProfileFallbackName()) {
+    const normalized = normalizeText(name).slice(0, 40);
+    return normalized || fallbackName;
+  }
 
-function sanitizeWorkspaceTab(tabKey) {
-  return ["inventory", "pet", "spheres", "trophies"].includes(tabKey) ? tabKey : "inventory";
-}
+  function normalizeDraftName(name) {
+    return normalizeText(name).slice(0, 40);
+  }
 
-function normalizeProfileEquipped(equipped, classKey) {
-  const source = normalizeEquipmentSelections(equipped, classKey);
-  const next = {};
+  function getActiveDraftDisplayName() {
+    return sanitizeProfileName(state.activeDraftName, getProfileFallbackName());
+  }
 
-  Object.entries(source).forEach(([slotKey, selection]) => {
-    const slot = getSlotConfig(slotKey);
-    const item = state.itemsById.get(String(selection?.itemId));
+  function sanitizeWorkspaceTab(tabKey) {
+    return ["inventory", "pet", "spheres", "trophies"].includes(tabKey) ? tabKey : "inventory";
+  }
 
-    if (!slot || !item || !matchesEquipmentSlot(slot, item, classKey, source)) {
+  function normalizeProfileEquipped(equipped, classKey) {
+    const source = normalizeEquipmentSelections(equipped, classKey);
+    const next = {};
+
+    Object.entries(source).forEach(([slotKey, selection]) => {
+      const slot = getSlotConfig(slotKey);
+      const item = state.itemsById.get(String(selection?.itemId));
+
+      if (!slot || !item || !matchesEquipmentSlot(slot, item, classKey, source)) {
+        return;
+      }
+
+      next[slotKey] = {
+        itemId: String(item.uid),
+        upgradeLevel: getValidUpgradeLevel(item, selection?.upgradeLevel),
+      };
+    });
+
+    return next;
+  }
+
+  function normalizeProfileRecord(profile, index = 0) {
+    const fallbackName = getProfileFallbackName(index);
+    const classConfig = profile?.classConfig && typeof profile.classConfig === "object"
+      ? profile.classConfig
+      : {};
+    const normalizedClassConfig = {
+      classKey: CLASS_CONFIGS[classConfig.classKey] ? classConfig.classKey : "knight",
+      level: sanitizeClassLevel(classConfig.level ?? 1),
+    };
+
+    return {
+      id: String(profile?.id || createProfileId()),
+      name: sanitizeProfileName(profile?.name, fallbackName),
+      classConfig: normalizedClassConfig,
+      equipped: normalizeProfileEquipped(profile?.equipped, normalizedClassConfig.classKey),
+      sphereEquipped: profile?.sphereEquipped && typeof profile.sphereEquipped === "object" ? deepClone(profile.sphereEquipped) : {},
+      trophyEquipped: profile?.trophyEquipped && typeof profile.trophyEquipped === "object" ? deepClone(profile.trophyEquipped) : {},
+      petEquipped: profile?.petEquipped && typeof profile.petEquipped === "object" ? deepClone(profile.petEquipped) : null,
+      activeWorkspaceTab: sanitizeWorkspaceTab(profile?.activeWorkspaceTab),
+      createdAt: Number(profile?.createdAt) || Date.now(),
+      updatedAt: Number(profile?.updatedAt) || Date.now(),
+    };
+  }
+
+  function createProfileSnapshot(overrides = {}) {
+    const fallbackName = getProfileFallbackName();
+    const sourceProfile = getSavedProfileById(overrides.sourceProfileId || state.activeDraftSourceProfileId || state.activeProfileId);
+
+    return normalizeProfileRecord({
+      id: overrides.id || state.activeProfileId || createProfileId(),
+      name: overrides.name ?? getActiveDraftDisplayName() ?? fallbackName,
+      classConfig: overrides.classConfig ?? state.classConfig,
+      equipped: overrides.equipped ?? state.equipped,
+      sphereEquipped: overrides.sphereEquipped ?? state.sphereEquipped,
+      trophyEquipped: overrides.trophyEquipped ?? state.trophyEquipped,
+      petEquipped: overrides.petEquipped ?? state.petEquipped,
+      activeWorkspaceTab: overrides.activeWorkspaceTab ?? state.activeWorkspaceTab,
+      createdAt: overrides.createdAt ?? sourceProfile?.createdAt ?? Date.now(),
+      updatedAt: Date.now(),
+    }, state.profiles.length);
+  }
+
+  function setCleanBuildSnapshot(profile) {
+    if (!profile) {
+      state.cleanBuildSnapshot = null;
+      return null;
+    }
+
+    const snapshot = normalizeProfileRecord(profile);
+    state.cleanBuildSnapshot = deepClone(snapshot);
+    return snapshot;
+  }
+
+  function getCleanBuildSnapshot() {
+    if (!state.cleanBuildSnapshot) {
+      return null;
+    }
+
+    return normalizeProfileRecord(deepClone(state.cleanBuildSnapshot));
+  }
+
+  function createEmptyProfile(name = getProfileFallbackName()) {
+    return normalizeProfileRecord({
+      id: createProfileId(),
+      name,
+      classConfig: { classKey: "knight", level: 1 },
+      equipped: {},
+      sphereEquipped: {},
+      trophyEquipped: {},
+      petEquipped: null,
+      activeWorkspaceTab: "inventory",
+    }, state.profiles.length);
+  }
+
+  function getNextProfileName() {
+    const names = new Set(state.profiles.map((profile) => profile.name));
+    let index = 1;
+    while (names.has(t("build.defaultName", { index }))) {
+      index += 1;
+    }
+    return t("build.defaultName", { index });
+  }
+
+  function getUniqueProfileCopyName(sourceName) {
+    const names = new Set(state.profiles.map((profile) => profile.name));
+    const copySuffix = t("build.copySuffix");
+    const fallbackCopyName = t("build.defaultCopyName");
+    const source = normalizeText(sourceName) || t("build.defaultName", { index: 1 }).replace(/\s+1$/, "");
+    const baseName = sanitizeProfileName(`${source} ${copySuffix}`, fallbackCopyName);
+
+    if (!names.has(baseName)) {
+      return baseName;
+    }
+
+    let index = 2;
+    while (index < 1000) {
+      const suffix = ` ${copySuffix} ${index}`;
+      const trimmedSource = source.slice(0, Math.max(1, 40 - suffix.length));
+      const candidate = sanitizeProfileName(`${trimmedSource}${suffix}`, `${fallbackCopyName} ${index}`);
+      if (!names.has(candidate)) {
+        return candidate;
+      }
+      index += 1;
+    }
+
+    return sanitizeProfileName(`${fallbackCopyName} ${Date.now()}`, fallbackCopyName);
+  }
+
+  function getSavedProfileById(profileId) {
+    return state.profiles.find((profile) => profile.id === profileId) || null;
+  }
+
+  function getActiveSavedProfile() {
+    return getSavedProfileById(state.activeDraftSourceProfileId || state.activeProfileId);
+  }
+
+  function getActiveProfile() {
+    if (!state.activeProfileId) {
+      return null;
+    }
+
+    return createProfileSnapshot({
+      id: state.activeProfileId,
+      name: getActiveDraftDisplayName(),
+    });
+  }
+
+  function applyProfileToState(profile) {
+    const normalized = normalizeProfileRecord(profile);
+    state.activeProfileId = normalized.id;
+    state.classConfig = deepClone(normalized.classConfig);
+    state.equipped = deepClone(normalized.equipped);
+    state.sphereEquipped = deepClone(normalized.sphereEquipped);
+    state.trophyEquipped = deepClone(normalized.trophyEquipped);
+    state.petEquipped = deepClone(normalized.petEquipped);
+    state.activeWorkspaceTab = sanitizeWorkspaceTab(normalized.activeWorkspaceTab);
+    persistLegacyStateSnapshot();
+  }
+
+  function syncDraftMeta(profile, {
+    mode = "existing",
+    sourceProfileId = profile?.id || "",
+    isDirty = false,
+    keepMenuState = false,
+  } = {}) {
+    const normalized = normalizeProfileRecord(profile);
+    state.activeProfileId = normalized.id;
+    state.activeDraftName = normalized.name;
+    state.activeDraftSourceProfileId = sourceProfileId || "";
+    state.activeDraftMode = mode;
+    state.isBuildDirty = Boolean(isDirty);
+    state.isBuildNameEditing = false;
+    state.isBuildMenuOpen = keepMenuState ? state.isBuildMenuOpen : false;
+  }
+
+  function activateSavedProfile(profile, { announce = true } = {}) {
+    applyProfileToState(profile);
+    sanitizeEquippedState();
+    sanitizeSphereEquippedState();
+    sanitizeTrophyEquippedState();
+    sanitizePetEquippedState();
+    initializeUiState();
+    const cleanProfile = createProfileSnapshot({
+      id: profile.id,
+      name: profile.name,
+      createdAt: profile.createdAt,
+      sourceProfileId: profile.id,
+    });
+    setCleanBuildSnapshot(cleanProfile);
+    syncDraftMeta(cleanProfile, { mode: "existing", sourceProfileId: profile.id, isDirty: false });
+    saveActiveProfileIdState();
+    renderAll();
+    if (announce) {
+      setLastAction(t("action.buildActivated", { name: profile.name }));
+    }
+  }
+
+  function initializeProfilesState() {
+    const loadedProfiles = loadProfilesState().map((profile, index) => normalizeProfileRecord(profile, index));
+    const activeProfileId = loadActiveProfileIdState();
+
+    if (!loadedProfiles.length) {
+      const migratedProfile = createProfileSnapshot({
+        id: createProfileId(),
+        name: getNextProfileName(),
+        classConfig: state.classConfig,
+        equipped: state.equipped,
+        sphereEquipped: state.sphereEquipped,
+        trophyEquipped: state.trophyEquipped,
+        petEquipped: state.petEquipped,
+        activeWorkspaceTab: state.activeWorkspaceTab,
+      });
+
+      state.profiles = [migratedProfile];
+      setCleanBuildSnapshot(migratedProfile);
+      syncDraftMeta(migratedProfile, { mode: "existing", sourceProfileId: migratedProfile.id, isDirty: false });
+      saveProfilesState();
+      applyProfileToState(migratedProfile);
+      saveActiveProfileIdState();
       return;
     }
 
-    next[slotKey] = {
-      itemId: String(item.uid),
-      upgradeLevel: getValidUpgradeLevel(item, selection?.upgradeLevel),
-    };
-  });
-
-  return next;
-}
-
-function normalizeProfileRecord(profile, index = 0) {
-  const fallbackName = getProfileFallbackName(index);
-  const classConfig = profile?.classConfig && typeof profile.classConfig === "object"
-    ? profile.classConfig
-    : {};
-  const normalizedClassConfig = {
-    classKey: CLASS_CONFIGS[classConfig.classKey] ? classConfig.classKey : "knight",
-    level: sanitizeClassLevel(classConfig.level ?? 1),
-  };
-
-  return {
-    id: String(profile?.id || createProfileId()),
-    name: sanitizeProfileName(profile?.name, fallbackName),
-    classConfig: normalizedClassConfig,
-    equipped: normalizeProfileEquipped(profile?.equipped, normalizedClassConfig.classKey),
-    sphereEquipped: profile?.sphereEquipped && typeof profile.sphereEquipped === "object" ? deepClone(profile.sphereEquipped) : {},
-    trophyEquipped: profile?.trophyEquipped && typeof profile.trophyEquipped === "object" ? deepClone(profile.trophyEquipped) : {},
-    petEquipped: profile?.petEquipped && typeof profile.petEquipped === "object" ? deepClone(profile.petEquipped) : null,
-    activeWorkspaceTab: sanitizeWorkspaceTab(profile?.activeWorkspaceTab),
-    createdAt: Number(profile?.createdAt) || Date.now(),
-    updatedAt: Number(profile?.updatedAt) || Date.now(),
-  };
-}
-
-function createProfileSnapshot(overrides = {}) {
-  const fallbackName = getProfileFallbackName();
-
-  return normalizeProfileRecord({
-    id: overrides.id || createProfileId(),
-    name: overrides.name || fallbackName,
-    classConfig: overrides.classConfig ?? state.classConfig,
-    equipped: overrides.equipped ?? state.equipped,
-    sphereEquipped: overrides.sphereEquipped ?? state.sphereEquipped,
-    trophyEquipped: overrides.trophyEquipped ?? state.trophyEquipped,
-    petEquipped: overrides.petEquipped ?? state.petEquipped,
-    activeWorkspaceTab: overrides.activeWorkspaceTab ?? state.activeWorkspaceTab,
-    createdAt: overrides.createdAt ?? Date.now(),
-    updatedAt: Date.now(),
-  }, state.profiles.length);
-}
-
-function createEmptyProfile(name = getProfileFallbackName()) {
-  return normalizeProfileRecord({
-    id: createProfileId(),
-    name,
-    classConfig: { classKey: "knight", level: 1 },
-    equipped: {},
-    sphereEquipped: {},
-    trophyEquipped: {},
-    petEquipped: null,
-    activeWorkspaceTab: "inventory",
-  }, state.profiles.length);
-}
-
-function getNextProfileName() {
-  const names = new Set(state.profiles.map((profile) => profile.name));
-  let index = 1;
-  while (names.has(`Профиль ${index}`)) {
-    index += 1;
-  }
-  return `Профиль ${index}`;
-}
-
-function getUniqueProfileCopyName(sourceName) {
-  const names = new Set(state.profiles.map((profile) => profile.name));
-  const source = normalizeText(sourceName) || "Профиль";
-  const baseName = sanitizeProfileName(`${source} копия`, "Профиль копия");
-
-  if (!names.has(baseName)) {
-    return baseName;
+    state.profiles = loadedProfiles;
+    const selectedProfile = loadedProfiles.find((profile) => profile.id === activeProfileId) || loadedProfiles[0];
+    activateSavedProfile(selectedProfile, { announce: false });
   }
 
-  let index = 2;
-  while (index < 1000) {
-    const suffix = ` копия ${index}`;
-    const trimmedSource = source.slice(0, Math.max(1, 40 - suffix.length));
-    const candidate = sanitizeProfileName(`${trimmedSource}${suffix}`, `Профиль копия ${index}`);
-    if (!names.has(candidate)) {
-      return candidate;
+  function markBuildDirty(options = {}) {
+    const shouldRender = typeof options === "object" ? options.render !== false : true;
+    const wasDirty = state.isBuildDirty;
+    const wasMenuOpen = state.isBuildMenuOpen;
+
+    state.isBuildDirty = true;
+    state.isBuildMenuOpen = false;
+
+    if (shouldRender && (!wasDirty || wasMenuOpen)) {
+      renderProfileBar();
     }
-    index += 1;
   }
 
-  return sanitizeProfileName(`Профиль копия ${Date.now()}`, "Профиль копия");
-}
+  function setActiveProfile(profileId) {
+    if (state.isBuildDirty || !profileId) {
+      return;
+    }
 
-function getActiveProfile() {
-  return state.profiles.find((profile) => profile.id === state.activeProfileId) || null;
-}
+    const nextProfile = getSavedProfileById(profileId);
+    if (!nextProfile) {
+      return;
+    }
 
-function createItemUid(item, index) {
-  return `${item.slot_code}:${item.name}:${index}`;
-}
+    activateSavedProfile(nextProfile);
+  }
 
-function createSphereUid(item, index) {
-  return `sphere:${item.category || "unknown"}:${item.id ?? index}`;
-}
+  function setActiveDraftName(name, { render = true } = {}) {
+    state.activeDraftName = normalizeDraftName(name);
+    markBuildDirty({ render: false });
+    if (render) {
+      renderProfileBar();
+    }
+    return getActiveDraftDisplayName();
+  }
 
-function createTrophyUid(item, index) {
-  return `trophy:${item.slot_code || "unknown"}:${item.id ?? index}`;
-}
+  function startBuildNameEditing() {
+    state.isBuildMenuOpen = false;
+    state.isBuildNameEditing = true;
+    renderProfileBar();
+  }
 
-function createPetUid(item, index) {
-  return `pet:${item.id ?? index}`;
-}
+  function finishBuildNameEditing(name) {
+    state.activeDraftName = sanitizeProfileName(name, getProfileFallbackName());
+    state.isBuildNameEditing = false;
+    markBuildDirty({ render: false });
+    renderProfileBar();
+    setLastAction(t("action.buildRenamed", { name: state.activeDraftName }));
+  }
 
-function applyProfileToState(profile) {
-  const normalized = normalizeProfileRecord(profile);
-  state.activeProfileId = normalized.id;
-  state.classConfig = deepClone(normalized.classConfig);
-  state.equipped = deepClone(normalized.equipped);
-  state.sphereEquipped = deepClone(normalized.sphereEquipped);
-  state.trophyEquipped = deepClone(normalized.trophyEquipped);
-  state.petEquipped = deepClone(normalized.petEquipped);
-  state.activeWorkspaceTab = sanitizeWorkspaceTab(normalized.activeWorkspaceTab);
-  persistLegacyStateSnapshot();
-}
+  function cancelBuildNameEditing() {
+    state.activeDraftName = getActiveDraftDisplayName();
+    state.isBuildNameEditing = false;
+    renderProfileBar();
+  }
 
-function initializeProfilesState() {
-  const loadedProfiles = loadProfilesState().map((profile, index) => normalizeProfileRecord(profile, index));
-  const activeProfileId = loadActiveProfileIdState();
+  function toggleBuildMenu() {
+    if (state.isBuildDirty || state.isBuildNameEditing) {
+      return;
+    }
 
-  if (!loadedProfiles.length) {
-    const migratedProfile = createProfileSnapshot({
-      id: createProfileId(),
-      name: getNextProfileName(),
-      classConfig: state.classConfig,
-      equipped: state.equipped,
-      sphereEquipped: state.sphereEquipped,
-      trophyEquipped: state.trophyEquipped,
-      petEquipped: state.petEquipped,
-      activeWorkspaceTab: state.activeWorkspaceTab,
+    state.isBuildMenuOpen = !state.isBuildMenuOpen;
+    renderProfileBar();
+  }
+
+  function closeBuildMenu() {
+    if (!state.isBuildMenuOpen) {
+      return;
+    }
+
+    state.isBuildMenuOpen = false;
+    renderProfileBar();
+  }
+
+  function createNewProfile() {
+    if (state.isBuildDirty) {
+      return;
+    }
+
+    const cleanSnapshot = getCleanBuildSnapshot();
+    const profile = createEmptyProfile(getNextProfileName());
+    applyProfileToState(profile);
+    initializeUiState();
+    if (cleanSnapshot) {
+      state.cleanBuildSnapshot = deepClone(cleanSnapshot);
+    }
+    syncDraftMeta(profile, { mode: "new", sourceProfileId: "", isDirty: true });
+    renderAll();
+    setLastAction(t("action.buildCreated", { name: profile.name }));
+  }
+
+  function saveActiveProfileExplicitly() {
+    const sourceProfile = getActiveSavedProfile();
+    let savedProfile;
+
+    if (state.activeDraftMode === "existing" && sourceProfile) {
+      savedProfile = createProfileSnapshot({
+        id: sourceProfile.id,
+        name: getActiveDraftDisplayName(),
+        createdAt: sourceProfile.createdAt,
+        sourceProfileId: sourceProfile.id,
+      });
+      state.profiles = state.profiles.map((profile) => profile.id === sourceProfile.id ? savedProfile : profile);
+    } else {
+      savedProfile = createProfileSnapshot({
+        id: state.activeProfileId || createProfileId(),
+        name: getActiveDraftDisplayName(),
+        createdAt: Date.now(),
+      });
+      state.profiles.push(savedProfile);
+    }
+
+    state.profiles = state.profiles.map((profile, index) => normalizeProfileRecord(profile, index));
+    const persistedProfile = state.profiles.find((profile) => profile.id === savedProfile.id) || savedProfile;
+
+    setCleanBuildSnapshot(persistedProfile);
+    syncDraftMeta(persistedProfile, {
+      mode: "existing",
+      sourceProfileId: persistedProfile.id,
+      isDirty: false,
     });
-    state.profiles = [migratedProfile];
-    state.activeProfileId = migratedProfile.id;
     saveProfilesState();
+    applyProfileToState(persistedProfile);
     saveActiveProfileIdState();
-    return;
+    renderAll();
+    showBuildToast(t("toast.buildSaved"));
+    setLastAction(t("action.buildSaved", { name: persistedProfile.name }));
   }
 
-  state.profiles = loadedProfiles;
-  state.activeProfileId = loadedProfiles.some((profile) => profile.id === activeProfileId)
-    ? activeProfileId
-    : loadedProfiles[0].id;
+  function copyActiveProfile() {
+    if (state.isBuildDirty) {
+      return;
+    }
 
-  const activeProfile = getActiveProfile() || loadedProfiles[0];
-  if (activeProfile) {
-    applyProfileToState(activeProfile);
-  }
-}
+    const cleanSnapshot = getCleanBuildSnapshot();
+    const sourceProfile = getActiveProfile();
+    if (!sourceProfile) {
+      return;
+    }
 
-function setActiveProfile(profileId, { persistCurrent = true } = {}) {
-  const nextProfile = state.profiles.find((profile) => profile.id === profileId);
-  if (!nextProfile) {
-    return;
-  }
+    const profile = createProfileSnapshot({
+      id: createProfileId(),
+      name: getUniqueProfileCopyName(getActiveDraftDisplayName()),
+      createdAt: Date.now(),
+    });
 
-  if (persistCurrent) {
-    syncActiveProfileFromState();
-  }
-
-  applyProfileToState(nextProfile);
-  sanitizeEquippedState();
-  sanitizeSphereEquippedState();
-  sanitizeTrophyEquippedState();
-  sanitizePetEquippedState();
-  initializeUiState();
-  syncActiveProfileFromState();
-  renderAll();
-  setLastAction(`Активирован профиль "${nextProfile.name}".`);
-}
-
-function renameActiveProfile(name) {
-  const profile = getActiveProfile();
-  if (!profile) {
-    return;
+    applyProfileToState(profile);
+    initializeUiState();
+    if (cleanSnapshot) {
+      state.cleanBuildSnapshot = deepClone(cleanSnapshot);
+    }
+    syncDraftMeta(profile, {
+      mode: "copy",
+      sourceProfileId: sourceProfile.id,
+      isDirty: true,
+    });
+    renderAll();
+    setLastAction(t("action.buildCopied", { name: profile.name }));
   }
 
-  profile.name = sanitizeProfileName(name, profile.name);
-  profile.updatedAt = Date.now();
-  saveProfilesState();
-  renderProfileBar();
-  setLastAction(`Профиль переименован в "${profile.name}".`);
-}
+  function cancelActiveBuildEdits() {
+    if (!state.isBuildDirty) {
+      cancelBuildNameEditing();
+      return;
+    }
 
-function createNewProfile() {
-  syncActiveProfileFromState();
-  const profile = createEmptyProfile(getNextProfileName());
-  state.profiles.push(profile);
-  saveProfilesState();
-  setActiveProfile(profile.id, { persistCurrent: false });
-  setLastAction(`Создан профиль "${profile.name}".`);
-}
+    const cleanSnapshot = getCleanBuildSnapshot() || getSavedProfileById(state.activeDraftSourceProfileId) || state.profiles[0] || null;
+    if (!cleanSnapshot) {
+      return;
+    }
 
-function saveActiveProfileExplicitly() {
-  syncActiveProfileFromState();
-  const profile = getActiveProfile();
-  if (!profile) {
-    return;
+    applyProfileToState(cleanSnapshot);
+    sanitizeEquippedState();
+    sanitizeSphereEquippedState();
+    sanitizeTrophyEquippedState();
+    sanitizePetEquippedState();
+    initializeUiState();
+    setCleanBuildSnapshot(cleanSnapshot);
+    syncDraftMeta(cleanSnapshot, {
+      mode: "existing",
+      sourceProfileId: cleanSnapshot.id,
+      isDirty: false,
+    });
+    renderAll();
+    setLastAction(t("action.buildCanceled", { name: cleanSnapshot.name }));
   }
 
-  saveProfilesState();
-  saveActiveProfileIdState();
-  renderProfileBar();
-  setLastAction(`Профиль "${profile.name}" сохранён.`);
-}
+  function deleteActiveProfile() {
+    if (state.isBuildDirty || state.profiles.length <= 1) {
+      return;
+    }
 
-function copyActiveProfile() {
-  syncActiveProfileFromState();
-  const sourceProfile = getActiveProfile();
-  if (!sourceProfile) {
-    return;
+    const profile = getActiveSavedProfile();
+    if (!profile) {
+      return;
+    }
+
+    state.profiles = state.profiles.filter((entry) => entry.id !== profile.id);
+    saveProfilesState();
+    activateSavedProfile(state.profiles[0]);
+    setLastAction(t("action.buildDeleted", { name: profile.name }));
   }
-
-  const profile = createProfileSnapshot({
-    id: createProfileId(),
-    name: getUniqueProfileCopyName(sourceProfile.name),
-    createdAt: Date.now(),
-  });
-
-  state.profiles.push(profile);
-  saveProfilesState();
-  setActiveProfile(profile.id, { persistCurrent: false });
-  setLastAction(`Создана копия профиля "${profile.name}".`);
-}
-
-function deleteActiveProfile() {
-  if (state.profiles.length <= 1) {
-    return;
-  }
-
-  const profile = getActiveProfile();
-  if (!profile) {
-    return;
-  }
-
-  state.profiles = state.profiles.filter((entry) => entry.id !== profile.id);
-  saveProfilesState();
-  setActiveProfile(state.profiles[0].id, { persistCurrent: false });
-  setLastAction(`Профиль "${profile.name}" удалён.`);
-}
-
 
   return {
     createProfileId,
@@ -317,10 +492,20 @@ function deleteActiveProfile() {
     getNextProfileName,
     getUniqueProfileCopyName,
     getActiveProfile,
+    getSavedProfileById,
+    getActiveSavedProfile,
+    getActiveDraftDisplayName,
     applyProfileToState,
     initializeProfilesState,
+    markBuildDirty,
     setActiveProfile,
-    renameActiveProfile,
+    setActiveDraftName,
+    startBuildNameEditing,
+    finishBuildNameEditing,
+    cancelBuildNameEditing,
+    cancelActiveBuildEdits,
+    toggleBuildMenu,
+    closeBuildMenu,
     createNewProfile,
     saveActiveProfileExplicitly,
     copyActiveProfile,

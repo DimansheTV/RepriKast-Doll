@@ -137,7 +137,7 @@ export function createCompareStatsModule(deps) {
         spheres: sphereBucket,
         trophies: trophyBucket,
       },
-      effects: [...effects.values()].sort((a, b) => a.localeCompare(b, "ru")),
+      effects: [...effects.values()].sort((a, b) => app.localizeText(a).localeCompare(app.localizeText(b), app.getCurrentLanguage())),
     };
   }
 
@@ -262,7 +262,7 @@ export function createCompareStatsModule(deps) {
         return priorityDiff;
       }
 
-      return statA.label.localeCompare(statB.label, "ru");
+      return app.localizeText(statA.label).localeCompare(app.localizeText(statB.label), app.getCurrentLanguage());
     });
 
     orderedSecondaryKeys.forEach((key) => {

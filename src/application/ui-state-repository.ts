@@ -2,6 +2,7 @@ const STORAGE_KEYS = {
   sidebarTab: "r2-doll-sidebar-tab-v2",
   workspaceTab: "r2-doll-workspace-tab-v1",
   compareSecondaryProfileId: "r2-doll-compare-secondary-v1",
+  language: "r2-doll-language-v1",
   navTransition: "r2-nav-transition-v1",
 };
 
@@ -34,6 +35,21 @@ export function createUiStateRepository(storage, sessionStorageImpl = storage) {
     saveWorkspaceTab(value) {
       try {
         storage.setItem(STORAGE_KEYS.workspaceTab, value);
+      } catch {
+        // Ignore storage failures to preserve file:// compatibility.
+      }
+    },
+    loadLanguage() {
+      try {
+        const value = String(storage.getItem(STORAGE_KEYS.language) || "").toLowerCase();
+        return value === "en" ? "en" : "ru";
+      } catch {
+        return "ru";
+      }
+    },
+    saveLanguage(value) {
+      try {
+        storage.setItem(STORAGE_KEYS.language, value === "en" ? "en" : "ru");
       } catch {
         // Ignore storage failures to preserve file:// compatibility.
       }

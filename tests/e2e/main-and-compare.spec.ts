@@ -1,5 +1,7 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import { localizeText } from "../../src/shared/i18n";
 
 type ProfileSeed = {
   id: string;
@@ -19,6 +21,7 @@ const STORAGE_KEYS = {
   profiles: "r2-doll-profiles-v1",
   activeProfileId: "r2-doll-active-profile-v1",
   compareSecondaryProfileId: "r2-doll-compare-secondary-v1",
+  language: "r2-doll-language-v1",
 };
 
 async function seedProfiles(
@@ -101,6 +104,42 @@ async function clickFirstEquipButton(page: Page, selector: string) {
   await button.click();
 }
 
+async function renameActiveBuild(page: Page, name: string) {
+  await page.locator("[data-build-edit]").click();
+  const input = page.locator("[data-build-name-input]");
+  await expect(input).toBeVisible();
+  await input.fill(name);
+  await input.press("Enter");
+}
+
+async function openBuildMenu(page: Page) {
+  const trigger = page.locator("[data-build-trigger]");
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
+  await trigger.click();
+  await expect(page.locator("[data-build-menu]")).toBeVisible();
+}
+
+async function closeBuildMenu(page: Page) {
+  if (await page.locator("[data-build-menu]").count()) {
+    await page.evaluate(() => {
+      document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await expect(page.locator("[data-build-menu]")).toHaveCount(0);
+  }
+}
+
+async function expectSavedBuildCount(page: Page, count: number) {
+  await openBuildMenu(page);
+  await expect(page.locator("[data-build-option]")).toHaveCount(count);
+  await closeBuildMenu(page);
+}
+
+async function selectSavedBuildByIndex(page: Page, index: number) {
+  await openBuildMenu(page);
+  await page.locator("[data-build-option]").nth(index).click();
+}
+
 async function expectCompareSecondaryStored(page: Page, predicateSource: string) {
   await expect
     .poll(async () => page.evaluate(
@@ -114,9 +153,16 @@ async function expectCompareSecondaryStored(page: Page, predicateSource: string)
     .toBe(true);
 }
 
+async function switchLanguage(page: Page, language: "ru" | "en") {
+  const button = page.locator(`#lang-${language}-button`);
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+}
+
 test("production dist entrypoints load bundled assets", async ({ page }) => {
   await page.goto("/index.html");
-  await expect(page.locator("#profile-select")).toBeVisible();
+  await expect(page.locator("[data-build-trigger]")).toBeVisible();
 
   const indexAssets = await page.evaluate(() => ({
     scripts: [...document.querySelectorAll<HTMLScriptElement>('script[type="module"]')].map((script) =>
@@ -157,10 +203,73 @@ test("catalog CLI validates local equipment and pet data without network", () =>
   execSync("corepack pnpm catalog:build -- --kind pet", { stdio: "pipe" });
 });
 
+test("english localization translates catalog names and descriptions through shared rules", () => {
+  expect(localizeText("Сфера перевоплощения 70+ уровня", "en")).toBe("Morph Sphere Lv. 70+");
+  expect(localizeText("Увеличение уровня переносимого веса +100", "en")).toBe("Carry weight level +100");
+  expect(localizeText("Кольцо атаки", "en")).toBe("Ring of attack");
+  expect(localizeText("Кольцо гнева", "en")).toBe("Ring of wrath");
+  expect(localizeText("Кольцо гривеносного дракона", "en")).toBe("Ring of the maned dragon");
+  expect(localizeText("Кольцо грифона", "en")).toBe("Ring of the griffin");
+  expect(localizeText("Серьги шпиона", "en")).toBe("Earrings of the spy");
+  expect(localizeText("Кольцо доблести", "en")).toBe("Ring of valor");
+  expect(localizeText("Сфера алчности ур. 2", "en")).toBe("Sphere of greed Lv. 2");
+  expect(localizeText("Кольцо, увеличивающее уровень концентрации.", "en")).toBe("A ring that increases concentration level.");
+  expect(localizeText("Награда за 5-е место в гонках.", "en")).toBe("Reward for 5th place in the races.");
+  expect(localizeText("Награда за 2-е место в гонках.", "en")).toBe("Reward for 2nd place in the races.");
+
+  const sphereItems = JSON.parse(readFileSync("src/resources/data/sphere-items.json", "utf8"));
+  const equipmentItems = JSON.parse(readFileSync("src/resources/data/equipment-items.json", "utf8"));
+  const suspiciousPatterns = [
+    /Sfera/i,
+    /alchn/i,
+    /usilenn/i,
+    /uluchsh/i,
+    /usovershenstv/i,
+    /urov(?:n|nya)?/i,
+    /shpion/i,
+    /garmonii/i,
+    /arkhimag/i,
+    /okhotnik/i,
+    /yarost/i,
+    /napolnenn/i,
+    /napolnyay/i,
+    /intellekt/i,
+    /energiey/i,
+    /razrushiteln/i,
+    /zhiznenn/i,
+    /moshch/i,
+    /grivenos/i,
+    /gnev/i,
+    /kontsentr/i,
+    /gonk/i,
+    /sergi/i,
+    /ozherel/i,
+    /remen/i,
+  ];
+
+  const findings = [...sphereItems, ...equipmentItems]
+    .flatMap((item) => ["name", "description"]
+      .map((field) => {
+        const source = item[field];
+        if (!source) {
+          return null;
+        }
+
+        const localized = localizeText(source, "en");
+        const looksBroken = suspiciousPatterns.some((pattern) => pattern.test(localized));
+
+        return looksBroken ? { field, source, localized } : null;
+      })
+      .filter(Boolean))
+    .slice(0, 10);
+
+  expect(findings).toEqual([]);
+});
+
 test("default knight baseline stats match origin/main", async ({ page }) => {
   await page.goto("/index.html");
 
-  await expect(page.locator("#profile-select")).toBeVisible();
+  await expect(page.locator("[data-build-trigger]")).toBeVisible();
   await expect(page.locator("#board-main-stats .board-stat-row")).toHaveCount(5);
 
   await expect(readBoardMainStats(page)).resolves.toEqual({
@@ -190,38 +299,230 @@ test("class controls recalculate baseline totals from the UI", async ({ page }) 
   await expect.poll(async () => (await readBoardMainStats(page)).HP).not.toBe("758");
 });
 
-test("main page keeps equipment after reload and supports profile create/copy/delete", async ({ page }) => {
+test("main page keeps explicit build save flow and dirty-state controls", async ({ page }) => {
   await page.goto("/index.html");
 
-  const profileOptions = page.locator("#profile-select option");
-  await expect(profileOptions).toHaveCount(1);
+  await expectSavedBuildCount(page, 1);
 
-  await page.locator("#profile-name-input").fill("Main build");
+  await renameActiveBuild(page, "Main build");
   await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
+
+  await expect(page.locator("[data-build-trigger]")).toBeDisabled();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-cancel]")).toBeVisible();
+  await expect(page.locator("[data-build-copy]")).toHaveCount(0);
+  await expect(page.locator("[data-build-delete]")).toHaveCount(0);
+  await expect(page.locator("#profile-compare-link")).toHaveAttribute("aria-disabled", "true");
+
   await page.locator("#profile-save-button").click();
+  await expect(page.locator("[data-build-toast]")).toHaveText("Сборка успешно сохранена");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expectSavedBuildCount(page, 1);
 
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
   await page.reload();
 
-  await expect(page.locator("#profile-name-input")).toHaveValue("Main build");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
 
   await page.locator("#profile-new-button").click();
-  await expect(profileOptions).toHaveCount(2);
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(0);
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-trigger]")).toBeDisabled();
+  await page.locator("#profile-save-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expectSavedBuildCount(page, 2);
 
-  await page.locator("#profile-delete-button").click();
-  await expect(profileOptions).toHaveCount(1);
-  await expect(page.locator("#profile-name-input")).toHaveValue("Main build");
+  await page.locator("[data-build-delete]").click();
+  await expectSavedBuildCount(page, 1);
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
 
-  await page.locator("#profile-copy-button").click();
-  await expect(profileOptions).toHaveCount(2);
+  await page.locator("[data-build-copy]").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-trigger]")).toBeDisabled();
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await page.locator("#profile-save-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expectSavedBuildCount(page, 2);
 
-  await page.locator("#profile-delete-button").click();
-  await expect(profileOptions).toHaveCount(1);
-  await expect(page.locator("#profile-name-input")).toHaveValue("Main build");
+  await page.locator("[data-build-delete]").click();
+  await expectSavedBuildCount(page, 1);
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
+});
+
+test("language switch localizes the main page, persists after reload, and applies on compare", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await expect(page.locator("#language-switch")).toBeVisible();
+  await expect(page.locator("#lang-ru-button")).toHaveText("RU");
+  await expect(page.locator("#lang-en-button")).toHaveText("EN");
+  await expect(page.locator("#lang-ru-button")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#lang-en-button")).toHaveAttribute("aria-pressed", "false");
+
+  await switchLanguage(page, "en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#profile-new-button")).toHaveText("New build");
+  await expect(page.locator("#profile-save-button")).toHaveText("Save");
+  await expect(page.locator("#profile-compare-link")).toHaveText("Compare");
+  await expect(page.locator('.workspace-tab[data-workspace-tab="inventory"]')).toHaveText("Inventory");
+  await expect(page.locator('.sidebar-tab-button[data-tab="stats"]')).toHaveText("Equipment stats");
+  await expect(page.locator('[data-stats-panel="effects"] h3')).toHaveText("Special effects");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Сборка 1");
+  await expect(page.locator(".passive-slot-note")).toHaveText("Equip a ring to activate the passive effect.");
+
+  const earringCategory = page.locator('.category-block[data-slot="earring"]').first();
+  const earringExpanded = await earringCategory.locator(".category-items").evaluate((element) => element.classList.contains("expanded"));
+  if (!earringExpanded) {
+    await earringCategory.locator(".category-header").click();
+  }
+  await expect(earringCategory).toContainText("Earrings of divine harmony");
+  await expect(earringCategory).not.toContainText("bozhestvennoy garmonii");
+  await expect(earringCategory).toContainText("Earrings of enhanced evasion");
+  await expect(earringCategory).toContainText("Earrings of the spy");
+  await expect(earringCategory).not.toContainText("usilennogo");
+  await expect(earringCategory).not.toContainText("shpiona");
+
+  await page.locator('[data-workspace-tab="pet"]').click();
+  await expect(page.locator("#category-list")).toContainText("Melee");
+  await expect(page.locator("#category-list")).toContainText("Fire (I)");
+  await expect(page.locator("#category-list")).not.toContainText("Blizhniy");
+  await expect(page.locator("#category-list")).not.toContainText("Ogon");
+  await page.locator('[data-workspace-tab="spheres"]').click();
+  const typeTwoSpheres = page.locator('[data-sphere-category="sphere_type_2"]').first();
+  const typeTwoExpanded = await typeTwoSpheres.locator(".category-items").evaluate((element) => element.classList.contains("expanded"));
+  if (!typeTwoExpanded) {
+    await typeTwoSpheres.locator(".category-header").click();
+  }
+  await expect(typeTwoSpheres).toContainText("Sphere of greed Lv. 2");
+  await expect(typeTwoSpheres).toContainText("Sphere of harmony Lv. 1");
+  await expect(typeTwoSpheres).not.toContainText("Sfera");
+  await expect(typeTwoSpheres).not.toContainText("alchnosti");
+  await page.locator('[data-workspace-tab="inventory"]').click();
+
+  await page.locator("#profile-new-button").click();
+  await page.locator("#profile-new-button").click();
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#profile-compare-link")).toHaveText("Compare");
+  await expect.poll(async () => page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEYS.language)).toBe("en");
+
+  await page.locator("#profile-compare-link").click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator(".compare-topbar-actions .profile-link-button")).toHaveText("Main menu");
+  await expect(page.locator(".compare-topbar-field").first().locator(".summary-label")).toHaveText("Build 1");
+  await expect(page.locator(".compare-topbar-field").nth(1).locator(".summary-label")).toHaveText("Build 2");
+  await expect(page.locator(".compare-summary-panel")).toHaveAttribute("aria-label", "Stat comparison");
+});
+
+
+test("cancel button restores the previous clean build state", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await renameActiveBuild(page, "Saved build");
+  await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
+  await page.locator("#profile-save-button").click();
+
+  await renameActiveBuild(page, "Changed build");
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-copy]")).toHaveCount(0);
+  await expect(page.locator("[data-build-delete]")).toHaveCount(0);
+
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Saved build");
+  await expect(page.locator("[data-build-copy]")).toHaveCount(1);
+  await expect(page.locator("[data-build-delete]")).toHaveCount(0);
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+});
+
+test("entering name edit mode immediately blocks copy and delete and swaps new to cancel", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("[data-build-edit]").click();
+  await expect(page.locator("[data-build-name-input]")).toBeVisible();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-copy]")).toHaveCount(0);
+  await expect(page.locator("[data-build-delete]")).toHaveCount(0);
+  await expect(page.locator("[data-build-trigger]")).toHaveCount(0);
+  await expect(page.locator("#profile-compare-link")).toHaveAttribute("aria-disabled", "true");
+  await expect(page.locator("#profile-compare-link")).toHaveClass(/is-disabled/);
+
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("[data-build-name-input]")).toHaveCount(0);
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expect(page.locator("[data-build-copy]")).toHaveCount(1);
+});
+
+test("save button stays inactive and does not save while name edit mode is open", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("[data-build-edit]").click();
+  const input = page.locator("[data-build-name-input]");
+  await expect(input).toBeVisible();
+  await input.fill("Draft name");
+
+  const saveButton = page.locator("#profile-save-button");
+  await expect(saveButton).toBeDisabled();
+
+  const box = await saveButton.boundingBox();
+  if (!box) {
+    throw new Error("Save button has no bounding box");
+  }
+
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator("[data-build-name-input]")).toBeVisible();
+  await expect(page.locator("[data-build-toast]")).not.toHaveText("Сборка успешно сохранена");
+});
+
+test("cancel button discards new and copied drafts back to the previous saved build", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await renameActiveBuild(page, "Base build");
+  await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
+  await page.locator("#profile-save-button").click();
+
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(0);
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Base build");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await expectSavedBuildCount(page, 1);
+
+  await page.locator("[data-build-copy]").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toContainText("Base build");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await page.locator("#profile-new-button").click();
+  await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Base build");
+  await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await expectSavedBuildCount(page, 1);
+});
+test("build dropdown opens above layout, closes outside, and switches saved builds", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await renameActiveBuild(page, "Сборка 1");
+  await page.locator("#profile-save-button").click();
+
+  await page.locator("#profile-new-button").click();
+  await renameActiveBuild(page, "Сборка 2");
+  await page.locator("#profile-save-button").click();
+
+  await openBuildMenu(page);
+  await expect(page.locator("[data-build-option]")).toHaveCount(2);
+  await expect(page.locator("[data-build-option]").nth(0)).toContainText("Сборка 1");
+  await expect(page.locator("[data-build-option]").nth(1)).toContainText("Сборка 2");
+
+  await closeBuildMenu(page);
+
+  await selectSavedBuildByIndex(page, 0);
+  await expect(page.locator("[data-build-menu]")).toHaveCount(0);
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Сборка 1");
 });
 
 test("main page equipment, pet, sphere and trophy workflows recalculate and persist", async ({ page }) => {
@@ -257,6 +558,9 @@ test("main page equipment, pet, sphere and trophy workflows recalculate and pers
   await expect(trophyStepper).toBeVisible();
   await trophyStepper.click();
   await expect(page.locator("#trophy-slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
+
+  await page.locator("#profile-save-button").click();
+  await expect(page.locator("[data-build-toast]")).toHaveText("Сборка успешно сохранена");
 
   await page.reload();
 
@@ -528,9 +832,11 @@ test("compare inventory shows equipment upgrade as read-only", async ({ page }) 
   await page.locator("#profile-save-button").click();
 
   await page.locator("#profile-new-button").click();
-  await page.locator("#profile-select").selectOption({ index: 0 });
+  await page.locator("#profile-save-button").click();
+  await selectSavedBuildByIndex(page, 0);
 
   await page.goto("/compare.html");
+  await page.locator("#compare-primary-select").selectOption({ index: 0 });
 
   const readonlyBadge = page.locator("#compare-primary-editor .compare-equipment-stage .compare-readonly-upgrade-badge").first();
   await expect(readonlyBadge).toBeVisible();
