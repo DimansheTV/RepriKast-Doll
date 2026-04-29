@@ -20,7 +20,7 @@ export function createCompareStateModule({ app, uiStateRepository }) {
 
     return app.normalizeProfileRecord({
       id: "compare-primary",
-      name: "Профиль 1",
+      name: "Сборка 1",
       classConfig: app.state.classConfig,
       equipped: app.state.equipped,
       sphereEquipped: app.state.sphereEquipped,

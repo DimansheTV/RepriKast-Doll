@@ -14,18 +14,20 @@ export function createAppRuntime(context) {
 
   let catalogModule;
   const refs = {
-    createProfileSnapshot: () => { throw new Error("Profile runtime not initialized"); },
     renderAll: () => {},
-    setLastAction: () => {},
+    createProfileSnapshot: () => { throw new Error("Profile runtime not initialized"); },
+    markBuildDirty: () => {},
     renderProfileBar: () => {},
+    setLastAction: () => {},
+    showBuildToast: () => {},
   };
 
   const stateModule = createRuntimeState({
     profileRepository,
     uiStateRepository,
     sanitizeClassLevel,
-    createProfileSnapshot: (...args) => refs.createProfileSnapshot(...args),
     setLastAction: (...args) => refs.setLastAction(...args),
+    markBuildDirty: (...args) => refs.markBuildDirty(...args),
     getSlotConfig: (...args) => catalogModule.getSlotConfig(...args),
     getSphereSlotConfig: (...args) => catalogModule.getSphereSlotConfig(...args),
     getTrophySlotConfig: (...args) => catalogModule.getTrophySlotConfig(...args),
@@ -61,12 +63,13 @@ export function createAppRuntime(context) {
     sanitizeTrophyEquippedState: stateModule.sanitizeTrophyEquippedState,
     sanitizePetEquippedState: stateModule.sanitizePetEquippedState,
     initializeUiState: stateModule.initializeUiState,
-    syncActiveProfileFromState: stateModule.syncActiveProfileFromState,
     renderAll: (...args) => refs.renderAll(...args),
     renderProfileBar: (...args) => refs.renderProfileBar(...args),
+    showBuildToast: (...args) => refs.showBuildToast(...args),
     setLastAction: (...args) => refs.setLastAction(...args),
   });
   refs.createProfileSnapshot = profilesModule.createProfileSnapshot;
+  refs.markBuildDirty = profilesModule.markBuildDirty;
 
   const statsModule = createStatsModule({
     state: stateModule.state,
@@ -82,14 +85,18 @@ export function createAppRuntime(context) {
   const renderModule = createMainRenderModule({
     state: stateModule.state,
     getActiveProfile: profilesModule.getActiveProfile,
-    sanitizeProfileName: profilesModule.sanitizeProfileName,
-    renameActiveProfile: profilesModule.renameActiveProfile,
+    getActiveDraftDisplayName: profilesModule.getActiveDraftDisplayName,
     setActiveProfile: profilesModule.setActiveProfile,
+    setActiveDraftName: profilesModule.setActiveDraftName,
+    startBuildNameEditing: profilesModule.startBuildNameEditing,
+    finishBuildNameEditing: profilesModule.finishBuildNameEditing,
+    cancelBuildNameEditing: profilesModule.cancelBuildNameEditing,
+    toggleBuildMenu: profilesModule.toggleBuildMenu,
+    closeBuildMenu: profilesModule.closeBuildMenu,
     saveActiveProfileExplicitly: profilesModule.saveActiveProfileExplicitly,
     copyActiveProfile: profilesModule.copyActiveProfile,
     createNewProfile: profilesModule.createNewProfile,
     deleteActiveProfile: profilesModule.deleteActiveProfile,
-    saveProfilesState: stateModule.saveProfilesState,
     saveWorkspaceTabState: stateModule.saveWorkspaceTabState,
     saveSidebarTabState: stateModule.saveSidebarTabState,
     saveClassState: stateModule.saveClassState,
@@ -112,6 +119,7 @@ export function createAppRuntime(context) {
   });
   refs.setLastAction = renderModule.setLastAction;
   refs.renderProfileBar = renderModule.renderProfileBar;
+  refs.showBuildToast = renderModule.showBuildToast;
 
   const workspaceModule = createMainWorkspaceModule({
     state: stateModule.state,

@@ -5,14 +5,18 @@ export function createMainRenderModule(deps) {
   const {
     state,
     getActiveProfile,
-    sanitizeProfileName,
-    renameActiveProfile,
+    getActiveDraftDisplayName,
     setActiveProfile,
+    setActiveDraftName,
+    startBuildNameEditing,
+    finishBuildNameEditing,
+    cancelBuildNameEditing,
+    toggleBuildMenu,
+    closeBuildMenu,
     saveActiveProfileExplicitly,
     copyActiveProfile,
     createNewProfile,
     deleteActiveProfile,
-    saveProfilesState,
     saveWorkspaceTabState,
     saveSidebarTabState,
     saveClassState,
@@ -34,6 +38,7 @@ export function createMainRenderModule(deps) {
     sanitizeClassLevel,
   } = deps;
   const CLASS_CONFIGS = runtimeClassConfigs;
+  let toastTimer = 0;
 
 
 function renderStatRows(stats) {
@@ -373,67 +378,229 @@ function bindClassControls() {
 }
 
 function renderProfileBar() {
-  const select = document.getElementById("profile-select");
-  const nameInput = document.getElementById("profile-name-input");
+  const buildPicker = document.getElementById("build-picker");
   const saveButton = document.getElementById("profile-save-button");
-  const copyButton = document.getElementById("profile-copy-button");
-  const deleteButton = document.getElementById("profile-delete-button");
-  if (!select || !nameInput || !deleteButton) {
+  const newButton = document.getElementById("profile-new-button");
+  const compareLink = document.getElementById("profile-compare-link");
+  if (!buildPicker || !saveButton || !newButton || !compareLink) {
     return;
   }
 
   const activeProfile = getActiveProfile();
-  select.innerHTML = state.profiles.map((profile) => `
-    <option value="${escapeHtml(profile.id)}" ${profile.id === state.activeProfileId ? "selected" : ""}>
-      ${escapeHtml(profile.name)}
-    </option>
-  `).join("");
+  const selectedSavedId = state.activeDraftSourceProfileId || state.activeProfileId;
+  const canOpenMenu = !state.isBuildDirty && !state.isBuildNameEditing;
+  const canCopyOrDelete = !state.isBuildDirty && state.activeDraftMode === "existing";
+  const canDelete = canCopyOrDelete && state.profiles.length > 1;
+  const title = escapeHtml(getActiveDraftDisplayName());
+  const menuHtml = state.isBuildMenuOpen && canOpenMenu
+    ? `
+      <div class="build-picker-menu" data-build-menu>
+        ${state.profiles.map((profile) => `
+          <button
+            type="button"
+            class="build-picker-option ${profile.id === selectedSavedId ? "is-active" : ""}"
+            data-build-option="${escapeHtml(profile.id)}"
+          >
+            <span class="build-picker-option-name">${escapeHtml(profile.name)}</span>
+          </button>
+        `).join("")}
+      </div>
+    `
+    : "";
 
-  nameInput.value = activeProfile?.name || "";
-  if (saveButton) {
-    saveButton.disabled = !activeProfile;
+  buildPicker.innerHTML = `
+    <div class="build-picker-shell ${state.isBuildDirty ? "is-dirty" : ""} ${state.isBuildMenuOpen ? "is-open" : ""}">
+      <div class="build-picker-main">
+        <div class="build-picker-name-slot">
+          ${state.isBuildNameEditing
+            ? `
+              <input
+                id="build-name-input"
+                class="build-picker-input"
+                type="text"
+                maxlength="40"
+                value="${title}"
+                aria-label="Название сборки"
+                data-build-name-input
+              >
+            `
+            : `
+              <button
+                type="button"
+                class="build-picker-trigger"
+                aria-expanded="${state.isBuildMenuOpen ? "true" : "false"}"
+                ${canOpenMenu ? "" : "disabled"}
+                data-build-trigger
+              >
+                <span class="build-picker-trigger-copy">
+                  <span class="build-picker-trigger-label">${title}</span>
+                  <span class="build-picker-trigger-state">${state.isBuildDirty ? "Не сохранено" : "Сохранено"}</span>
+                </span>
+                <span class="build-picker-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" focusable="false"><path d="M4 6.25 8 10.25 12 6.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"/></svg>
+                </span>
+              </button>
+            `}
+        </div>
+        <div class="build-picker-tools">
+          <button type="button" class="build-picker-icon-button" aria-label="Переименовать сборку" title="Переименовать сборку" data-build-edit>
+            <svg viewBox="0 0 16 16" focusable="false"><path d="m10.9 2.2 2.9 2.9-7.6 7.6-3.6.7.7-3.6 7.6-7.6Zm0 0 1.2-1.2a1.4 1.4 0 0 1 2 0l.9.9a1.4 1.4 0 0 1 0 2l-1.2 1.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"/></svg>
+          </button>
+          <button type="button" class="build-picker-icon-button" aria-label="Скопировать сборку" title="Скопировать сборку" ${canCopyOrDelete ? "" : "disabled"} data-build-copy>
+            <svg viewBox="0 0 16 16" focusable="false"><rect x="5.5" y="3.5" width="7" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3.5 11.5h-.8A1.2 1.2 0 0 1 1.5 10.3V3.7A1.2 1.2 0 0 1 2.7 2.5h5.6A1.2 1.2 0 0 1 9.5 3.7v.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+          </button>
+          <button type="button" class="build-picker-icon-button build-picker-icon-button-danger" aria-label="Удалить сборку" title="Удалить сборку" ${canDelete ? "" : "disabled"} data-build-delete>
+            <svg viewBox="0 0 16 16" focusable="false"><path d="M3 4.5h10m-8.2 0V3.3c0-.7.6-1.3 1.3-1.3h3.8c.7 0 1.3.6 1.3 1.3v1.2m-6 0v7.2c0 .8.6 1.3 1.3 1.3h3.4c.8 0 1.3-.5 1.3-1.3V4.5M6.6 6.8v3.8m2.8-3.8v3.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.2"/></svg>
+          </button>
+        </div>
+      </div>
+      ${menuHtml}
+    </div>
+  `;
+
+  syncBuildToolbarState();
+
+  if (state.isBuildNameEditing) {
+    const input = buildPicker.querySelector("[data-build-name-input]");
+    input?.focus();
+    input?.setSelectionRange?.(input.value.length, input.value.length);
   }
-  if (copyButton) {
-    copyButton.disabled = !activeProfile;
-  }
-  deleteButton.disabled = state.profiles.length <= 1;
 }
 
-function bindProfileControls() {
-  const select = document.getElementById("profile-select");
-  const nameInput = document.getElementById("profile-name-input");
+function syncBuildToolbarState() {
+  const buildPicker = document.getElementById("build-picker");
   const saveButton = document.getElementById("profile-save-button");
-  const copyButton = document.getElementById("profile-copy-button");
   const newButton = document.getElementById("profile-new-button");
-  const deleteButton = document.getElementById("profile-delete-button");
-
-  if (!select || !nameInput || !saveButton || !copyButton || !newButton || !deleteButton) {
+  const compareLink = document.getElementById("profile-compare-link");
+  if (!buildPicker || !saveButton || !newButton || !compareLink) {
     return;
   }
 
-  if (select.dataset.bound !== "1") {
-    select.dataset.bound = "1";
-    select.addEventListener("change", () => setActiveProfile(select.value));
+  const canOpenMenu = !state.isBuildDirty && !state.isBuildNameEditing;
+  const canCopyOrDelete = !state.isBuildDirty && state.activeDraftMode === "existing";
+  const canDelete = canCopyOrDelete && state.profiles.length > 1;
+  const activeProfile = getActiveProfile();
+
+  buildPicker.querySelector(".build-picker-shell")?.classList.toggle("is-dirty", state.isBuildDirty);
+
+  const trigger = buildPicker.querySelector("[data-build-trigger]");
+  if (trigger) {
+    trigger.disabled = !canOpenMenu;
   }
 
-  if (nameInput.dataset.bound !== "1") {
-    nameInput.dataset.bound = "1";
-    nameInput.addEventListener("input", () => {
-      const profile = getActiveProfile();
-      if (!profile) {
+  const copyButton = buildPicker.querySelector("[data-build-copy]");
+  if (copyButton) {
+    copyButton.disabled = !canCopyOrDelete;
+  }
+
+  const deleteButton = buildPicker.querySelector("[data-build-delete]");
+  if (deleteButton) {
+    deleteButton.disabled = !canDelete;
+  }
+
+  saveButton.disabled = !state.isBuildDirty || !activeProfile;
+  newButton.disabled = state.isBuildDirty;
+  compareLink.classList.toggle("is-disabled", state.isBuildDirty);
+  compareLink.setAttribute("aria-disabled", state.isBuildDirty ? "true" : "false");
+  compareLink.tabIndex = state.isBuildDirty ? -1 : 0;
+}
+
+function bindProfileControls() {
+  const buildPicker = document.getElementById("build-picker");
+  const saveButton = document.getElementById("profile-save-button");
+  const newButton = document.getElementById("profile-new-button");
+  const compareLink = document.getElementById("profile-compare-link");
+
+  if (!buildPicker || !saveButton || !newButton || !compareLink) {
+    return;
+  }
+
+  if (buildPicker.dataset.bound !== "1") {
+    buildPicker.dataset.bound = "1";
+
+    buildPicker.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
         return;
       }
 
-      profile.name = sanitizeProfileName(nameInput.value, profile.name);
-      profile.updatedAt = Date.now();
-      saveProfilesState();
-      const option = select.selectedOptions[0];
-      if (option) {
-        option.textContent = profile.name;
+      const optionButton = target.closest("[data-build-option]");
+      if (optionButton) {
+        setActiveProfile(optionButton.dataset.buildOption);
+        return;
+      }
+
+      if (target.closest("[data-build-trigger]")) {
+        toggleBuildMenu();
+        return;
+      }
+
+      if (target.closest("[data-build-edit]")) {
+        startBuildNameEditing();
+        return;
+      }
+
+      if (target.closest("[data-build-copy]")) {
+        copyActiveProfile();
+        return;
+      }
+
+      if (target.closest("[data-build-delete]")) {
+        deleteActiveProfile();
       }
     });
-    nameInput.addEventListener("change", () => renameActiveProfile(nameInput.value));
-    nameInput.addEventListener("blur", () => renameActiveProfile(nameInput.value));
+
+    buildPicker.addEventListener("input", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || !target.matches("[data-build-name-input]")) {
+        return;
+      }
+
+      setActiveDraftName(target.value, { render: false });
+      syncBuildToolbarState();
+    });
+
+    buildPicker.addEventListener("keydown", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || !target.matches("[data-build-name-input]")) {
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        finishBuildNameEditing(target.value);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelBuildNameEditing();
+      }
+    });
+
+    buildPicker.addEventListener("focusout", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || !target.matches("[data-build-name-input]")) {
+        return;
+      }
+
+      const nextTarget = event.relatedTarget;
+      if (nextTarget instanceof Element && buildPicker.contains(nextTarget)) {
+        return;
+      }
+
+      finishBuildNameEditing(target.value);
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+      if (path.includes(buildPicker) || (target instanceof Element && buildPicker.contains(target))) {
+        return;
+      }
+
+      closeBuildMenu();
+    });
   }
 
   if (saveButton.dataset.bound !== "1") {
@@ -441,20 +608,37 @@ function bindProfileControls() {
     saveButton.addEventListener("click", saveActiveProfileExplicitly);
   }
 
-  if (copyButton.dataset.bound !== "1") {
-    copyButton.dataset.bound = "1";
-    copyButton.addEventListener("click", copyActiveProfile);
-  }
-
   if (newButton.dataset.bound !== "1") {
     newButton.dataset.bound = "1";
     newButton.addEventListener("click", createNewProfile);
   }
 
-  if (deleteButton.dataset.bound !== "1") {
-    deleteButton.dataset.bound = "1";
-    deleteButton.addEventListener("click", deleteActiveProfile);
+  if (compareLink.dataset.bound !== "1") {
+    compareLink.dataset.bound = "1";
+    compareLink.addEventListener("click", (event) => {
+      if (state.isBuildDirty) {
+        event.preventDefault();
+      }
+    });
   }
+}
+
+function showBuildToast(message) {
+  const toast = document.getElementById("build-save-toast");
+  if (!toast) {
+    return;
+  }
+
+  toast.textContent = message;
+  toast.classList.add("is-visible");
+
+  if (toastTimer) {
+    window.clearTimeout(toastTimer);
+  }
+
+  toastTimer = window.setTimeout(() => {
+    toast.classList.remove("is-visible");
+  }, 2400);
 }
 
 function setLastAction(message) {
@@ -566,6 +750,7 @@ function bindWorkspaceTabs() {
     bindClassControls,
     renderProfileBar,
     bindProfileControls,
+    showBuildToast,
     setLastAction,
     renderSidebarTabs,
     renderWorkspaceTabs,

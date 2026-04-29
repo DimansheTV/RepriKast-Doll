@@ -112,6 +112,8 @@ h2 {
 .app-header {
   width: 100%;
   margin: 0 auto 20px;
+  position: relative;
+  z-index: 80;
 }
 
 .app-shell {
@@ -158,6 +160,7 @@ h2 {
   background:
     linear-gradient(180deg, rgba(47, 33, 24, 0.94), rgba(28, 19, 14, 0.92));
   border-color: rgba(214, 171, 106, 0.24);
+  z-index: 70;
 }
 
 .panel-board {
@@ -190,7 +193,7 @@ h2 {
 
 .profile-toolbar {
   display: grid;
-  grid-template-columns: minmax(200px, 240px) minmax(180px, 240px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
 }
@@ -209,7 +212,8 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-start;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .profile-actions .ghost-button {
@@ -225,6 +229,215 @@ h2 {
   justify-content: center;
   text-decoration: none;
   margin-left: auto;
+}
+
+.profile-link-button.is-disabled {
+  pointer-events: none;
+  opacity: 0.48;
+}
+
+.build-picker {
+  position: relative;
+  min-width: 0;
+  z-index: 120;
+}
+
+.build-picker-shell {
+  position: relative;
+  border: 1px solid rgba(242, 184, 79, 0.24);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(34, 42, 54, 0.96), rgba(11, 15, 21, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 208, 0.06),
+    0 12px 24px rgba(0, 0, 0, 0.16);
+  min-height: 48px;
+  overflow: visible;
+}
+
+.build-picker-shell.is-dirty {
+  border-color: rgba(216, 137, 115, 0.48);
+}
+
+.build-picker-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+}
+
+.build-picker-name-slot {
+  min-width: 0;
+}
+
+.build-picker-trigger,
+.build-picker-input {
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--text-bright);
+}
+
+.build-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.build-picker-trigger:disabled {
+  cursor: default;
+}
+
+.build-picker-trigger-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.build-picker-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.build-picker-trigger-state {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.build-picker-shell.is-dirty .build-picker-trigger-state {
+  color: var(--accent-red);
+}
+
+.build-picker-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-soft);
+  flex: 0 0 auto;
+}
+
+.build-picker-shell.is-open .build-picker-chevron {
+  transform: rotate(180deg);
+}
+
+.build-picker-chevron svg,
+.build-picker-icon-button svg {
+  width: 100%;
+  height: 100%;
+}
+
+.build-picker-input {
+  padding: 0 2px;
+  outline: none;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.build-picker-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.build-picker-icon-button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(255, 244, 208, 0.04);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.build-picker-icon-button:hover:not(:disabled) {
+  background: rgba(242, 184, 79, 0.14);
+  border-color: rgba(242, 184, 79, 0.22);
+  color: var(--text-bright);
+}
+
+.build-picker-icon-button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.build-picker-icon-button-danger:hover:not(:disabled) {
+  background: rgba(216, 137, 115, 0.14);
+  border-color: rgba(216, 137, 115, 0.22);
+  color: var(--accent-red);
+}
+
+.build-picker-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 140;
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid rgba(242, 184, 79, 0.18);
+  border-radius: 14px;
+  background: rgba(14, 19, 27, 0.98);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
+}
+
+.build-picker-option {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: 10px 12px;
+  text-align: left;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.build-picker-option:hover,
+.build-picker-option.is-active {
+  background: rgba(242, 184, 79, 0.12);
+  border-color: rgba(242, 184, 79, 0.2);
+  color: var(--text-bright);
+}
+
+.build-picker-option-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.build-save-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 16px);
+  z-index: 120;
+  padding: 12px 18px;
+  border: 1px solid rgba(159, 201, 162, 0.34);
+  border-radius: 999px;
+  background: rgba(16, 26, 22, 0.96);
+  color: #e7f4e6;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.build-save-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .sidebar-tabs {
@@ -2504,7 +2717,7 @@ body[data-page="compare"] .panel {
   }
 
   .profile-toolbar {
-    grid-template-columns: minmax(200px, 240px) minmax(180px, 240px);
+    grid-template-columns: 1fr;
   }
 
   .profile-actions {
@@ -2626,6 +2839,14 @@ body[data-page="compare"] .panel {
 
   .profile-link-button {
     margin-left: 0;
+  }
+
+  .build-picker-main {
+    grid-template-columns: 1fr;
+  }
+
+  .build-picker-tools {
+    justify-content: flex-end;
   }
 
   .compare-topbar-actions .ghost-button {
@@ -2935,8 +3156,39 @@ h2 {
 }
 
 .profile-toolbar {
-  grid-template-columns: minmax(180px, 220px) minmax(160px, 220px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
+}
+
+.app-header {
+  position: relative;
+  z-index: 200;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.app-shell,
+.compare-page-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.panel-topbar {
+  position: relative;
+  z-index: 210;
+  overflow: visible;
+}
+
+.build-picker {
+  z-index: 220;
+}
+
+.build-picker-shell {
+  overflow: visible;
+}
+
+.build-picker-menu {
+  z-index: 230;
 }
 
 .profile-actions {
@@ -3290,7 +3542,7 @@ body[data-page="compare"] .panel {
   }
 
   .profile-toolbar {
-    grid-template-columns: minmax(180px, 220px) minmax(160px, 220px);
+    grid-template-columns: 1fr;
   }
 
   .profile-actions {

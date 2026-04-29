@@ -22,22 +22,14 @@
 </head>
 <body data-page="main">
   <header class="app-header">
-    <section class="panel panel-topbar" aria-label="Панель профиля">
+    <section class="panel panel-topbar" aria-label="Панель сборки">
       <div class="profile-toolbar">
-        <div class="profile-field">
-          <select id="profile-select" class="class-control" aria-label="Выбор профиля"></select>
-        </div>
-
-        <div class="profile-field profile-field-name">
-          <input id="profile-name-input" class="class-control" type="text" maxlength="40" placeholder="Название профиля" aria-label="Название профиля">
-        </div>
+        <div id="build-picker" class="build-picker" aria-label="Выбор сборки"></div>
 
         <div class="profile-actions">
-          <button id="profile-save-button" class="ghost-button" type="button">Сохранить</button>
-          <button id="profile-copy-button" class="ghost-button" type="button">Скопировать</button>
-          <button id="profile-new-button" class="ghost-button" type="button">Новый профиль</button>
-          <button id="profile-delete-button" class="ghost-button" type="button">Удалить профиль</button>
-          <a href="compare.html" class="ghost-button profile-link-button" data-nav-direction="forward">Сравнение</a>
+          <button id="profile-new-button" class="ghost-button" type="button" data-build-new>Новая сборка</button>
+          <button id="profile-save-button" class="ghost-button" type="button" data-build-save>Сохранить</button>
+          <a id="profile-compare-link" href="compare.html" class="ghost-button profile-link-button" data-nav-direction="forward">Сравнение</a>
         </div>
       </div>
     </section>
@@ -221,5 +213,6 @@
   </div>
 
   <script type="module" src="/src/main-entry.ts"></script>
+  <div id="build-save-toast" class="build-save-toast" data-build-toast aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>

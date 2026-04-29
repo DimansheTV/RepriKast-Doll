@@ -13,7 +13,11 @@ export function createCompareRenderModule(deps) {
 
   function renderStaticUpgradeBadge(controlClass, level) {
     return app.shouldDisplayUpgradeLevel(level)
-      ? `<span class="${controlClass} upgrade-stepper upgrade-stepper-static"><span class="upgrade-stepper-value">${app.escapeHtml(level)}</span></span>`
+      ? `
+        <span class="${controlClass} upgrade-stepper upgrade-stepper-static compare-readonly-upgrade-badge">
+          <span class="upgrade-stepper-value compare-readonly-upgrade-badge-value">${app.escapeHtml(level)}</span>
+        </span>
+      `
       : "";
   }
 
@@ -226,7 +230,7 @@ export function createCompareRenderModule(deps) {
         <section class="pet-column compare-stage-column">
           <section class="pet-stage compare-pet-stage" aria-label="Питомец">
             <div class="pet-stage-empty">
-              <div class="empty-note">У профиля не выбран питомец.</div>
+              <div class="empty-note">У сборки не выбран питомец.</div>
             </div>
           </section>
         </section>
@@ -306,7 +310,7 @@ export function createCompareRenderModule(deps) {
           </div>
         </div>
 
-        <nav class="workspace-tabs compare-workspace-tabs" aria-label="Рабочая область профиля">
+        <nav class="workspace-tabs compare-workspace-tabs" aria-label="Рабочая область сборки">
           <button class="workspace-tab ${editor.activeWorkspaceTab === "inventory" ? "is-active" : ""}" type="button" data-compare-workspace-tab="inventory">Инвентарь</button>
           <button class="workspace-tab ${editor.activeWorkspaceTab === "pets" ? "is-active" : ""}" type="button" data-compare-workspace-tab="pets">Питомцы</button>
           <button class="workspace-tab ${editor.activeWorkspaceTab === "spheres" ? "is-active" : ""}" type="button" data-compare-workspace-tab="spheres">Сферы</button>
@@ -331,7 +335,7 @@ export function createCompareRenderModule(deps) {
     }
 
     if (!secondaryProfile) {
-      container.innerHTML = '<div class="empty-note">Создайте или выберите второй профиль для сравнения.</div>';
+      container.innerHTML = '<div class="empty-note">Создайте или выберите вторую сборку для сравнения.</div>';
       return;
     }
 
@@ -406,14 +410,14 @@ export function createCompareRenderModule(deps) {
     const secondaryProfile = getSecondaryProfile();
 
     renderTopbar(primaryProfile, secondaryProfile);
-    renderProfileEditor("primary", primaryProfile, "compare-primary-editor", "Профиль 1");
+    renderProfileEditor("primary", primaryProfile, "compare-primary-editor", "Сборка 1");
 
     if (secondaryProfile) {
-      renderProfileEditor("secondary", secondaryProfile, "compare-secondary-editor", "Профиль 2");
+      renderProfileEditor("secondary", secondaryProfile, "compare-secondary-editor", "Сборка 2");
     } else {
       const secondaryContainer = document.getElementById("compare-secondary-editor");
       if (secondaryContainer) {
-        secondaryContainer.innerHTML = '<div class="empty-note">Создайте второй профиль, чтобы увидеть вторую сборку.</div>';
+        secondaryContainer.innerHTML = '<div class="empty-note">Создайте вторую сборку, чтобы увидеть вторую сборку.</div>';
       }
     }
 

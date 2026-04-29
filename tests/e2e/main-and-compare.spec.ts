@@ -101,6 +101,42 @@ async function clickFirstEquipButton(page: Page, selector: string) {
   await button.click();
 }
 
+async function renameActiveBuild(page: Page, name: string) {
+  await page.locator("[data-build-edit]").click();
+  const input = page.locator("[data-build-name-input]");
+  await expect(input).toBeVisible();
+  await input.fill(name);
+  await input.press("Enter");
+}
+
+async function openBuildMenu(page: Page) {
+  const trigger = page.locator("[data-build-trigger]");
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
+  await trigger.click();
+  await expect(page.locator("[data-build-menu]")).toBeVisible();
+}
+
+async function closeBuildMenu(page: Page) {
+  if (await page.locator("[data-build-menu]").count()) {
+    await page.evaluate(() => {
+      document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await expect(page.locator("[data-build-menu]")).toHaveCount(0);
+  }
+}
+
+async function expectSavedBuildCount(page: Page, count: number) {
+  await openBuildMenu(page);
+  await expect(page.locator("[data-build-option]")).toHaveCount(count);
+  await closeBuildMenu(page);
+}
+
+async function selectSavedBuildByIndex(page: Page, index: number) {
+  await openBuildMenu(page);
+  await page.locator("[data-build-option]").nth(index).click();
+}
+
 async function expectCompareSecondaryStored(page: Page, predicateSource: string) {
   await expect
     .poll(async () => page.evaluate(
@@ -116,7 +152,7 @@ async function expectCompareSecondaryStored(page: Page, predicateSource: string)
 
 test("production dist entrypoints load bundled assets", async ({ page }) => {
   await page.goto("/index.html");
-  await expect(page.locator("#profile-select")).toBeVisible();
+  await expect(page.locator("[data-build-trigger]")).toBeVisible();
 
   const indexAssets = await page.evaluate(() => ({
     scripts: [...document.querySelectorAll<HTMLScriptElement>('script[type="module"]')].map((script) =>
@@ -160,7 +196,7 @@ test("catalog CLI validates local equipment and pet data without network", () =>
 test("default knight baseline stats match origin/main", async ({ page }) => {
   await page.goto("/index.html");
 
-  await expect(page.locator("#profile-select")).toBeVisible();
+  await expect(page.locator("[data-build-trigger]")).toBeVisible();
   await expect(page.locator("#board-main-stats .board-stat-row")).toHaveCount(5);
 
   await expect(readBoardMainStats(page)).resolves.toEqual({
@@ -190,38 +226,73 @@ test("class controls recalculate baseline totals from the UI", async ({ page }) 
   await expect.poll(async () => (await readBoardMainStats(page)).HP).not.toBe("758");
 });
 
-test("main page keeps equipment after reload and supports profile create/copy/delete", async ({ page }) => {
+test("main page keeps explicit build save flow and dirty-state controls", async ({ page }) => {
   await page.goto("/index.html");
 
-  const profileOptions = page.locator("#profile-select option");
-  await expect(profileOptions).toHaveCount(1);
+  await expectSavedBuildCount(page, 1);
 
-  await page.locator("#profile-name-input").fill("Main build");
+  await renameActiveBuild(page, "Main build");
   await clickFirstEquipButton(page, "#category-list .equip-btn[data-action='equip']");
+
+  await expect(page.locator("[data-build-trigger]")).toBeDisabled();
+  await expect(page.locator("#profile-new-button")).toBeDisabled();
+  await expect(page.locator("[data-build-copy]")).toBeDisabled();
+  await expect(page.locator("[data-build-delete]")).toBeDisabled();
+  await expect(page.locator("#profile-compare-link")).toHaveAttribute("aria-disabled", "true");
+
   await page.locator("#profile-save-button").click();
+  await expect(page.locator("[data-build-toast]")).toHaveText("Сборка успешно сохранена");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
+  await expectSavedBuildCount(page, 1);
 
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
   await page.reload();
 
-  await expect(page.locator("#profile-name-input")).toHaveValue("Main build");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
 
   await page.locator("#profile-new-button").click();
-  await expect(profileOptions).toHaveCount(2);
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(0);
+  await expect(page.locator("[data-build-trigger]")).toBeDisabled();
+  await page.locator("#profile-save-button").click();
+  await expectSavedBuildCount(page, 2);
 
-  await page.locator("#profile-delete-button").click();
-  await expect(profileOptions).toHaveCount(1);
-  await expect(page.locator("#profile-name-input")).toHaveValue("Main build");
+  await page.locator("[data-build-delete]").click();
+  await expectSavedBuildCount(page, 1);
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
 
-  await page.locator("#profile-copy-button").click();
-  await expect(profileOptions).toHaveCount(2);
+  await page.locator("[data-build-copy]").click();
+  await expect(page.locator("[data-build-trigger]")).toBeDisabled();
   await expect(page.locator("#slot-grid .slot-cell.is-filled")).toHaveCount(1);
+  await page.locator("#profile-save-button").click();
+  await expectSavedBuildCount(page, 2);
 
-  await page.locator("#profile-delete-button").click();
-  await expect(profileOptions).toHaveCount(1);
-  await expect(page.locator("#profile-name-input")).toHaveValue("Main build");
+  await page.locator("[data-build-delete]").click();
+  await expectSavedBuildCount(page, 1);
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
+});
+
+test("build dropdown opens above layout, closes outside, and switches saved builds", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await renameActiveBuild(page, "Сборка 1");
+  await page.locator("#profile-save-button").click();
+
+  await page.locator("#profile-new-button").click();
+  await renameActiveBuild(page, "Сборка 2");
+  await page.locator("#profile-save-button").click();
+
+  await openBuildMenu(page);
+  await expect(page.locator("[data-build-option]")).toHaveCount(2);
+  await expect(page.locator("[data-build-option]").nth(0)).toContainText("Сборка 1");
+  await expect(page.locator("[data-build-option]").nth(1)).toContainText("Сборка 2");
+
+  await closeBuildMenu(page);
+
+  await selectSavedBuildByIndex(page, 0);
+  await expect(page.locator("[data-build-menu]")).toHaveCount(0);
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Сборка 1");
 });
 
 test("main page equipment, pet, sphere and trophy workflows recalculate and persist", async ({ page }) => {
@@ -257,6 +328,9 @@ test("main page equipment, pet, sphere and trophy workflows recalculate and pers
   await expect(trophyStepper).toBeVisible();
   await trophyStepper.click();
   await expect(page.locator("#trophy-slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
+
+  await page.locator("#profile-save-button").click();
+  await expect(page.locator("[data-build-toast]")).toHaveText("Сборка успешно сохранена");
 
   await page.reload();
 
@@ -528,9 +602,11 @@ test("compare inventory shows equipment upgrade as read-only", async ({ page }) 
   await page.locator("#profile-save-button").click();
 
   await page.locator("#profile-new-button").click();
-  await page.locator("#profile-select").selectOption({ index: 0 });
+  await page.locator("#profile-save-button").click();
+  await selectSavedBuildByIndex(page, 0);
 
   await page.goto("/compare.html");
+  await page.locator("#compare-primary-select").selectOption({ index: 0 });
 
   const readonlyBadge = page.locator("#compare-primary-editor .compare-equipment-stage .compare-readonly-upgrade-badge").first();
   await expect(readonlyBadge).toBeVisible();
