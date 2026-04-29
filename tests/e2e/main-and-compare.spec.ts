@@ -1,5 +1,7 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import { localizeText } from "../../src/shared/i18n";
 
 type ProfileSeed = {
   id: string;
@@ -19,6 +21,7 @@ const STORAGE_KEYS = {
   profiles: "r2-doll-profiles-v1",
   activeProfileId: "r2-doll-active-profile-v1",
   compareSecondaryProfileId: "r2-doll-compare-secondary-v1",
+  language: "r2-doll-language-v1",
 };
 
 async function seedProfiles(
@@ -150,6 +153,13 @@ async function expectCompareSecondaryStored(page: Page, predicateSource: string)
     .toBe(true);
 }
 
+async function switchLanguage(page: Page, language: "ru" | "en") {
+  const button = page.locator(`#lang-${language}-button`);
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+}
+
 test("production dist entrypoints load bundled assets", async ({ page }) => {
   await page.goto("/index.html");
   await expect(page.locator("[data-build-trigger]")).toBeVisible();
@@ -191,6 +201,69 @@ test("catalog CLI validates local equipment and pet data without network", () =>
 
   execSync("corepack pnpm catalog:build -- --kind equipment", { stdio: "pipe" });
   execSync("corepack pnpm catalog:build -- --kind pet", { stdio: "pipe" });
+});
+
+test("english localization translates catalog names and descriptions through shared rules", () => {
+  expect(localizeText("Сфера перевоплощения 70+ уровня", "en")).toBe("Morph Sphere Lv. 70+");
+  expect(localizeText("Увеличение уровня переносимого веса +100", "en")).toBe("Carry weight level +100");
+  expect(localizeText("Кольцо атаки", "en")).toBe("Ring of attack");
+  expect(localizeText("Кольцо гнева", "en")).toBe("Ring of wrath");
+  expect(localizeText("Кольцо гривеносного дракона", "en")).toBe("Ring of the maned dragon");
+  expect(localizeText("Кольцо грифона", "en")).toBe("Ring of the griffin");
+  expect(localizeText("Серьги шпиона", "en")).toBe("Earrings of the spy");
+  expect(localizeText("Кольцо доблести", "en")).toBe("Ring of valor");
+  expect(localizeText("Сфера алчности ур. 2", "en")).toBe("Sphere of greed Lv. 2");
+  expect(localizeText("Кольцо, увеличивающее уровень концентрации.", "en")).toBe("A ring that increases concentration level.");
+  expect(localizeText("Награда за 5-е место в гонках.", "en")).toBe("Reward for 5th place in the races.");
+  expect(localizeText("Награда за 2-е место в гонках.", "en")).toBe("Reward for 2nd place in the races.");
+
+  const sphereItems = JSON.parse(readFileSync("src/resources/data/sphere-items.json", "utf8"));
+  const equipmentItems = JSON.parse(readFileSync("src/resources/data/equipment-items.json", "utf8"));
+  const suspiciousPatterns = [
+    /Sfera/i,
+    /alchn/i,
+    /usilenn/i,
+    /uluchsh/i,
+    /usovershenstv/i,
+    /urov(?:n|nya)?/i,
+    /shpion/i,
+    /garmonii/i,
+    /arkhimag/i,
+    /okhotnik/i,
+    /yarost/i,
+    /napolnenn/i,
+    /napolnyay/i,
+    /intellekt/i,
+    /energiey/i,
+    /razrushiteln/i,
+    /zhiznenn/i,
+    /moshch/i,
+    /grivenos/i,
+    /gnev/i,
+    /kontsentr/i,
+    /gonk/i,
+    /sergi/i,
+    /ozherel/i,
+    /remen/i,
+  ];
+
+  const findings = [...sphereItems, ...equipmentItems]
+    .flatMap((item) => ["name", "description"]
+      .map((field) => {
+        const source = item[field];
+        if (!source) {
+          return null;
+        }
+
+        const localized = localizeText(source, "en");
+        const looksBroken = suspiciousPatterns.some((pattern) => pattern.test(localized));
+
+        return looksBroken ? { field, source, localized } : null;
+      })
+      .filter(Boolean))
+    .slice(0, 10);
+
+  expect(findings).toEqual([]);
 });
 
 test("default knight baseline stats match origin/main", async ({ page }) => {
@@ -277,6 +350,71 @@ test("main page keeps explicit build save flow and dirty-state controls", async 
   await page.locator("[data-build-delete]").click();
   await expectSavedBuildCount(page, 1);
   await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
+});
+
+test("language switch localizes the main page, persists after reload, and applies on compare", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await expect(page.locator("#language-switch")).toBeVisible();
+  await expect(page.locator("#lang-ru-button")).toHaveText("RU");
+  await expect(page.locator("#lang-en-button")).toHaveText("EN");
+  await expect(page.locator("#lang-ru-button")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#lang-en-button")).toHaveAttribute("aria-pressed", "false");
+
+  await switchLanguage(page, "en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#profile-new-button")).toHaveText("New build");
+  await expect(page.locator("#profile-save-button")).toHaveText("Save");
+  await expect(page.locator("#profile-compare-link")).toHaveText("Compare");
+  await expect(page.locator('.workspace-tab[data-workspace-tab="inventory"]')).toHaveText("Inventory");
+  await expect(page.locator('.sidebar-tab-button[data-tab="stats"]')).toHaveText("Equipment stats");
+  await expect(page.locator('[data-stats-panel="effects"] h3')).toHaveText("Special effects");
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Сборка 1");
+  await expect(page.locator(".passive-slot-note")).toHaveText("Equip a ring to activate the passive effect.");
+
+  const earringCategory = page.locator('.category-block[data-slot="earring"]').first();
+  const earringExpanded = await earringCategory.locator(".category-items").evaluate((element) => element.classList.contains("expanded"));
+  if (!earringExpanded) {
+    await earringCategory.locator(".category-header").click();
+  }
+  await expect(earringCategory).toContainText("Earrings of divine harmony");
+  await expect(earringCategory).not.toContainText("bozhestvennoy garmonii");
+  await expect(earringCategory).toContainText("Earrings of enhanced evasion");
+  await expect(earringCategory).toContainText("Earrings of the spy");
+  await expect(earringCategory).not.toContainText("usilennogo");
+  await expect(earringCategory).not.toContainText("shpiona");
+
+  await page.locator('[data-workspace-tab="pet"]').click();
+  await expect(page.locator("#category-list")).toContainText("Melee");
+  await expect(page.locator("#category-list")).toContainText("Fire (I)");
+  await expect(page.locator("#category-list")).not.toContainText("Blizhniy");
+  await expect(page.locator("#category-list")).not.toContainText("Ogon");
+  await page.locator('[data-workspace-tab="spheres"]').click();
+  const typeTwoSpheres = page.locator('[data-sphere-category="sphere_type_2"]').first();
+  const typeTwoExpanded = await typeTwoSpheres.locator(".category-items").evaluate((element) => element.classList.contains("expanded"));
+  if (!typeTwoExpanded) {
+    await typeTwoSpheres.locator(".category-header").click();
+  }
+  await expect(typeTwoSpheres).toContainText("Sphere of greed Lv. 2");
+  await expect(typeTwoSpheres).toContainText("Sphere of harmony Lv. 1");
+  await expect(typeTwoSpheres).not.toContainText("Sfera");
+  await expect(typeTwoSpheres).not.toContainText("alchnosti");
+  await page.locator('[data-workspace-tab="inventory"]').click();
+
+  await page.locator("#profile-new-button").click();
+  await page.locator("#profile-new-button").click();
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#profile-compare-link")).toHaveText("Compare");
+  await expect.poll(async () => page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEYS.language)).toBe("en");
+
+  await page.locator("#profile-compare-link").click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator(".compare-topbar-actions .profile-link-button")).toHaveText("Main menu");
+  await expect(page.locator(".compare-topbar-field").first().locator(".summary-label")).toHaveText("Build 1");
+  await expect(page.locator(".compare-topbar-field").nth(1).locator(".summary-label")).toHaveText("Build 2");
+  await expect(page.locator(".compare-summary-panel")).toHaveAttribute("aria-label", "Stat comparison");
 });
 
 

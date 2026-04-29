@@ -27,7 +27,11 @@ import {
 } from "./stats";
 
 export function createCatalogModule(deps) {
-  const { state } = deps;
+  const { state, localizeText = (value) => String(value || ""), getCurrentLanguage = () => "ru" } = deps;
+
+function sortByLocalizedName(left, right) {
+  return localizeText(left?.name || "").localeCompare(localizeText(right?.name || ""), getCurrentLanguage());
+}
 
 function getSphereSlotConfig(slotKey) {
   return SPHERE_SLOT_CONFIG.find((slot) => slot.key === slotKey);
@@ -57,13 +61,13 @@ function getSphereItemsForSlot(slotKey) {
 
   return state.sphereItems
     .filter((item) => slot.matches(item))
-    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    .sort(sortByLocalizedName);
 }
 
 function getTrophyItemsForSlot(slotKey) {
   return state.trophyItems
     .filter((item) => item.slot_code === slotKey)
-    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    .sort(sortByLocalizedName);
 }
 
 function getPetItemsForCategory(categoryKey) {
@@ -81,7 +85,7 @@ function getSphereCategoryGroups() {
   return SPHERE_CATEGORY_CONFIG.map((group) => {
     const items = state.sphereItems
       .filter((item) => getCompatibleSphereSlots(item).some((slot) => slot.categoryKey === group.key))
-      .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+      .sort(sortByLocalizedName);
 
     return {
       ...group,
@@ -416,7 +420,7 @@ function getItemsForEquipmentSlot(slotKeyOrConfig, classKey = state.classConfig.
 
   return state.items
     .filter((item) => matchesEquipmentSlot(slot, item, classKey, equipped))
-    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    .sort(sortByLocalizedName);
 }
 
 function getFirstAvailableSlotKey() {

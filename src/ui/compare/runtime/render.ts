@@ -11,6 +11,38 @@ export function createCompareRenderModule(deps) {
     formatAbsoluteStat,
   } = deps;
 
+  function localize(value) {
+    return app.localizeText(value);
+  }
+
+  function applyStaticLocalization() {
+    document.documentElement.lang = app.getCurrentLanguage();
+
+    const topbar = document.querySelector("body[data-page='compare'] .panel-topbar");
+    topbar?.setAttribute("aria-label", app.t("compare.toolbar"));
+
+    const backLink = document.querySelector(".compare-topbar-actions .profile-link-button");
+    if (backLink) {
+      backLink.textContent = app.t("button.mainMenu");
+    }
+
+    const primaryField = document.querySelector(".compare-topbar-field:nth-of-type(1) .summary-label");
+    if (primaryField) {
+      primaryField.textContent = app.t("compare.primaryBuild");
+    }
+
+    const secondaryField = document.querySelector(".compare-topbar-field:nth-of-type(2) .summary-label");
+    if (secondaryField) {
+      secondaryField.textContent = app.t("compare.secondaryBuild");
+    }
+
+    document.getElementById("compare-primary-select")?.setAttribute("aria-label", app.t("compare.primarySelect"));
+    document.getElementById("compare-secondary-select")?.setAttribute("aria-label", app.t("compare.secondarySelect"));
+    document.querySelector(".compare-profile-panel:first-of-type")?.setAttribute("aria-label", app.t("compare.primaryBuild"));
+    document.querySelector(".compare-profile-panel:nth-of-type(2)")?.setAttribute("aria-label", app.t("compare.secondaryBuild"));
+    document.querySelector(".compare-summary-panel")?.setAttribute("aria-label", app.t("compare.stats"));
+  }
+
   function renderStaticUpgradeBadge(controlClass, level) {
     return app.shouldDisplayUpgradeLevel(level)
       ? `
@@ -39,12 +71,12 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
+        ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
         : "";
       const upgradeControl = item ? renderStaticUpgradeBadge("slot-upgrade-select", level) : "";
       const slotTitle = item
-        ? `${slot.label}: ${item.name}${app.formatUpgradeTitleSuffix(level)}`
-        : slot.label;
+        ? `${localize(slot.label)}: ${localize(item.name)}${app.formatUpgradeTitleSuffix(level)}`
+        : localize(slot.label);
 
       return `
         <div class="${classes.join(" ")}" style="grid-column: ${slot.col}; grid-row: ${slot.row};">
@@ -72,7 +104,7 @@ export function createCompareRenderModule(deps) {
     }
 
     const passiveImageHtml = passiveItem?.image
-      ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(passiveItem.name)}" loading="lazy">`
+      ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(localize(passiveItem.name))}" loading="lazy">`
       : "";
     const passiveUpgradeControl = passiveItem ? renderStaticUpgradeBadge("slot-upgrade-select", passiveLevel) : "";
     const passiveSlotHtml = passiveItem && passiveSlot
@@ -82,8 +114,8 @@ export function createCompareRenderModule(deps) {
             <div
               class="slot-pin compare-static-slot-pin"
               role="img"
-              aria-label="${app.escapeHtml(`${passiveSlot.label}: ${passiveItem.name}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
-              title="${app.escapeHtml(`${passiveSlot.label}: ${passiveItem.name}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              aria-label="${app.escapeHtml(`${localize(passiveSlot.label)}: ${localize(passiveItem.name)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              title="${app.escapeHtml(`${localize(passiveSlot.label)}: ${localize(passiveItem.name)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
             >
               <span class="slot-item-visual" aria-hidden="true">${passiveImageHtml}</span>
             </div>
@@ -95,7 +127,7 @@ export function createCompareRenderModule(deps) {
 
     return `
       <section class="equipment-column compare-stage-column">
-        <section class="equipment-stage compare-equipment-stage" aria-label="Слоты экипировки">
+        <section class="equipment-stage compare-equipment-stage" aria-label="${app.escapeHtml(app.t("workspace.equipmentSlots"))}">
           <div class="slot-grid">${slotsHtml}</div>
         </section>
         ${passiveSlotHtml}
@@ -120,12 +152,12 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
+        ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
         : "";
       const upgradeControl = item && showUpgrade ? renderStaticUpgradeBadge("sphere-upgrade-select", level) : "";
       const slotTitle = item
-        ? `${slot.label}: ${item.name}${showUpgrade ? app.formatUpgradeTitleSuffix(level) : ""}`
-        : slot.label;
+        ? `${localize(slot.label)}: ${localize(item.name)}${showUpgrade ? app.formatUpgradeTitleSuffix(level) : ""}`
+        : localize(slot.label);
 
       return `
         <div class="${classes.join(" ")}">
@@ -144,7 +176,7 @@ export function createCompareRenderModule(deps) {
 
     return `
       <section class="sphere-column compare-stage-column">
-        <section class="sphere-stage compare-sphere-stage" aria-label="Слоты сфер">
+        <section class="sphere-stage compare-sphere-stage" aria-label="${app.escapeHtml(app.t("workspace.sphereSlots"))}">
           <div class="sphere-slot-grid">${slotsHtml}</div>
         </section>
       </section>
@@ -164,12 +196,12 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(item.name)}" loading="lazy">`
+        ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
         : "";
       const upgradeControl = item ? renderStaticUpgradeBadge("trophy-upgrade-select", level) : "";
       const slotTitle = item
-        ? `${slot.label}: ${item.name}${app.formatUpgradeTitleSuffix(level)}`
-        : slot.label;
+        ? `${localize(slot.label)}: ${localize(item.name)}${app.formatUpgradeTitleSuffix(level)}`
+        : localize(slot.label);
 
       return `
         <div class="${classes.join(" ")}">
@@ -188,7 +220,7 @@ export function createCompareRenderModule(deps) {
 
     return `
       <section class="trophy-column compare-stage-column">
-        <section class="trophy-stage compare-trophy-stage" aria-label="Слоты трофеев">
+        <section class="trophy-stage compare-trophy-stage" aria-label="${app.escapeHtml(app.t("workspace.trophySlots"))}">
           <div class="trophy-slot-grid">${slotsHtml}</div>
         </section>
       </section>
@@ -198,7 +230,7 @@ export function createCompareRenderModule(deps) {
   function renderCompareStatRows(stats) {
     return stats.map((stat) => `
       <div class="stat-row ${stat.value > 0 ? "is-positive" : stat.value < 0 ? "is-negative" : ""}">
-        <span class="stat-name">${app.escapeHtml(stat.label)}</span>
+        <span class="stat-name">${app.escapeHtml(localize(stat.label))}</span>
         <span class="stat-value">${app.escapeHtml(app.formatStatValue(stat.value, stat.unit))}</span>
       </div>
     `).join("");
@@ -217,7 +249,7 @@ export function createCompareRenderModule(deps) {
     return {
       pet,
       stats: app.getDisplayStatsFromMap(bucket.numericStats).allStats,
-      effects: [...bucket.effects.values()].sort((a, b) => a.localeCompare(b, "ru")),
+      effects: [...bucket.effects.values()].sort((a, b) => localize(a).localeCompare(localize(b), app.getCurrentLanguage())),
       mergeCounts: app.getPetMergeCounts(profile.petEquipped),
       mergeTotal: app.getPetMergeTotal(profile.petEquipped?.mergeCounts),
     };
@@ -228,9 +260,9 @@ export function createCompareRenderModule(deps) {
     if (!petData) {
       return `
         <section class="pet-column compare-stage-column">
-          <section class="pet-stage compare-pet-stage" aria-label="Питомец">
+          <section class="pet-stage compare-pet-stage" aria-label="${app.escapeHtml(app.t("workspace.petStage"))}">
             <div class="pet-stage-empty">
-              <div class="empty-note">У сборки не выбран питомец.</div>
+              <div class="empty-note">${app.escapeHtml(app.t("empty.noPetInBuild"))}</div>
             </div>
           </section>
         </section>
@@ -238,21 +270,21 @@ export function createCompareRenderModule(deps) {
     }
 
     const { pet, stats, effects } = petData;
-    const subtitle = app.normalizeText(pet.description_lines?.[0]) || `${pet.element} (${pet.variant})`;
-    const categoryLabel = app.PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label || pet.category;
+    const subtitle = localize(app.normalizeText(pet.description_lines?.[0]) || `${pet.element} (${pet.variant})`);
+    const categoryLabel = localize(app.PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label || pet.category);
 
     return `
       <section class="pet-column compare-stage-column">
-        <section class="pet-stage compare-pet-stage" aria-label="Питомец">
+        <section class="pet-stage compare-pet-stage" aria-label="${app.escapeHtml(app.t("workspace.petStage"))}">
           <article class="pet-card">
             <div class="pet-card-head">
               <div class="pet-card-portrait">
-                <img src="${app.escapeHtml(pet.image)}" alt="${app.escapeHtml(pet.name)}" loading="lazy">
+                <img src="${app.escapeHtml(pet.image)}" alt="${app.escapeHtml(localize(pet.name))}" loading="lazy">
               </div>
               <div class="pet-card-copy">
                 <div class="pet-card-kicker">${app.escapeHtml(categoryLabel)}</div>
                 <div class="pet-card-title-row">
-                  <h3>${app.escapeHtml(pet.name)}</h3>
+                  <h3>${app.escapeHtml(localize(pet.name))}</h3>
                 </div>
                 <div class="pet-card-meta">${app.escapeHtml(subtitle)}</div>
               </div>
@@ -260,19 +292,19 @@ export function createCompareRenderModule(deps) {
 
             <section class="pet-card-section">
               <div class="stats-subtitle-row">
-                <h3>Параметры питомца</h3>
+                <h3>${app.escapeHtml(app.t("stats.petValues"))}</h3>
               </div>
               <div class="stat-list stat-list-secondary">
-                ${stats.length ? renderCompareStatRows(stats) : '<div class="empty-note">Питомец не даёт числовых параметров.</div>'}
+                ${stats.length ? renderCompareStatRows(stats) : `<div class="empty-note">${app.escapeHtml(app.t("empty.petNoNumericStats"))}</div>`}
               </div>
             </section>
             ${effects.length ? `
               <section class="pet-card-section">
                 <div class="stats-subtitle-row">
-                  <h3>Особые эффекты</h3>
+                  <h3>${app.escapeHtml(app.t("stats.specialEffects"))}</h3>
                 </div>
                 <div class="effects-list">
-                  ${effects.map((effect) => `<div class="effect-pill">${app.escapeHtml(effect)}</div>`).join("")}
+                  ${effects.map((effect) => `<div class="effect-pill">${app.escapeHtml(localize(effect))}</div>`).join("")}
                 </div>
               </section>
             ` : ""}
@@ -290,7 +322,7 @@ export function createCompareRenderModule(deps) {
 
     ensureEditorState(editorKey, profile);
     const editor = compareState.editors[editorKey];
-    const classLabel = app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || "Класс";
+    const classLabel = localize(app.CLASS_CONFIGS[profile.classConfig.classKey]?.label || app.t("class.class"));
     let stageHtml = renderCompareInventoryStage(profile);
 
     if (editor.activeWorkspaceTab === "pets") {
@@ -306,18 +338,18 @@ export function createCompareRenderModule(deps) {
           <div class="compare-editor-headline">
             <span class="compare-editor-tag">${app.escapeHtml(title)}</span>
             <h2>${app.escapeHtml(profile.name)}</h2>
-            <span class="section-note">${app.escapeHtml(classLabel)} · Ур. ${app.escapeHtml(profile.classConfig.level)}</span>
+            <span class="section-note">${app.escapeHtml(app.t("compare.classLevel", { className: classLabel, level: profile.classConfig.level }))}</span>
           </div>
         </div>
 
-        <nav class="workspace-tabs compare-workspace-tabs" aria-label="Рабочая область сборки">
-          <button class="workspace-tab ${editor.activeWorkspaceTab === "inventory" ? "is-active" : ""}" type="button" data-compare-workspace-tab="inventory">Инвентарь</button>
-          <button class="workspace-tab ${editor.activeWorkspaceTab === "pets" ? "is-active" : ""}" type="button" data-compare-workspace-tab="pets">Питомцы</button>
-          <button class="workspace-tab ${editor.activeWorkspaceTab === "spheres" ? "is-active" : ""}" type="button" data-compare-workspace-tab="spheres">Сферы</button>
-          <button class="workspace-tab ${editor.activeWorkspaceTab === "trophies" ? "is-active" : ""}" type="button" data-compare-workspace-tab="trophies">Трофеи</button>
+        <nav class="workspace-tabs compare-workspace-tabs" aria-label="${app.escapeHtml(app.t("workspace.doll"))}">
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "inventory" ? "is-active" : ""}" type="button" data-compare-workspace-tab="inventory">${app.escapeHtml(app.t("workspace.inventory"))}</button>
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "pets" ? "is-active" : ""}" type="button" data-compare-workspace-tab="pets">${app.escapeHtml(app.t("workspace.pet"))}</button>
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "spheres" ? "is-active" : ""}" type="button" data-compare-workspace-tab="spheres">${app.escapeHtml(app.t("workspace.spheres"))}</button>
+          <button class="workspace-tab ${editor.activeWorkspaceTab === "trophies" ? "is-active" : ""}" type="button" data-compare-workspace-tab="trophies">${app.escapeHtml(app.t("workspace.trophies"))}</button>
         </nav>
 
-        <div class="compare-readonly-note">Режим просмотра: изменения в compare недоступны.</div>
+        <div class="compare-readonly-note">${app.escapeHtml(app.t("compare.readonly"))}</div>
 
         <section class="compare-editor-stage compare-editor-stage-readonly">
           <div class="compare-editor-stage-view">
@@ -335,7 +367,7 @@ export function createCompareRenderModule(deps) {
     }
 
     if (!secondaryProfile) {
-      container.innerHTML = '<div class="empty-note">Создайте или выберите вторую сборку для сравнения.</div>';
+      container.innerHTML = `<div class="empty-note">${app.escapeHtml(app.t("compare.chooseSecondBuild"))}</div>`;
       return;
     }
 
@@ -348,27 +380,27 @@ export function createCompareRenderModule(deps) {
       <section class="compare-summary-shell">
         <div class="section-title-row compare-summary-heading">
           <div class="compare-summary-headline">
-            <span class="compare-editor-tag compare-editor-tag-summary">Аналитика</span>
-            <h2>Сравнение параметров</h2>
+            <span class="compare-editor-tag compare-editor-tag-summary">${app.escapeHtml(app.t("compare.analytics"))}</span>
+            <h2>${app.escapeHtml(app.t("compare.stats"))}</h2>
             <span class="section-note">${app.escapeHtml(primaryProfile.name)} vs ${app.escapeHtml(secondaryProfile.name)}</span>
           </div>
         </div>
 
         <div class="compare-summary-strip">
-          <div class="compare-summary-chip is-better">Лучше: ${app.escapeHtml(betterCount)}</div>
-          <div class="compare-summary-chip is-worse">Хуже: ${app.escapeHtml(worseCount)}</div>
-          <div class="compare-summary-chip is-neutral">Равно: ${app.escapeHtml(equalCount)}</div>
+          <div class="compare-summary-chip is-better">${app.escapeHtml(app.t("compare.better"))}: ${app.escapeHtml(betterCount)}</div>
+          <div class="compare-summary-chip is-worse">${app.escapeHtml(app.t("compare.worse"))}: ${app.escapeHtml(worseCount)}</div>
+          <div class="compare-summary-chip is-neutral">${app.escapeHtml(app.t("compare.equal"))}: ${app.escapeHtml(equalCount)}</div>
         </div>
 
         <div class="compare-table-wrap">
           <div class="compare-table">
-            <div class="compare-table-header">Параметр</div>
+            <div class="compare-table-header">${app.escapeHtml(app.t("compare.parameter"))}</div>
             <div class="compare-table-header">${app.escapeHtml(primaryProfile.name)}</div>
             <div class="compare-table-header">${app.escapeHtml(secondaryProfile.name)}</div>
-            <div class="compare-table-header">Δ</div>
+            <div class="compare-table-header">${app.escapeHtml(app.t("compare.delta"))}</div>
 
             ${rows.map((row) => `
-              <div class="compare-table-cell compare-table-label">${app.escapeHtml(row.label)}</div>
+              <div class="compare-table-cell compare-table-label">${app.escapeHtml(localize(row.label))}</div>
               <div class="compare-table-cell compare-table-value ${row.classes.primary}">${app.escapeHtml(formatAbsoluteStat(row.primary))}</div>
               <div class="compare-table-cell compare-table-value ${row.classes.secondary}">${app.escapeHtml(formatAbsoluteStat(row.secondary))}</div>
               <div class="compare-table-cell compare-table-delta ${row.classes.delta}">${app.escapeHtml(app.formatStatValue(row.delta, row.unit))}</div>
@@ -383,6 +415,8 @@ export function createCompareRenderModule(deps) {
     const primarySelect = document.getElementById("compare-primary-select");
     const secondarySelect = document.getElementById("compare-secondary-select");
     const hasSecondary = Boolean(secondaryProfile);
+
+    applyStaticLocalization();
 
     if (primarySelect) {
       primarySelect.innerHTML = app.state.profiles.map((profile) => `
@@ -405,19 +439,20 @@ export function createCompareRenderModule(deps) {
   }
 
   function renderComparePage() {
+    applyStaticLocalization();
     ensureSecondaryProfileSelection();
     const primaryProfile = getPrimaryProfile();
     const secondaryProfile = getSecondaryProfile();
 
     renderTopbar(primaryProfile, secondaryProfile);
-    renderProfileEditor("primary", primaryProfile, "compare-primary-editor", "Сборка 1");
+    renderProfileEditor("primary", primaryProfile, "compare-primary-editor", app.t("compare.primaryBuild"));
 
     if (secondaryProfile) {
-      renderProfileEditor("secondary", secondaryProfile, "compare-secondary-editor", "Сборка 2");
+      renderProfileEditor("secondary", secondaryProfile, "compare-secondary-editor", app.t("compare.secondaryBuild"));
     } else {
       const secondaryContainer = document.getElementById("compare-secondary-editor");
       if (secondaryContainer) {
-        secondaryContainer.innerHTML = '<div class="empty-note">Создайте вторую сборку, чтобы увидеть вторую сборку.</div>';
+        secondaryContainer.innerHTML = `<div class="empty-note">${app.escapeHtml(app.t("compare.createSecondBuild"))}</div>`;
       }
     }
 

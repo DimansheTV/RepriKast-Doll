@@ -4,6 +4,7 @@ import { SPHERE_SLOT_CONFIG } from "../../../domain/spheres/config";
 import { PET_CATEGORY_CONFIG } from "../../../domain/pets/config";
 import { PASSIVE_MORPH_RING_SLOT_KEY } from "../../../domain/equipment/config";
 import { CLASS_CONFIGS } from "../../../domain/stats/runtime-config";
+import { normalizeLanguage } from "../../../shared/i18n";
 import { normalizeText } from "./utils";
 
 export function createRuntimeState(deps) {
@@ -59,6 +60,7 @@ export function createRuntimeState(deps) {
     activeSidebarTab: loadSidebarTabState(),
     activeStatsTab: "inventory",
     activeWorkspaceTab: loadWorkspaceTabState(),
+    language: loadLanguageState(),
     profiles: [],
     activeProfileId: null,
     activeDraftName: "",
@@ -99,6 +101,10 @@ export function createRuntimeState(deps) {
 
   function loadWorkspaceTabState() {
     return uiStateRepository.loadWorkspaceTab();
+  }
+
+  function loadLanguageState() {
+    return normalizeLanguage(uiStateRepository.loadLanguage?.() || "ru");
   }
 
   function loadProfilesState() {
@@ -157,6 +163,10 @@ export function createRuntimeState(deps) {
 
   function saveActiveProfileIdState() {
     profileRepository.saveActiveProfileId(state.activeProfileId || "");
+  }
+
+  function saveLanguageState() {
+    uiStateRepository.saveLanguage?.(state.language || "ru");
   }
 
   function persistLegacyStateSnapshot() {
@@ -356,6 +366,7 @@ export function createRuntimeState(deps) {
     saveWorkspaceTabState,
     saveProfilesState,
     saveActiveProfileIdState,
+    saveLanguageState,
     persistLegacyStateSnapshot,
     sanitizeEquippedState,
     sanitizeSphereEquippedState,

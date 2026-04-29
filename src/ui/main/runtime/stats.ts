@@ -127,6 +127,8 @@ export function createStatsModule(deps) {
     getEquippedSlots,
     getEquippedSphereSlots,
     getEquippedTrophySlots,
+    localizeText = (value) => String(value ?? ""),
+    getCurrentLanguage = () => "ru",
   } = deps;
 
 function escapeHtml(value) {
@@ -145,7 +147,7 @@ function renderItemIcon(item) {
 
   return `
     <span class="item-icon-frame">
-      <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">
+      <img src="${escapeHtml(item.image)}" alt="${escapeHtml(localizeText(item.name))}" loading="lazy">
     </span>
   `;
 }
@@ -401,7 +403,7 @@ function getDisplayStatsFromMap(statsMap, { includeMainZeros = false } = {}) {
       if (priorityDiff !== 0) {
         return priorityDiff;
       }
-      return a.label.localeCompare(b.label, "ru");
+      return localizeText(a.label).localeCompare(localizeText(b.label), getCurrentLanguage());
     });
 
   return {
@@ -474,7 +476,7 @@ function collectEquippedStats() {
       spheres: sphereBucket,
       trophies: trophyBucket,
     },
-    effects: [...effects.values()].sort((a, b) => a.localeCompare(b, "ru")),
+    effects: [...effects.values()].sort((a, b) => localizeText(a).localeCompare(localizeText(b), getCurrentLanguage())),
   };
 }
 

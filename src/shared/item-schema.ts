@@ -1,3 +1,5 @@
+import { decodeMojibakeText } from "./i18n";
+
 const REQUIRED_ITEM_FIELDS = [
   "kind",
   "id",
@@ -10,7 +12,9 @@ const REQUIRED_ITEM_FIELDS = [
 ];
 
 function normalizeLines(value) {
-  return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((entry) => typeof entry === "string").map((entry) => decodeMojibakeText(entry))
+    : [];
 }
 
 function normalizeUpgradeLevels(rawLevels) {
@@ -59,7 +63,7 @@ export function normalizeCatalogItem(kind, rawItem, index = 0, options: Normaliz
     ...rawItem,
     kind,
     id,
-    name: String(rawItem?.name || ""),
+    name: decodeMojibakeText(rawItem?.name || ""),
     slotCode,
     slot_code: slotCode,
     image: resolveImageAssetPath(rawItem?.image || ""),
@@ -70,11 +74,11 @@ export function normalizeCatalogItem(kind, rawItem, index = 0, options: Normaliz
     sourceMeta: {
       wikiUrl: String(rawItem?.wiki_url || rawItem?.sourceMeta?.wikiUrl || ""),
       sourceImageUrl: String(rawItem?.source_image_url || rawItem?.sourceMeta?.sourceImageUrl || ""),
-      category: rawItem?.category ?? rawItem?.sourceMeta?.category ?? null,
+      category: decodeMojibakeText(rawItem?.category ?? rawItem?.sourceMeta?.category ?? null),
       weight: rawItem?.weight ?? rawItem?.sourceMeta?.weight ?? null,
       classes: Array.isArray(rawItem?.classes) ? [...rawItem.classes] : Array.isArray(rawItem?.sourceMeta?.classes) ? [...rawItem.sourceMeta.classes] : [],
-      variant: rawItem?.variant ?? rawItem?.sourceMeta?.variant ?? null,
-      element: rawItem?.element ?? rawItem?.sourceMeta?.element ?? null,
+      variant: decodeMojibakeText(rawItem?.variant ?? rawItem?.sourceMeta?.variant ?? null),
+      element: decodeMojibakeText(rawItem?.element ?? rawItem?.sourceMeta?.element ?? null),
       parameters: rawItem?.parameters ?? rawItem?.sourceMeta?.parameters ?? null,
     },
     attributes: omitKnownFields(rawItem || {}),

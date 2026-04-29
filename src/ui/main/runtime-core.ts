@@ -8,11 +8,13 @@ import { createRuntimeState } from "./runtime/state";
 import { createMainWorkspaceModule } from "./runtime/workspace-main";
 import { createSharedRuntimeApi } from "./runtime/shared-api";
 import { normalizeText, sanitizeClassLevel, escapeHtml } from "./runtime/utils";
+import { DEFAULT_LANGUAGE, normalizeLanguage, localizeText, t } from "../../shared/i18n";
 
 export function createAppRuntime(context) {
   const { catalogRepository, profileRepository, uiStateRepository } = context;
 
   let catalogModule;
+  let getCurrentLanguage = () => DEFAULT_LANGUAGE;
   const refs = {
     renderAll: () => {},
     createProfileSnapshot: () => { throw new Error("Profile runtime not initialized"); },
@@ -26,7 +28,7 @@ export function createAppRuntime(context) {
     profileRepository,
     uiStateRepository,
     sanitizeClassLevel,
-    setLastAction: (...args) => refs.setLastAction(...args),
+    setLastAction: (message) => refs.setLastAction(localizeText(message, getCurrentLanguage?.() || DEFAULT_LANGUAGE)),
     markBuildDirty: (...args) => refs.markBuildDirty(...args),
     getSlotConfig: (...args) => catalogModule.getSlotConfig(...args),
     getSphereSlotConfig: (...args) => catalogModule.getSphereSlotConfig(...args),
@@ -45,7 +47,25 @@ export function createAppRuntime(context) {
     getSphereTypeOneTabForSlot: (...args) => catalogModule.getSphereTypeOneTabForSlot(...args),
   });
 
-  catalogModule = createCatalogModule({ state: stateModule.state });
+  getCurrentLanguage = () => normalizeLanguage(stateModule.state.language || DEFAULT_LANGUAGE);
+  const localize = (value) => localizeText(value, getCurrentLanguage());
+  const translate = (key, params = {}) => t(key, getCurrentLanguage(), params);
+  const setLanguage = (language) => {
+    const nextLanguage = normalizeLanguage(language);
+    if (stateModule.state.language === nextLanguage) {
+      return;
+    }
+
+    stateModule.state.language = nextLanguage;
+    stateModule.saveLanguageState();
+    refs.renderAll();
+  };
+
+  catalogModule = createCatalogModule({
+    state: stateModule.state,
+    localizeText: (value) => localize(value),
+    getCurrentLanguage,
+  });
 
   const profilesModule = createProfilesModule({
     state: stateModule.state,
@@ -67,6 +87,7 @@ export function createAppRuntime(context) {
     renderProfileBar: (...args) => refs.renderProfileBar(...args),
     showBuildToast: (...args) => refs.showBuildToast(...args),
     setLastAction: (...args) => refs.setLastAction(...args),
+    t: (...args) => translate(...args),
   });
   refs.createProfileSnapshot = profilesModule.createProfileSnapshot;
   refs.markBuildDirty = profilesModule.markBuildDirty;
@@ -80,6 +101,8 @@ export function createAppRuntime(context) {
     getEquippedSlots: catalogModule.getEquippedSlots,
     getEquippedSphereSlots: catalogModule.getEquippedSphereSlots,
     getEquippedTrophySlots: catalogModule.getEquippedTrophySlots,
+    localizeText: (value) => localize(value),
+    getCurrentLanguage,
   });
 
   const renderModule = createMainRenderModule({
@@ -117,6 +140,9 @@ export function createAppRuntime(context) {
     getLevelKeys: catalogModule.getLevelKeys,
     CLASS_CONFIGS,
     sanitizeClassLevel,
+    t: (...args) => translate(...args),
+    localizeText: (value) => localize(value),
+    setLanguage,
   });
   refs.setLastAction = renderModule.setLastAction;
   refs.renderProfileBar = renderModule.renderProfileBar;
@@ -125,7 +151,7 @@ export function createAppRuntime(context) {
   const workspaceModule = createMainWorkspaceModule({
     state: stateModule.state,
     renderAll: (...args) => refs.renderAll(...args),
-    setLastAction: (...args) => refs.setLastAction(...args),
+    setLastAction: (message) => refs.setLastAction(localize(message)),
     getSlotConfig: catalogModule.getSlotConfig,
     matchesEquipmentSlot: catalogModule.matchesEquipmentSlot,
     getDefaultUpgradeLevel: catalogModule.getDefaultUpgradeLevel,
@@ -168,6 +194,8 @@ export function createAppRuntime(context) {
     getPetMergeStats: catalogModule.getPetMergeStats,
     savePetEquippedState: stateModule.savePetEquippedState,
     createPetSelection: catalogModule.createPetSelection,
+    localizeText: (value) => localize(value),
+    t: (...args) => translate(...args),
   });
 
   refs.renderAll = () => {
@@ -194,6 +222,10 @@ export function createAppRuntime(context) {
     normalizeText,
     sanitizeClassLevel,
     escapeHtml,
+    localizeText: (value) => localize(value),
+    t: (...args) => translate(...args),
+    setLanguage,
+    getCurrentLanguage,
   });
 
   async function init() {

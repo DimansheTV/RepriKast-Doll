@@ -1,5 +1,7 @@
+import { decodeMojibakeText } from "./i18n";
+
 export function normalizeText(value: unknown): string {
-  return String(value || "").replace(/\s+/g, " ").trim();
+  return decodeMojibakeText(value).replace(/\s+/g, " ").trim();
 }
 
 export function escapeHtml(value: unknown): string {

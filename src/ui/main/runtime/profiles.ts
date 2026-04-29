@@ -23,6 +23,7 @@ export function createProfilesModule(deps) {
     renderProfileBar,
     showBuildToast,
     setLastAction,
+    t,
   } = deps;
 
   function createProfileId() {
@@ -30,7 +31,7 @@ export function createProfilesModule(deps) {
   }
 
   function getProfileFallbackName(index = state.profiles.length) {
-    return `Сборка ${index + 1}`;
+    return t("build.defaultName", { index: index + 1 });
   }
 
   function sanitizeProfileName(name, fallbackName = getProfileFallbackName()) {
@@ -148,16 +149,18 @@ export function createProfilesModule(deps) {
   function getNextProfileName() {
     const names = new Set(state.profiles.map((profile) => profile.name));
     let index = 1;
-    while (names.has(`Сборка ${index}`)) {
+    while (names.has(t("build.defaultName", { index }))) {
       index += 1;
     }
-    return `Сборка ${index}`;
+    return t("build.defaultName", { index });
   }
 
   function getUniqueProfileCopyName(sourceName) {
     const names = new Set(state.profiles.map((profile) => profile.name));
-    const source = normalizeText(sourceName) || "Сборка";
-    const baseName = sanitizeProfileName(`${source} копия`, "Сборка копия");
+    const copySuffix = t("build.copySuffix");
+    const fallbackCopyName = t("build.defaultCopyName");
+    const source = normalizeText(sourceName) || t("build.defaultName", { index: 1 }).replace(/\s+1$/, "");
+    const baseName = sanitizeProfileName(`${source} ${copySuffix}`, fallbackCopyName);
 
     if (!names.has(baseName)) {
       return baseName;
@@ -165,16 +168,16 @@ export function createProfilesModule(deps) {
 
     let index = 2;
     while (index < 1000) {
-      const suffix = ` копия ${index}`;
+      const suffix = ` ${copySuffix} ${index}`;
       const trimmedSource = source.slice(0, Math.max(1, 40 - suffix.length));
-      const candidate = sanitizeProfileName(`${trimmedSource}${suffix}`, `Сборка копия ${index}`);
+      const candidate = sanitizeProfileName(`${trimmedSource}${suffix}`, `${fallbackCopyName} ${index}`);
       if (!names.has(candidate)) {
         return candidate;
       }
       index += 1;
     }
 
-    return sanitizeProfileName(`Сборка копия ${Date.now()}`, "Сборка копия");
+    return sanitizeProfileName(`${fallbackCopyName} ${Date.now()}`, fallbackCopyName);
   }
 
   function getSavedProfileById(profileId) {
@@ -242,7 +245,7 @@ export function createProfilesModule(deps) {
     saveActiveProfileIdState();
     renderAll();
     if (announce) {
-      setLastAction(`Активирована сборка "${profile.name}".`);
+      setLastAction(t("action.buildActivated", { name: profile.name }));
     }
   }
 
@@ -322,7 +325,7 @@ export function createProfilesModule(deps) {
     state.isBuildNameEditing = false;
     markBuildDirty({ render: false });
     renderProfileBar();
-    setLastAction(`Название сборки изменено на "${state.activeDraftName}".`);
+    setLastAction(t("action.buildRenamed", { name: state.activeDraftName }));
   }
 
   function cancelBuildNameEditing() {
@@ -363,7 +366,7 @@ export function createProfilesModule(deps) {
     }
     syncDraftMeta(profile, { mode: "new", sourceProfileId: "", isDirty: true });
     renderAll();
-    setLastAction(`Создана новая сборка "${profile.name}".`);
+    setLastAction(t("action.buildCreated", { name: profile.name }));
   }
 
   function saveActiveProfileExplicitly() {
@@ -400,8 +403,8 @@ export function createProfilesModule(deps) {
     applyProfileToState(persistedProfile);
     saveActiveProfileIdState();
     renderAll();
-    showBuildToast("Сборка успешно сохранена");
-    setLastAction(`Сборка "${persistedProfile.name}" сохранена.`);
+    showBuildToast(t("toast.buildSaved"));
+    setLastAction(t("action.buildSaved", { name: persistedProfile.name }));
   }
 
   function copyActiveProfile() {
@@ -432,7 +435,7 @@ export function createProfilesModule(deps) {
       isDirty: true,
     });
     renderAll();
-    setLastAction(`Создана копия сборки "${profile.name}".`);
+    setLastAction(t("action.buildCopied", { name: profile.name }));
   }
 
   function cancelActiveBuildEdits() {
@@ -459,7 +462,7 @@ export function createProfilesModule(deps) {
       isDirty: false,
     });
     renderAll();
-    setLastAction(`Изменения сборки "${cleanSnapshot.name}" отменены.`);
+    setLastAction(t("action.buildCanceled", { name: cleanSnapshot.name }));
   }
 
   function deleteActiveProfile() {
@@ -475,7 +478,7 @@ export function createProfilesModule(deps) {
     state.profiles = state.profiles.filter((entry) => entry.id !== profile.id);
     saveProfilesState();
     activateSavedProfile(state.profiles[0]);
-    setLastAction(`Сборка "${profile.name}" удалена.`);
+    setLastAction(t("action.buildDeleted", { name: profile.name }));
   }
 
   return {

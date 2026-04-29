@@ -24,7 +24,14 @@
   <header class="app-header">
     <section class="panel panel-topbar" aria-label="Панель сборки">
       <div class="profile-toolbar">
-        <div id="build-picker" class="build-picker" aria-label="Выбор сборки"></div>
+        <div class="profile-primary-controls">
+          <div id="language-switch" class="language-switch" aria-label="Переключатель языка">
+            <button id="lang-ru-button" class="language-button is-active" type="button" data-language="ru" aria-pressed="true">RU</button>
+            <button id="lang-en-button" class="language-button" type="button" data-language="en" aria-pressed="false">EN</button>
+          </div>
+
+          <div id="build-picker" class="build-picker" aria-label="Выбор сборки"></div>
+        </div>
 
         <div class="profile-actions">
           <button id="profile-new-button" class="ghost-button" type="button" data-build-new>Новая сборка</button>
@@ -145,7 +152,6 @@
             </section>
           </section>
         </section>
-
       </div>
     </aside>
 
