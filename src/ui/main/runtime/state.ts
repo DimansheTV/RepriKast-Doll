@@ -18,6 +18,7 @@ export function createRuntimeState(deps) {
     getTrophySlotConfig,
     getValidUpgradeLevel,
     matchesEquipmentSlot,
+    normalizeEquipmentSelections,
     createPetSelection,
     getEquippedSlots,
     getFirstAvailableSlotKey,
@@ -176,9 +177,10 @@ function persistLegacyStateSnapshot() {
 }
 
 function sanitizeEquippedState() {
-  const previous = state.equipped && typeof state.equipped === "object" ? state.equipped : {};
+  const rawPrevious = state.equipped && typeof state.equipped === "object" ? state.equipped : {};
+  const previous = normalizeEquipmentSelections(rawPrevious, state.classConfig.classKey);
   const next = {};
-  let changed = false;
+  let changed = previous !== rawPrevious;
   const passiveSlot = getSlotConfig(PASSIVE_MORPH_RING_SLOT_KEY);
 
   Object.entries(previous).forEach(([slotKey, selection]) => {
@@ -195,14 +197,14 @@ function sanitizeEquippedState() {
       normalized &&
       passiveSlot &&
       slotKey !== PASSIVE_MORPH_RING_SLOT_KEY &&
-      matchesEquipmentSlot(passiveSlot, item) &&
+      matchesEquipmentSlot(passiveSlot, item, state.classConfig.classKey, previous) &&
       !next[PASSIVE_MORPH_RING_SLOT_KEY]
     ) {
       next[PASSIVE_MORPH_RING_SLOT_KEY] = normalized;
       changed = true;
     }
 
-    if (!slot || !item || !matchesEquipmentSlot(slot, item)) {
+    if (!slot || !item || !matchesEquipmentSlot(slot, item, state.classConfig.classKey, previous)) {
       changed = true;
       return;
     }

@@ -62,7 +62,11 @@ function scrollCategoryIntoView(slotKey) {
 function equipItem(slotKey, itemId) {
   const slot = getSlotConfig(slotKey);
   const item = state.itemsById.get(String(itemId));
-  if (!slot || !item || !matchesEquipmentSlot(slot, item)) return;
+  if (!slot || !item) return;
+  if (!matchesEquipmentSlot(slot, item, state.classConfig.classKey, state.equipped)) {
+    setLastAction(`${slot.label}: этот предмет сейчас нельзя надеть.`);
+    return;
+  }
 
   state.equipped[slotKey] = {
     itemId: String(item.uid),

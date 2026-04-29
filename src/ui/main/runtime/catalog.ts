@@ -1,5 +1,15 @@
 // @ts-nocheck
-import { SLOT_CONFIG, PASSIVE_MORPH_RING_SLOT_KEY } from "../../../domain/equipment/config";
+import {
+  SLOT_CONFIG,
+  PASSIVE_MORPH_RING_SLOT_KEY,
+  CLASS_RESTRICTED_EQUIPMENT_SLOT_CODES,
+  EQUIPMENT_CLASS_BY_WIKI_ICON,
+  KNIGHT_HALBERD_WEAPON_NAMES,
+  SUMMONER_ORB_WEAPON_NAMES,
+  SUMMONER_SOUL_STONE_SHIELD_NAMES,
+  MAGE_RANGED_WEAPON_NAMES,
+  MAGE_FOLIANT_SHIELD_NAMES,
+} from "../../../domain/equipment/config";
 import { SPHERE_SLOT_CONFIG, SPHERE_CATEGORY_CONFIG, SPHERE_TYPE_ONE_TABS } from "../../../domain/spheres/config";
 import { TROPHY_SLOT_CONFIG } from "../../../domain/trophies/config";
 import { PET_CATEGORY_CONFIG, PET_MERGE_CONFIG, PET_MERGE_TOTAL_LIMIT } from "../../../domain/pets/config";
@@ -205,18 +215,207 @@ function getSlotConfig(slotKey) {
   return SLOT_CONFIG.find((slot) => slot.key === slotKey);
 }
 
-function matchesEquipmentSlot(slot, item) {
-  return Boolean(slot && item && item.slot_code === slot.sourceSlot && (!slot.matches || slot.matches(item)));
+function normalizeEquipmentClassKey(value) {
+  const normalized = normalizeText(value).toLowerCase();
+  return EQUIPMENT_CLASS_BY_WIKI_ICON[normalized] || normalized;
 }
 
-function getItemsForEquipmentSlot(slotKeyOrConfig) {
+function isClassRestrictedEquipmentSlot(slotOrItem) {
+  const slotCode = typeof slotOrItem === "string"
+    ? slotOrItem
+    : slotOrItem?.sourceSlot || slotOrItem?.slot_code || slotOrItem?.slotCode || "";
+  return CLASS_RESTRICTED_EQUIPMENT_SLOT_CODES.has(slotCode);
+}
+
+function getEquipmentClasses(item) {
+  const source = Array.isArray(item?.classes)
+    ? item.classes
+    : Array.isArray(item?.sourceMeta?.classes)
+      ? item.sourceMeta.classes
+      : [];
+  const classes = [...new Set(source.map((entry) => normalizeEquipmentClassKey(entry)).filter(Boolean))];
+
+  if (!classes.length || classes.includes("all")) {
+    return ["all"];
+  }
+
+  return classes.sort();
+}
+
+function isEquipmentAllowedForClass(item, classKey = state.classConfig.classKey) {
+  if (!isClassRestrictedEquipmentSlot(item)) {
+    return true;
+  }
+
+  const classes = getEquipmentClasses(item);
+  return classes.includes("all") || classes.includes(classKey);
+}
+
+function getEquippedItem(equipped, slotKey) {
+  const selection = equipped && typeof equipped === "object" ? equipped[slotKey] : null;
+  return selection ? state.itemsById.get(String(selection.itemId)) || null : null;
+}
+
+function isKnightHalberdWeapon(item) {
+  return item?.slot_code === "weapon" && KNIGHT_HALBERD_WEAPON_NAMES.has(normalizeText(item?.name).toLowerCase());
+}
+
+function isSummonerRestrictedOrbWeapon(item) {
+  return item?.slot_code === "weapon" && SUMMONER_ORB_WEAPON_NAMES.has(normalizeText(item?.name).toLowerCase());
+}
+
+function isSummonerSoulStoneShield(item) {
+  return item?.slot_code === "shield" && SUMMONER_SOUL_STONE_SHIELD_NAMES.has(normalizeText(item?.name).toLowerCase());
+}
+
+function isSummonerNonOrbWeapon(item) {
+  return item?.slot_code === "weapon" && !isSummonerRestrictedOrbWeapon(item);
+}
+
+function isMageRangedWeapon(item) {
+  return item?.slot_code === "weapon" && MAGE_RANGED_WEAPON_NAMES.has(normalizeText(item?.name).toLowerCase());
+}
+
+function isMageFoliantShield(item) {
+  return item?.slot_code === "shield" && MAGE_FOLIANT_SHIELD_NAMES.has(normalizeText(item?.name).toLowerCase());
+}
+
+function isMageNonRangedWeapon(item) {
+  return item?.slot_code === "weapon" && !isMageRangedWeapon(item);
+}
+
+function hasKnightWeaponShieldConflict(slot, item, classKey = state.classConfig.classKey, equipped = state.equipped) {
+  if (classKey !== "knight" || !slot || !item) {
+    return false;
+  }
+
+  if (slot.key === "weapon" && isKnightHalberdWeapon(item)) {
+    return Boolean(getEquippedItem(equipped, "shield"));
+  }
+
+  if (slot.key === "shield") {
+    return isKnightHalberdWeapon(getEquippedItem(equipped, "weapon"));
+  }
+
+  return false;
+}
+
+function hasSummonerWeaponShieldConflict(slot, item, classKey = state.classConfig.classKey, equipped = state.equipped) {
+  if (classKey !== "summoner" || !slot || !item) {
+    return false;
+  }
+
+  if (slot.key === "weapon" && isSummonerRestrictedOrbWeapon(item)) {
+    const shield = getEquippedItem(equipped, "shield");
+    return Boolean(shield && !isSummonerSoulStoneShield(shield));
+  }
+
+  if (slot.key === "weapon" && isSummonerNonOrbWeapon(item)) {
+    return isSummonerSoulStoneShield(getEquippedItem(equipped, "shield"));
+  }
+
+  if (slot.key === "shield") {
+    const weapon = getEquippedItem(equipped, "weapon");
+    if (isSummonerRestrictedOrbWeapon(weapon)) {
+      return !isSummonerSoulStoneShield(item);
+    }
+    if (isSummonerNonOrbWeapon(weapon)) {
+      return isSummonerSoulStoneShield(item);
+    }
+  }
+
+  return false;
+}
+
+function hasMageWeaponShieldConflict(slot, item, classKey = state.classConfig.classKey, equipped = state.equipped) {
+  if (classKey !== "mage" || !slot || !item) {
+    return false;
+  }
+
+  if (slot.key === "weapon" && isMageRangedWeapon(item)) {
+    const shield = getEquippedItem(equipped, "shield");
+    return Boolean(shield && !isMageFoliantShield(shield));
+  }
+
+  if (slot.key === "weapon" && isMageNonRangedWeapon(item)) {
+    return isMageFoliantShield(getEquippedItem(equipped, "shield"));
+  }
+
+  if (slot.key === "shield") {
+    const weapon = getEquippedItem(equipped, "weapon");
+    if (isMageRangedWeapon(weapon)) {
+      return !isMageFoliantShield(item);
+    }
+    if (isMageNonRangedWeapon(weapon)) {
+      return isMageFoliantShield(item);
+    }
+  }
+
+  return false;
+}
+
+function normalizeEquipmentSelections(equipped, classKey = state.classConfig.classKey) {
+  const source = equipped && typeof equipped === "object" ? equipped : {};
+  let next = source;
+
+  if (classKey === "knight") {
+    const weapon = getEquippedItem(next, "weapon");
+    if (isKnightHalberdWeapon(weapon) && next.shield) {
+      next = { ...next };
+      delete next.shield;
+    }
+  }
+
+  if (classKey === "summoner") {
+    const weapon = getEquippedItem(next, "weapon");
+    const shield = getEquippedItem(next, "shield");
+    const hasInvalidOrbShieldPair = isSummonerRestrictedOrbWeapon(weapon) && shield && !isSummonerSoulStoneShield(shield);
+    const hasInvalidNonOrbSoulStonePair = isSummonerNonOrbWeapon(weapon) && shield && isSummonerSoulStoneShield(shield);
+    if (hasInvalidOrbShieldPair || hasInvalidNonOrbSoulStonePair) {
+      if (next === source) {
+        next = { ...next };
+      }
+      delete next.shield;
+    }
+  }
+
+  if (classKey === "mage") {
+    const weapon = getEquippedItem(next, "weapon");
+    const shield = getEquippedItem(next, "shield");
+    const hasInvalidRangedShieldPair = isMageRangedWeapon(weapon) && shield && !isMageFoliantShield(shield);
+    const hasInvalidNonRangedFoliantPair = isMageNonRangedWeapon(weapon) && shield && isMageFoliantShield(shield);
+    if (hasInvalidRangedShieldPair || hasInvalidNonRangedFoliantPair) {
+      if (next === source) {
+        next = { ...next };
+      }
+      delete next.shield;
+    }
+  }
+
+  return next;
+}
+
+function matchesEquipmentSlot(slot, item, classKey = state.classConfig.classKey, equipped = state.equipped) {
+  return Boolean(
+    slot &&
+    item &&
+    item.slot_code === slot.sourceSlot &&
+    (!slot.matches || slot.matches(item)) &&
+    isEquipmentAllowedForClass(item, classKey) &&
+    !hasKnightWeaponShieldConflict(slot, item, classKey, equipped) &&
+    !hasSummonerWeaponShieldConflict(slot, item, classKey, equipped) &&
+    !hasMageWeaponShieldConflict(slot, item, classKey, equipped),
+  );
+}
+
+function getItemsForEquipmentSlot(slotKeyOrConfig, classKey = state.classConfig.classKey, equipped = state.equipped) {
   const slot = typeof slotKeyOrConfig === "string" ? getSlotConfig(slotKeyOrConfig) : slotKeyOrConfig;
   if (!slot) {
     return [];
   }
 
   return state.items
-    .filter((item) => matchesEquipmentSlot(slot, item))
+    .filter((item) => matchesEquipmentSlot(slot, item, classKey, equipped))
     .sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
 
@@ -497,6 +696,11 @@ function createPetUid(item, index) {
     formatUpgradeTitleSuffix,
     getParamsForLevel,
     getSlotConfig,
+    isClassRestrictedEquipmentSlot,
+    getEquipmentClasses,
+    isEquipmentAllowedForClass,
+    isKnightHalberdWeapon,
+    normalizeEquipmentSelections,
     matchesEquipmentSlot,
     getItemsForEquipmentSlot,
     getFirstAvailableSlotKey,

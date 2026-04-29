@@ -16,6 +16,7 @@ export function createMainRenderModule(deps) {
     saveWorkspaceTabState,
     saveSidebarTabState,
     saveClassState,
+    sanitizeEquippedState,
     renderAll,
     collectEquippedStats,
     getDisplayStatsFromMap,
@@ -341,9 +342,9 @@ function bindClassControls() {
 
   select.addEventListener("change", () => {
     state.classConfig.classKey = CLASS_CONFIGS[select.value] ? select.value : "knight";
+    sanitizeEquippedState();
     saveClassState();
-    renderClassPanel();
-    renderBoardTotalStats();
+    renderAll();
   });
 
   decreaseButton.addEventListener("click", () => applyClassLevel(state.classConfig.level - 1));

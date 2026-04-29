@@ -272,6 +272,199 @@ test("main page equipment, pet, sphere and trophy workflows recalculate and pers
   await expect(page.locator("#trophy-slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
 });
 
+test("main page filters class-restricted equipment and removes incompatible gear on class change", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("#class-select").selectOption("ranger");
+  await page.locator('.category-header[data-slot="weapon"]').click();
+
+  const weaponCategory = page.locator('.category-block[data-slot="weapon"]');
+  const rangerWeapon = weaponCategory.locator(".catalog-item", { hasText: "Начальный лук рейнджера" });
+  const assassinWeapon = weaponCategory.locator(".catalog-item", { hasText: "Адские катары" });
+
+  await expect(rangerWeapon).toBeVisible();
+  await expect(assassinWeapon).toHaveCount(0);
+
+  await rangerWeapon.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="weapon"].is-filled')).toHaveCount(1);
+
+  await page.locator("#class-select").selectOption("assassin");
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="weapon"].is-filled')).toHaveCount(0);
+  await expect(weaponCategory.locator(".catalog-item", { hasText: "Адские катары" })).toBeVisible();
+  await expect(weaponCategory.locator(".catalog-item", { hasText: "Начальный лук рейнджера" })).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="ring_left"]').click();
+  await expect(page.locator('.category-block[data-slot="ring_left"] .catalog-item', { hasText: "Блестящее кольцо ловкости" })).toBeVisible();
+});
+
+test("main page keeps knight halberds and shields mutually exclusive", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("#class-select").selectOption("knight");
+  await page.locator('.category-header[data-slot="shield"]').click();
+
+  const shieldCategory = page.locator('.category-block[data-slot="shield"]');
+  const weaponCategory = page.locator('.category-block[data-slot="weapon"]');
+  const bigShield = shieldCategory.locator(".catalog-item", { hasText: "Большой щит" });
+  const knightSword = weaponCategory.locator(".catalog-item", { hasText: "Начальный меч рыцаря" });
+  const halberd = weaponCategory.locator(".catalog-item", { hasText: "Дамасская алебарда" });
+
+  await expect(bigShield).toBeVisible();
+  await bigShield.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(knightSword).toBeVisible();
+  await expect(halberd).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  await bigShield.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(halberd).toBeVisible();
+  await halberd.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="weapon"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  await expect(shieldCategory.locator(".catalog-item", { hasText: "Большой щит" })).toHaveCount(0);
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-unavailable')).toHaveCount(1);
+});
+
+test("main page limits summoner equipment slot to soul stones for restricted orbs", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("#class-select").selectOption("summoner");
+  await page.locator('.category-header[data-slot="shield"]').click();
+
+  const shieldCategory = page.locator('.category-block[data-slot="shield"]');
+  const weaponCategory = page.locator('.category-block[data-slot="weapon"]');
+  const bigShield = shieldCategory.locator(".catalog-item", { hasText: "Большой щит" });
+  const soulStone = shieldCategory.locator(".catalog-item", { hasText: "Магический камень души" });
+  const summonerOrb = weaponCategory.locator(".catalog-item", { hasText: "Начальный орб призывателя" });
+  const nonOrbWeapon = weaponCategory.locator(".catalog-item", { hasText: "Аронди" });
+  const soulStoneItems = [
+    "Камень души Бафомета",
+    "Камень души Ифрита",
+    "Магический камень души",
+    "Мифриловый камень души",
+    "Стальной камень души",
+    "Тренировочные камни души",
+  ];
+
+  await expect(bigShield).toBeVisible();
+  await bigShield.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(summonerOrb).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  await bigShield.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(summonerOrb).toBeVisible();
+  await summonerOrb.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="weapon"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  for (const soulStoneName of soulStoneItems) {
+    await expect(shieldCategory.locator(".catalog-item", { hasText: soulStoneName })).toBeVisible();
+  }
+  await expect(shieldCategory.locator(".catalog-item")).toHaveCount(6);
+  await expect(shieldCategory.locator(".catalog-item", { hasText: "Большой щит" })).toHaveCount(0);
+  await soulStone.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(nonOrbWeapon).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  await soulStone.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(nonOrbWeapon).toBeVisible();
+  await nonOrbWeapon.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="weapon"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  await expect(shieldCategory.locator(".catalog-item", { hasText: "Магический камень души" })).toHaveCount(0);
+  await expect(bigShield).toBeVisible();
+});
+
+test("main page limits mage equipment slot to foliants for ranged mage weapons", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("#class-select").selectOption("mage");
+  await page.locator('.category-header[data-slot="shield"]').click();
+
+  const shieldCategory = page.locator('.category-block[data-slot="shield"]');
+  const weaponCategory = page.locator('.category-block[data-slot="weapon"]');
+  const bigShield = shieldCategory.locator(".catalog-item", { hasText: "Большой щит" });
+  const rangedMageWeapon = weaponCategory.locator(".catalog-item", { hasText: "Начальный посох мага" });
+  const nonRangedMageWeapon = weaponCategory.locator(".catalog-item", { hasText: "Начальный меч мага" });
+  const foliantItems = [
+    "Магический мифриловый фолиант",
+    "Мифриловый фолиант",
+    "Фолиант",
+    "Фолиант Бафомета",
+    "Фолиант Ифрита",
+    "Фолиант новичка",
+  ];
+
+  await expect(bigShield).toBeVisible();
+  await bigShield.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(rangedMageWeapon).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  await bigShield.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(rangedMageWeapon).toBeVisible();
+  await rangedMageWeapon.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="weapon"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  for (const foliantName of foliantItems) {
+    const escapedName = foliantName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    await expect(
+      shieldCategory.locator(".item-name").filter({ hasText: new RegExp(`^${escapedName}$`) }),
+    ).toHaveCount(1);
+  }
+  await expect(shieldCategory.locator(".catalog-item")).toHaveCount(6);
+  await expect(bigShield).toHaveCount(0);
+  const foliantItemId = await shieldCategory.evaluate((element) => {
+    const item = [...element.querySelectorAll(".catalog-item")].find(
+      (entry) => entry.querySelector(".item-name")?.textContent?.trim() === "Фолиант",
+    );
+    return item?.getAttribute("data-id") || "";
+  });
+  await page.locator(`.category-block[data-slot="shield"] .catalog-item[data-id="${foliantItemId}"] .equip-btn`).click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(nonRangedMageWeapon).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  await page.locator(`.category-block[data-slot="shield"] .catalog-item[data-id="${foliantItemId}"] .equip-btn`).click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="shield"].is-filled')).toHaveCount(0);
+
+  await page.locator('.category-header[data-slot="weapon"]').click();
+  await expect(nonRangedMageWeapon).toBeVisible();
+  await nonRangedMageWeapon.locator(".equip-btn").click();
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="weapon"].is-filled')).toHaveCount(1);
+
+  await page.locator('.category-header[data-slot="shield"]').click();
+  await expect(shieldCategory.locator(".catalog-item", { hasText: "Фолиант" })).toHaveCount(0);
+  await expect(bigShield).toBeVisible();
+});
+
 test("compare page preserves baseline math and reverse-stat direction", async ({ page }) => {
   await seedProfiles(
     page,
