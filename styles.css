@@ -1447,6 +1447,18 @@ select.class-control {
   box-shadow: inset 0 0 0 2px rgba(226, 184, 103, 0.42), 0 0 18px rgba(226, 184, 103, 0.14);
 }
 
+.compare-static-trophy-slot {
+  cursor: default;
+  pointer-events: none;
+}
+
+.compare-static-trophy-slot:hover,
+.trophy-slot-cell.is-active .compare-static-trophy-slot {
+  transform: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 .sphere-slot-grid {
   position: absolute;
   inset: 0;
@@ -1492,6 +1504,17 @@ select.class-control {
 
 .sphere-slot-cell.is-active .sphere-slot-button {
   filter: brightness(1.14);
+}
+
+.compare-static-sphere-slot {
+  cursor: default;
+  pointer-events: none;
+}
+
+.compare-static-sphere-slot:hover,
+.sphere-slot-cell.is-active .compare-static-sphere-slot {
+  transform: none;
+  filter: none;
 }
 
 .sphere-slot-cell.is-unavailable {
@@ -1646,6 +1669,17 @@ select.class-control {
 
 .slot-cell.is-unavailable {
   opacity: 0.7;
+}
+
+.compare-static-slot-pin {
+  cursor: default;
+  pointer-events: none;
+}
+
+.compare-static-slot-pin:hover,
+.slot-cell.is-active .compare-static-slot-pin {
+  transform: none;
+  filter: none;
 }
 
 .slot-item-visual {
@@ -2187,11 +2221,26 @@ body[data-page="compare"] .panel {
   width: 100%;
 }
 
+.compare-editor-stage-readonly {
+  grid-template-columns: minmax(0, 1fr);
+  padding-right: 0;
+}
+
 .compare-stage-column {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.compare-readonly-note {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(214, 171, 106, 0.14);
+  background: rgba(255, 238, 205, 0.04);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .compare-equipment-stage,
@@ -2204,6 +2253,23 @@ body[data-page="compare"] .panel {
 .compare-passive-slot-panel {
   display: flex;
   justify-content: flex-end;
+}
+
+.compare-equipment-stage .slot-upgrade-select,
+.compare-passive-slot-panel .slot-upgrade-select {
+  min-width: 74px;
+  min-height: 28px;
+  padding: 3px 6px;
+}
+
+.compare-equipment-stage .upgrade-stepper-static,
+.compare-passive-slot-panel .upgrade-stepper-static {
+  min-width: 48px;
+}
+
+.compare-equipment-stage .upgrade-stepper-value,
+.compare-passive-slot-panel .upgrade-stepper-value {
+  font-size: 12px;
 }
 
 .compare-passive-slot-cell {
