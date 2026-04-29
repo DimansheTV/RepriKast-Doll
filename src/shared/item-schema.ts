@@ -38,6 +38,7 @@ function omitKnownFields(raw) {
     "upgrade_levels",
     "descriptionLines",
     "description_lines",
+    "classes",
     "sourceMeta",
     "wiki_url",
     "source_image_url",

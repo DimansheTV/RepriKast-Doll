@@ -33,7 +33,7 @@ export function createCompareRenderModule(deps) {
     const visibleSlots = app.SLOT_CONFIG.filter((slot) => slot.renderOnDoll !== false);
 
     const slotsHtml = visibleSlots.map((slot) => {
-      const items = app.getItemsForEquipmentSlot(slot);
+      const items = app.getItemsForEquipmentSlot(slot, profile.classConfig.classKey, profile.equipped);
       const selected = profile.equipped[slot.key];
       const item = selected ? app.state.itemsById.get(selected.itemId) : null;
       const level = item ? app.getValidUpgradeLevel(item, selected.upgradeLevel) : null;

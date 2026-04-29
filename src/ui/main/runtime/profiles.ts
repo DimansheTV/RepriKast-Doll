@@ -10,6 +10,10 @@ export function createProfilesModule(deps) {
     saveProfilesState,
     saveActiveProfileIdState,
     persistLegacyStateSnapshot,
+    getSlotConfig,
+    getValidUpgradeLevel,
+    matchesEquipmentSlot,
+    normalizeEquipmentSelections,
     sanitizeEquippedState,
     sanitizeSphereEquippedState,
     sanitizeTrophyEquippedState,
@@ -38,20 +42,42 @@ function sanitizeWorkspaceTab(tabKey) {
   return ["inventory", "pet", "spheres", "trophies"].includes(tabKey) ? tabKey : "inventory";
 }
 
+function normalizeProfileEquipped(equipped, classKey) {
+  const source = normalizeEquipmentSelections(equipped, classKey);
+  const next = {};
+
+  Object.entries(source).forEach(([slotKey, selection]) => {
+    const slot = getSlotConfig(slotKey);
+    const item = state.itemsById.get(String(selection?.itemId));
+
+    if (!slot || !item || !matchesEquipmentSlot(slot, item, classKey, source)) {
+      return;
+    }
+
+    next[slotKey] = {
+      itemId: String(item.uid),
+      upgradeLevel: getValidUpgradeLevel(item, selection?.upgradeLevel),
+    };
+  });
+
+  return next;
+}
+
 function normalizeProfileRecord(profile, index = 0) {
   const fallbackName = getProfileFallbackName(index);
   const classConfig = profile?.classConfig && typeof profile.classConfig === "object"
     ? profile.classConfig
     : {};
+  const normalizedClassConfig = {
+    classKey: CLASS_CONFIGS[classConfig.classKey] ? classConfig.classKey : "knight",
+    level: sanitizeClassLevel(classConfig.level ?? 1),
+  };
 
   return {
     id: String(profile?.id || createProfileId()),
     name: sanitizeProfileName(profile?.name, fallbackName),
-    classConfig: {
-      classKey: CLASS_CONFIGS[classConfig.classKey] ? classConfig.classKey : "knight",
-      level: sanitizeClassLevel(classConfig.level ?? 1),
-    },
-    equipped: profile?.equipped && typeof profile.equipped === "object" ? deepClone(profile.equipped) : {},
+    classConfig: normalizedClassConfig,
+    equipped: normalizeProfileEquipped(profile?.equipped, normalizedClassConfig.classKey),
     sphereEquipped: profile?.sphereEquipped && typeof profile.sphereEquipped === "object" ? deepClone(profile.sphereEquipped) : {},
     trophyEquipped: profile?.trophyEquipped && typeof profile.trophyEquipped === "object" ? deepClone(profile.trophyEquipped) : {},
     petEquipped: profile?.petEquipped && typeof profile.petEquipped === "object" ? deepClone(profile.petEquipped) : null,

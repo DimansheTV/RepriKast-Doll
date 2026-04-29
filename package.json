@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "catalog:build": "node scripts/build-catalog.mjs",
     "catalog:equipment": "node scripts/build-catalog.mjs --kind equipment",
+    "catalog:equipment:classes": "node scripts/data/equipment-class-sync.mjs",
     "catalog:sphere": "node scripts/build-catalog.mjs --kind sphere",
     "catalog:trophy": "node scripts/build-catalog.mjs --kind trophy",
     "catalog:pet": "node scripts/build-catalog.mjs --kind pet",
