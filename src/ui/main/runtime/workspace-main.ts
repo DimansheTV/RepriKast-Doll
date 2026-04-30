@@ -25,6 +25,8 @@ export function createMainWorkspaceModule(deps) {
     getSphereItemsForSlot,
     getSphereCategoryGroups,
     getPrimarySphereSlot,
+    getMorphSphereRequiredLevel,
+    isSphereAllowedForLevel,
     shouldShowSphereUpgrade,
     shouldDisplayUpgradeLevel,
     renderSphereDescription,
@@ -600,6 +602,10 @@ function equipSphere(slotKey, itemId) {
   if (!slot || !item || !slot.matches(item)) {
     return;
   }
+  if (!isSphereAllowedForLevel(item, state.classConfig.level)) {
+    setLastAction(`${slot.label}: этот предмет сейчас нельзя надеть.`);
+    return;
+  }
 
   state.sphereEquipped[slotKey] = {
     itemId: String(item.uid),
@@ -966,7 +972,7 @@ function setSphereTypeOneTab(categoryName) {
   state.activeSphereSlot = tab.slotKey;
   state.expandedSphereCategories = new Set(["sphere_type_1"]);
   renderAll();
-  setLastAction(`Сферы 1-го типа: выбрана вкладка "${tab.label}".`);
+  setLastAction(`Основные сферы: выбрана вкладка "${tab.label}".`);
 }
 
 function renderCategoryList() {
@@ -1065,11 +1071,16 @@ function renderCategoryList() {
           const params = getParamsForLevel(item, previewLevel);
           const previewText = localize(params[0] || item.description || "Без параметров");
           const targetSlot = getPrimarySphereSlot(item);
+          const requiredLevel = getMorphSphereRequiredLevel(item);
+          const canEquip = Boolean(targetSlot) && isSphereAllowedForLevel(item, state.classConfig.level);
           const selectedItemId = targetSlot ? state.sphereEquipped[targetSlot.key]?.itemId : null;
           const isEquipped = String(item.uid) === String(selectedItemId || "");
           const metaParts = [];
           if (showCategory) {
             metaParts.push(localize(item.category));
+          }
+          if (requiredLevel > 0) {
+            metaParts.push(localize(`Уровень экипировки ${requiredLevel}`));
           }
           if (shouldShowSphereUpgrade(item, targetSlot) && shouldDisplayUpgradeLevel(previewLevel)) {
             metaParts.push(previewLevel);
@@ -1090,7 +1101,7 @@ function renderCategoryList() {
                   data-sphere-slot="${escapeHtml(targetSlot?.key || "")}"
                   data-sphere-id="${escapeHtml(item.uid)}"
                   data-action="${isEquipped ? "remove" : "equip"}"
-                  ${targetSlot ? "" : "disabled"}
+                  ${targetSlot && (isEquipped || canEquip) ? "" : "disabled"}
                 >
                   ${escapeHtml(localize(isEquipped ? "Снять" : "Надеть"))}
                 </button>

@@ -13,7 +13,7 @@ import {
 import { SPHERE_SLOT_CONFIG, SPHERE_CATEGORY_CONFIG, SPHERE_TYPE_ONE_TABS } from "../../../domain/spheres/config";
 import { TROPHY_SLOT_CONFIG } from "../../../domain/trophies/config";
 import { PET_CATEGORY_CONFIG, PET_MERGE_CONFIG, PET_MERGE_TOTAL_LIMIT } from "../../../domain/pets/config";
-import { normalizeText, escapeHtml } from "./utils";
+import { normalizeText, escapeHtml, sanitizeClassLevel } from "./utils";
 import {
   parseNumericStat,
   formatStatValue,
@@ -31,6 +31,27 @@ export function createCatalogModule(deps) {
 
 function sortByLocalizedName(left, right) {
   return localizeText(left?.name || "").localeCompare(localizeText(right?.name || ""), getCurrentLanguage());
+}
+
+function getMorphSphereRequiredLevel(item) {
+  const match = String(item?.name || "").match(/(\d+)\+\s*уров/i);
+  return match ? Number(match[1]) : -1;
+}
+
+function isSphereAllowedForLevel(item, classLevel = state.classConfig.level) {
+  const requiredLevel = getMorphSphereRequiredLevel(item);
+  return requiredLevel < 0 || sanitizeClassLevel(classLevel ?? 1) >= requiredLevel;
+}
+
+function sortSphereCategoryItems(left, right, categoryKey) {
+  if (categoryKey === "sphere_type_4") {
+    const levelDelta = getMorphSphereRequiredLevel(right) - getMorphSphereRequiredLevel(left);
+    if (levelDelta !== 0) {
+      return levelDelta;
+    }
+  }
+
+  return sortByLocalizedName(left, right);
 }
 
 function getSphereSlotConfig(slotKey) {
@@ -85,7 +106,7 @@ function getSphereCategoryGroups() {
   return SPHERE_CATEGORY_CONFIG.map((group) => {
     const items = state.sphereItems
       .filter((item) => getCompatibleSphereSlots(item).some((slot) => slot.categoryKey === group.key))
-      .sort(sortByLocalizedName);
+      .sort((left, right) => sortSphereCategoryItems(left, right, group.key));
 
     return {
       ...group,
@@ -684,6 +705,8 @@ function createPetUid(item, index) {
     getTrophySlotConfig,
     getCompatibleSphereSlots,
     getPrimarySphereSlot,
+    getMorphSphereRequiredLevel,
+    isSphereAllowedForLevel,
     shouldShowSphereUpgrade,
     getSphereItemsForSlot,
     getTrophyItemsForSlot,

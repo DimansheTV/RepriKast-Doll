@@ -6,6 +6,7 @@ const UI_MESSAGES: Record<string, { ru: string; en: string }> = {
   "toolbar.buildPanel": { ru: "Панель сборки", en: "Build toolbar" },
   "toolbar.buildPicker": { ru: "Выбор сборки", en: "Build picker" },
   "toolbar.languageSwitcher": { ru: "Переключатель языка", en: "Language switcher" },
+  "toolbar.mobileNav": { ru: "Мобильная навигация", en: "Mobile navigation" },
   "toolbar.renameBuild": { ru: "Переименовать сборку", en: "Rename build" },
   "toolbar.copyBuild": { ru: "Скопировать сборку", en: "Copy build" },
   "toolbar.deleteBuild": { ru: "Удалить сборку", en: "Delete build" },
@@ -16,6 +17,8 @@ const UI_MESSAGES: Record<string, { ru: string; en: string }> = {
   "button.cancel": { ru: "Отменить", en: "Cancel" },
   "button.save": { ru: "Сохранить", en: "Save" },
   "button.compare": { ru: "Сравнение", en: "Compare" },
+  "button.menu": { ru: "Меню", en: "Menu" },
+  "button.close": { ru: "Закрыть", en: "Close" },
   "button.mainMenu": { ru: "Главное меню", en: "Main menu" },
   "button.languageRu": { ru: "RU", en: "RU" },
   "button.languageEn": { ru: "EN", en: "EN" },
@@ -60,6 +63,9 @@ const UI_MESSAGES: Record<string, { ru: string; en: string }> = {
   "board.totalStats": { ru: "Итоговые параметры", en: "Total stats" },
   "workspace.doll": { ru: "Рабочая область куклы", en: "Doll workspace" },
   "workspace.areas": { ru: "Рабочие области", en: "Workspace areas" },
+  "mobileNav.quickJump": { ru: "Быстрый переход", en: "Quick navigation" },
+  "mobileNav.sidebar": { ru: "Левая панель", en: "Left panel" },
+  "mobileNav.workspace": { ru: "Рабочая область", en: "Workspace" },
   "workspace.inventory": { ru: "Инвентарь", en: "Inventory" },
   "workspace.pet": { ru: "Питомцы", en: "Pets" },
   "workspace.spheres": { ru: "Сферы", en: "Spheres" },
@@ -138,10 +144,10 @@ const EXACT_TRANSLATIONS = new Map<string, string>([
   ["Сферы разрушения", "Destruction Spheres"],
   ["Сферы защиты", "Protection Spheres"],
   ["Сферы перевоплощения", "Morph Spheres"],
-  ["Сферы 1-го типа", "Type I Spheres"],
-  ["Сферы 2-го типа", "Type II Spheres"],
-  ["Сферы 3-го типа", "Type III Spheres"],
-  ["Сферы 4-го типа", "Type IV Spheres"],
+  ["Основные сферы", "Core Spheres"],
+  ["Сферы добычи", "Harvest Spheres"],
+  ["Особые сферы", "Special Spheres"],
+  ["Сферы перевоплощения", "Morph Spheres"],
   ["Разрушения", "Destruction"],
   ["Жизни", "Life"],
   ["Мастерства", "Mastery"],
@@ -163,6 +169,8 @@ const EXACT_TRANSLATIONS = new Map<string, string>([
   ["шлем", "helm"],
   ["Плащ", "Cloak"],
   ["плащ", "cloak"],
+  ["Пояс", "Belt"],
+  ["пояс", "belt"],
   ["Доспех", "Armor"],
   ["доспех", "armor"],
   ["Браслет", "Bracelet"],
@@ -209,12 +217,16 @@ const EXACT_TRANSLATIONS = new Map<string, string>([
   ["Точность ближних атак", "Melee accuracy"],
   ["Точность дальних атак", "Ranged accuracy"],
   ["Точность магических атак", "Magic accuracy"],
+  ["Точность", "Accuracy"],
   ["Шанс нанести крит. удар", "Critical hit chance"],
   ["Шанс получить крит. удар", "Incoming critical hit chance"],
+  ["Шанс получить крит. урон", "Incoming critical damage chance"],
   ["Доп. урон при крит. ударе", "Critical damage bonus"],
   ["Получаемый крит. урон", "Incoming critical damage"],
+  ["Получение критического урона", "Incoming critical damage"],
   ["Получаемый урон", "Incoming damage"],
   ["Периодический урон", "Damage over time"],
+  ["Проникающий урон", "Piercing damage"],
   ["Поглощение", "Absorption"],
   ["Уклонение", "Evasion"],
   ["Восстановление HP", "HP regeneration"],
@@ -222,8 +234,29 @@ const EXACT_TRANSLATIONS = new Map<string, string>([
   ["Особое восстановление HP", "Special HP regeneration"],
   ["Особое восстановление MP", "Special MP regeneration"],
   ["Эффект зелий здоровья", "HP potion effect"],
+  ["Увеличение эффекта зелий здоровья", "HP potion effect"],
+  ["Увеличивает эффект зелий здоровья", "HP potion effect"],
+  ["Эффективность уровня зелий", "Potion level effectiveness"],
   ["Уровень зелий здоровья", "HP potion level"],
   ["Увеличение уровня переносимого веса", "Carry weight level"],
+  ["Уровень экипировки", "Required level"],
+  ["Базовый уровень атаки", "Base attack level"],
+  ["Базовый уровень защиты", "Base defense level"],
+  ["Базовый урон", "Base damage"],
+  ["Дополнительный урон при крит. ударе", "Critical damage bonus"],
+  ["Шанс крит. удара", "Critical hit chance"],
+  ["Расход МР", "MP cost"],
+  ["Расход MP", "MP cost"],
+  ["Невидимость", "Invisibility"],
+  ["Ожог", "Burn"],
+  ["Убийца людей", "Human slayer"],
+  ["Могучая сила", "Mighty Strength"],
+  ["Шанс ядовитого удара", "Poison strike chance"],
+  ["По монстрам:", "Against monsters:"],
+  ["Защита от людей ур. 1", "Human defense Lv. 1"],
+  ["Защита от людей ур. 2", "Human defense Lv. 2"],
+  ["Защита от людей", "Human defense"],
+  ["Шанс выпадения трофеев", "Trophy drop chance"],
   ["Вероятность выпадения трофеев", "Trophy drop chance"],
   ["Количество получаемых очков опыта", "Experience gain"],
   ["Вес", "Weight"],
@@ -470,8 +503,113 @@ const EXACT_TRANSLATIONS = new Map<string, string>([
   ["Ожерелье, увеличивающее поглощение от атак противника.", "A necklace that increases absorption against enemy attacks."],
   ["Ремень, увеличивающий поглощение от атак противника.", "A belt that increases absorption against enemy attacks."],
   ["Увеличивает поглощение силой земли.", "Increases earth absorption."],
+  ["Благодаря легкому весу позволяет с легкостью уворачиваться от атак противника.", "Thanks to its light weight, it makes it easy to evade enemy attacks."],
+  ["Благодаря легкому весу, позволяют увернуться от атак противника.", "Thanks to their light weight, they allow you to evade enemy attacks."],
+  ["Благодаря малому весу, позволяют с легкостью уйти от атак противника.", "Thanks to their low weight, they make it easy to avoid enemy attacks."],
+  ["Может наложить на цель эффект:", "Can inflict the following effect on the target:"],
+  ["Может наложить на цель эффект: Все параметры -1", "Can inflict the following effect on the target: All stats -1"],
+  ["Пояс, повышающий интеллект.", "A belt that increases intelligence."],
+  ["Ремень, повышающий ловкость.", "A belt that increases dexterity."],
+  ["Расходуется, в отличие от колчана. Пригодится при тестировании скорости атаки.", "Consumed unlike a quiver. Useful for testing attack speed."],
+  ["Расходуется, в отличие от обычных камней. Пригодится при тестировании скорости атаки.", "Consumed unlike regular soul stones. Useful for testing attack speed."],
+  ["Реген MP от зелий", "MP recovery from potions"],
+  ["Снижает уровень эффекта обнаружения.", "Reduces the detection effect level."],
+  ["Увеличивает параметры МКБ в зависимости от уровня усиления оружия.", "Increases MKB stats depending on the weapon enhancement level."],
+  ["Увеличивает уклонение за счет силы воздуха.", "Increases evasion through the power of air."],
+  ["Чем выше уровень усиления, тем выше уровень магической атаки.", "The higher the enhancement level, the higher the magic attack level."],
+  ["Чем выше уровень усиления, тем выше уровень уклонения.", "The higher the enhancement level, the higher the evasion level."],
+  ["Щит, немного неудобный в использовании из-за своего веса и размера.", "A shield that is slightly awkward to use because of its weight and size."],
   ["Сфера, дарующая своему владельцу гармонию.", "A sphere that grants harmony to its owner."],
   ["Чем выше уровень усиления тем выше уровень поглощения.", "The higher the enhancement level, the higher the absorption level."],
+  ["Щит стража", "Guardian's Shield"],
+  ["Адские катары", "Hell Katars"],
+  ["Адский клинок", "Hell Blade"],
+  ["Алебарда хранителя", "Guardian's Halberd"],
+  ["Англахель", "Anglahel"],
+  ["Аронди", "Arondi"],
+  ["Блестящий меч Солнца", "Shining Sword of the Sun"],
+  ["Боевой топор", "Battle Axe"],
+  ["Бронебойное ружье", "Armor-Piercing Rifle"],
+  ["Вулканический мушкет Метеоса", "Meteos Volcanic Musket"],
+  ["Громовое ружье", "Thunder Rifle"],
+  ["Дамасская алебарда", "Damascus Halberd"],
+  ["Двуручный меч", "Two-Handed Sword"],
+  ["Двуручный меч хранителя", "Guardian's Two-Handed Sword"],
+  ["Джамадхары убийцы", "Killer's Jamadhars"],
+  ["Длинный лук ворона", "Raven Longbow"],
+  ["Железная алебарда", "Iron Halberd"],
+  ["Карабин гномов", "Dwarven Carbine"],
+  ["Катары хранителя", "Guardian's Katars"],
+  ["Клинок отражения", "Reflection Blade"],
+  ["Клинок убийцы", "Killer's Blade"],
+  ["Клинок хранителя", "Guardian's Blade"],
+  ["Композитный лук", "Composite Bow"],
+  ["Копье гвардейца", "Guard's Spear"],
+  ["Кремниевое ружье", "Flintlock Rifle"],
+  ["Крис", "Kris"],
+  ["Кровавые джамадхары", "Bloody Jamadhars"],
+  ["Кровавый клинок", "Bloody Blade"],
+  ["Лук гнома", "Dwarven Bow"],
+  ["Лук кочевника", "Nomad Bow"],
+  ["Лук хранителя", "Guardian's Bow"],
+  ["Магмовый орб Метеоса", "Meteos Magma Orb"],
+  ["Меч Правосудия", "Sword of Justice"],
+  ["Меч жреца", "Priest's Sword"],
+  ["Меч кочевника", "Nomad Sword"],
+  ["Меч лунного света", "Moonlight Sword"],
+  ["Меч точности Рарки", "Rarka's Sword of Precision"],
+  ["Меч хранителя", "Guardian's Sword"],
+  ["Морглай", "Morglay"],
+  ["Начальный клинок ассасина", "Novice Assassin's Blade"],
+  ["Начальный лук рейнджера", "Novice Ranger Bow"],
+  ["Начальный меч мага", "Novice Mage Sword"],
+  ["Начальный меч рыцаря", "Novice Knight Sword"],
+  ["Начальный орб призывателя", "Novice Summoner Orb"],
+  ["Начальный посох мага", "Novice Mage Staff"],
+  ["Огневой лук Метеоса", "Meteos Fire Bow"],
+  ["Огненные катары Метеоса", "Meteos Fire Katars"],
+  ["Огненный клеймор Метеоса", "Meteos Fire Claymore"],
+  ["Орб Зефироса", "Zephyros Orb"],
+  ["Орб Юпитера", "Jupiter Orb"],
+  ["Орб воды", "Orb of Water"],
+  ["Орб души Гайи", "Gaia Soul Orb"],
+  ["Орб кочевника", "Nomad Orb"],
+  ["Орб призывателя", "Summoner's Orb"],
+  ["Орб хранителя", "Guardian's Orb"],
+  ["Охотничий лук", "Hunting Bow"],
+  ["Пламенная рапира Метеоса", "Meteos Flame Rapier"],
+  ["Посох Аллатариэль", "Allatariel Staff"],
+  ["Посох Литейн", "Litein Staff"],
+  ["Посох Югенеса", "Yugenes Staff"],
+  ["Посох кочевника", "Nomad Staff"],
+  ["Пылающий двуручный меч Метеоса", "Meteos Blazing Two-Handed Sword"],
+  ["Раскаленный ятаган Метеоса", "Meteos Searing Scimitar"],
+  ["Ружье хранителя", "Guardian's Rifle"],
+  ["Сабля хранителя", "Guardian's Saber"],
+  ["Священный скипетр Метеоса", "Meteos Sacred Scepter"],
+  ["Скипетр Мудрости", "Scepter of Wisdom"],
+  ["Скипетр жреца", "Priest's Scepter"],
+  ["Слэшер", "Slasher"],
+  ["Стальная алебарда Метеоса", "Meteos Steel Halberd"],
+  ["Стальное ружье", "Steel Rifle"],
+  ["Хитиновая сабля", "Chitin Saber"],
+  ["Эльфийский лук", "Elven Bow"],
+  ["Эльфийский меч", "Elven Sword"],
+  ["Кольцо грозового дракона", "Ring of the storm dragon"],
+  ["Кольцо перевоплощения (легендарное)", "Morph Ring (Legendary)"],
+  ["Кольцо перевоплощения (редкое)", "Morph Ring (Rare)"],
+  ["Кольцо перевоплощения (эпич.) (врем.)", "Morph Ring (Epic) (Temporary)"],
+  ["Кольцо перевоплощения (эпическое)", "Morph Ring (Epic)"],
+  ["Кольцо преграды", "Ring of barrier"],
+  ["Кольцо разрушения", "Ring of destruction"],
+  ["Кольцо славы", "Ring of glory"],
+  ["Кольцо смелости", "Ring of courage"],
+  ["Кольцо смертельной атаки", "Ring of deadly attack"],
+  ["Кольцо тайфуна", "Ring of typhoon"],
+  ["Кольцо химеры", "Ring of the chimera"],
+  ["Кольцо холода", "Ring of cold"],
+  ["Кольцо шипастого дракона", "Ring of the spiked dragon"],
+  ["Мана", "Mana"],
 ]);
 
 const REGEX_TRANSLATIONS: Array<[RegExp, string]> = [
@@ -501,9 +639,17 @@ const REGEX_TRANSLATIONS: Array<[RegExp, string]> = [
   [/\bпитомец\b/giu, "pet"],
   [/\bвыбран\b/giu, "selected"],
   [/\bснят\b/giu, "removed"],
-  [/\bСферы 1-го типа: выбрана вкладка\b/gu, 'Type I spheres: selected tab'],
+  [/\bОсновные сферы: выбрана вкладка\b/gu, "Core spheres: selected tab"],
   [/\bГлавное меню\b/giu, "Main menu"],
 ];
+
+const REVERSE_EXACT_TRANSLATIONS = new Map<string, string>();
+
+for (const [source, target] of EXACT_TRANSLATIONS.entries()) {
+  if (!REVERSE_EXACT_TRANSLATIONS.has(target)) {
+    REVERSE_EXACT_TRANSLATIONS.set(target, source);
+  }
+}
 
 function interpolate(template: string, params: Record<string, string | number> = {}): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? ""));
@@ -550,6 +696,10 @@ function translateExact(value: string): string | null {
   return EXACT_TRANSLATIONS.get(value) || null;
 }
 
+function reverseTranslateExact(value: string): string | null {
+  return REVERSE_EXACT_TRANSLATIONS.get(value) || null;
+}
+
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -569,6 +719,21 @@ function translateCompositeText(value: string): string {
   return result;
 }
 
+function reverseTranslateCompositeText(value: string): string {
+  let result = value;
+  const entries = [...EXACT_TRANSLATIONS.entries()].sort((left, right) => right[1].length - left[1].length);
+
+  for (const [source, target] of entries) {
+    if (!result.includes(target)) {
+      continue;
+    }
+
+    result = result.replace(new RegExp(escapeRegex(target), "gu"), source);
+  }
+
+  return result;
+}
+
 function translateStatLine(value: string): string | null {
   const match = value.match(/^(.*?)\s*([+-])\s*(\d+(?:[.,]\d+)?)\s*(%)?$/u);
   if (!match) {
@@ -580,6 +745,16 @@ function translateStatLine(value: string): string | null {
     return null;
   }
   return `${translatedLabel} ${match[2]}${match[3]}${match[4] || ""}`.trim();
+}
+
+function reverseTranslateStatLine(value: string): string | null {
+  const match = value.match(/^(.*?)\s*([+-])\s*(\d+(?:[.,]\d+)?)\s*(%)?$/u);
+  if (!match) {
+    return null;
+  }
+
+  const translatedLabel = reverseTranslateExact(match[1].trim()) || reverseTranslateCompositeText(match[1].trim());
+  return hasCyrillic(translatedLabel) ? `${translatedLabel} ${match[2]}${match[3]}${match[4] || ""}`.trim() : null;
 }
 
 const SEGMENT_TRANSLATION_ENTRIES = [...EXACT_TRANSLATIONS.entries()]
@@ -691,6 +866,20 @@ function translateTextFragment(value: string): string {
   return translateCompositeText(trimmed);
 }
 
+function reverseTranslateTextFragment(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  const exact = reverseTranslateExact(trimmed);
+  if (exact) {
+    return exact;
+  }
+
+  return reverseTranslateCompositeText(trimmed);
+}
+
 function translateTemplateText(value: string): string | null {
   const morphLevelMatch = value.match(/^(Сфера перевоплощения)\s+(\d+)\+\s+уровня$/u);
   if (morphLevelMatch) {
@@ -742,6 +931,56 @@ function translateTemplateText(value: string): string | null {
     return hasCyrillic(translatedType) || hasCyrillic(translatedTarget)
       ? null
       : buildItemIncreaseSentence(translatedType, translatedTarget);
+  }
+
+  const raisingItemMatch = value.match(/^(Пояс|Ремень),\s+повышающ(?:ий|ая|ее)\s+(.+)\.$/u);
+  if (raisingItemMatch) {
+    const [, itemType, boostTarget] = raisingItemMatch;
+    const translatedType = translateTextFragment(itemType);
+    const translatedTarget = translateTextFragment(boostTarget);
+    return hasCyrillic(translatedType) || hasCyrillic(translatedTarget)
+      ? null
+      : buildItemIncreaseSentence(translatedType, translatedTarget);
+  }
+
+  const baseAttackLevelMatch = value.match(/^Базовый уровень атаки\s+([+-]?\d+(?:[.,]\d+)?)$/u);
+  if (baseAttackLevelMatch) {
+    return `Base attack level ${baseAttackLevelMatch[1]}`;
+  }
+
+  const baseDefenseLevelMatch = value.match(/^Базовый уровень защиты:\s*([+-]?\d+(?:[.,]\d+)?)$/u);
+  if (baseDefenseLevelMatch) {
+    return `Base defense level: ${baseDefenseLevelMatch[1]}`;
+  }
+
+  const baseDamageMatch = value.match(/^Базовый урон\s+([+-]?\d+(?:[.,]\d+)?)$/u);
+  if (baseDamageMatch) {
+    return `Base damage ${baseDamageMatch[1]}`;
+  }
+
+  const invisibilityMatch = value.match(/^Невидимость\s+(\d+)\s*ур\.$/u);
+  if (invisibilityMatch) {
+    return `Invisibility Lv. ${invisibilityMatch[1]}`;
+  }
+
+  const mightyStrengthMatch = value.match(/^Могучая сила,\s*ур\.\s*(\d+)$/u);
+  if (mightyStrengthMatch) {
+    return `Mighty Strength, Lv. ${mightyStrengthMatch[1]}`;
+  }
+
+  const humanSlayerMatch = value.match(/^Убийца людей\s+ур\.\s*(\d+)$/u);
+  if (humanSlayerMatch) {
+    return `Human slayer Lv. ${humanSlayerMatch[1]}`;
+  }
+
+  const humanDefenseMatch = value.match(/^Защита от людей\s+ур\.\s*(\d+)$/u);
+  if (humanDefenseMatch) {
+    return `Human defense Lv. ${humanDefenseMatch[1]}`;
+  }
+
+  const burnMatch = value.match(/^Ожог\s+\(([+-]?\d+(?:[.,]\d+)?)\s*HP\s+в\s+секунду\)$/u);
+  if (burnMatch) {
+    return `Burn (${burnMatch[1]} HP per second)`;
   }
 
   const raceRewardMatch = value.match(/^Награда за\s+(\d+)-е\s+место\s+в\s+гонках\.$/u);
@@ -804,14 +1043,111 @@ function translateTemplateText(value: string): string | null {
   return null;
 }
 
+function reverseTranslateTemplateText(value: string): string | null {
+  const morphLevelMatch = value.match(/^(Morph Sphere) Lv\. (\d+)\+$/u);
+  if (morphLevelMatch) {
+    const [, baseName, level] = morphLevelMatch;
+    const translatedBase = reverseTranslateTextFragment(baseName);
+    return hasCyrillic(translatedBase) ? `${translatedBase} ${level}+ уровня` : null;
+  }
+
+  const leveledNameMatch = value.match(/^(.*?) Lv\. (\d+)(?: \((.+)\))?$/u);
+  if (leveledNameMatch) {
+    const [, baseName, level, rarity] = leveledNameMatch;
+    const translatedBase = reverseTranslateTextFragment(baseName);
+    const translatedRarity = rarity ? reverseTranslateTextFragment(rarity) : "";
+    if (!hasCyrillic(translatedBase) || (translatedRarity && !hasCyrillic(translatedRarity))) {
+      return null;
+    }
+    return translatedRarity
+      ? `${translatedBase} ур. ${level} (${translatedRarity})`
+      : `${translatedBase} ур. ${level}`;
+  }
+
+  const grantsOwnerMatch = value.match(/^Grants its owner (.+)\.$/u);
+  if (grantsOwnerMatch) {
+    const translatedTarget = reverseTranslateTextFragment(grantsOwnerMatch[1]).toLowerCase();
+    return hasCyrillic(translatedTarget) ? `Сфера, дарующая своему владельцу ${translatedTarget}.` : null;
+  }
+
+  const grantsYouMatch = value.match(/^Grants you (.+)\.$/u);
+  if (grantsYouMatch) {
+    const translatedTarget = reverseTranslateTextFragment(grantsYouMatch[1]).toLowerCase();
+    return hasCyrillic(translatedTarget) ? `Сфера, придающая вам ${translatedTarget}.` : null;
+  }
+
+  const filledMatch = value.match(/^A sphere filled with (.+)\.$/u);
+  if (filledMatch) {
+    const translatedTarget = reverseTranslateTextFragment(filledMatch[1]).toLowerCase();
+    return hasCyrillic(translatedTarget) ? `Сфера, наполненная ${translatedTarget}.` : null;
+  }
+
+  const fillsYouMatch = value.match(/^A sphere that fills you with (.+)\.$/u);
+  if (fillsYouMatch) {
+    const translatedTarget = reverseTranslateTextFragment(fillsYouMatch[1]).toLowerCase();
+    return hasCyrillic(translatedTarget) ? `Сфера, наполняющая вас ${translatedTarget}.` : null;
+  }
+
+  const fillsHeartMatch = value.match(/^A sphere that fills the heart with (.+)\.$/u);
+  if (fillsHeartMatch) {
+    const translatedTarget = reverseTranslateTextFragment(fillsHeartMatch[1]).toLowerCase();
+    return hasCyrillic(translatedTarget) ? `Сфера, наполняющая сердце ${translatedTarget}.` : null;
+  }
+
+  const withAuraMatch = value.match(/^A sphere with (.+)\.$/u);
+  if (withAuraMatch) {
+    const translatedTarget = reverseTranslateTextFragment(withAuraMatch[1]).toLowerCase();
+    return hasCyrillic(translatedTarget) ? `Сфера с ${translatedTarget}.` : null;
+  }
+
+  const powerMatch = value.match(/^Increases (.+) through the power of (.+)\.$/u);
+  if (powerMatch) {
+    const translatedValue = reverseTranslateTextFragment(powerMatch[1]).toLowerCase();
+    const translatedSource = reverseTranslateTextFragment(powerMatch[2]).toLowerCase();
+    return hasCyrillic(translatedValue) && hasCyrillic(translatedSource)
+      ? `Увеличивает ${translatedValue} силой ${translatedSource}.`
+      : null;
+  }
+
+  const enhancementMatch = value.match(/^The higher the enhancement level, the higher the (.+) level\.$/u);
+  if (enhancementMatch) {
+    const translatedTarget = reverseTranslateTextFragment(enhancementMatch[1]).toLowerCase();
+    return hasCyrillic(translatedTarget)
+      ? `Чем выше уровень усиления тем выше уровень ${translatedTarget}.`
+      : null;
+  }
+
+  return null;
+}
+
 function applyRegexTranslations(value: string): string {
   return REGEX_TRANSLATIONS.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), value);
 }
 
 export function localizeText(value: unknown, language: Language): string {
   const decoded = decodeMojibakeText(value);
-  if (!decoded || language === "ru") {
+  if (!decoded) {
     return decoded;
+  }
+
+  if (language === "ru") {
+    const exact = reverseTranslateExact(decoded);
+    if (exact) {
+      return exact;
+    }
+
+    const statLine = reverseTranslateStatLine(decoded);
+    if (statLine) {
+      return statLine;
+    }
+
+    const templated = reverseTranslateTemplateText(decoded);
+    if (templated) {
+      return templated;
+    }
+
+    const translated = reverseTranslateCompositeText(decoded);
+    return hasCyrillic(translated) ? translated : decoded;
   }
 
   if (!/[А-Яа-яЁё]/u.test(decoded)) {

@@ -16,6 +16,7 @@ export function createRuntimeState(deps) {
     markBuildDirty,
     getSlotConfig,
     getSphereSlotConfig,
+    isSphereAllowedForLevel,
     getTrophySlotConfig,
     getValidUpgradeLevel,
     matchesEquipmentSlot,
@@ -243,7 +244,7 @@ export function createRuntimeState(deps) {
     Object.entries(previous).forEach(([slotKey, selection]) => {
       const slot = getSphereSlotConfig(slotKey);
       const item = state.sphereItemsById.get(String(selection?.itemId));
-      if (!slot || !item || !slot.matches(item)) {
+      if (!slot || !item || !slot.matches(item) || !isSphereAllowedForLevel(item, state.classConfig.level)) {
         changed = true;
         return;
       }

@@ -32,6 +32,7 @@ export function createAppRuntime(context) {
     markBuildDirty: (...args) => refs.markBuildDirty(...args),
     getSlotConfig: (...args) => catalogModule.getSlotConfig(...args),
     getSphereSlotConfig: (...args) => catalogModule.getSphereSlotConfig(...args),
+    isSphereAllowedForLevel: (...args) => catalogModule.isSphereAllowedForLevel(...args),
     getTrophySlotConfig: (...args) => catalogModule.getTrophySlotConfig(...args),
     getValidUpgradeLevel: (...args) => catalogModule.getValidUpgradeLevel(...args),
     matchesEquipmentSlot: (...args) => catalogModule.matchesEquipmentSlot(...args),
@@ -75,8 +76,10 @@ export function createAppRuntime(context) {
     saveActiveProfileIdState: stateModule.saveActiveProfileIdState,
     persistLegacyStateSnapshot: stateModule.persistLegacyStateSnapshot,
     getSlotConfig: catalogModule.getSlotConfig,
+    getSphereSlotConfig: catalogModule.getSphereSlotConfig,
     getValidUpgradeLevel: catalogModule.getValidUpgradeLevel,
     matchesEquipmentSlot: catalogModule.matchesEquipmentSlot,
+    isSphereAllowedForLevel: catalogModule.isSphereAllowedForLevel,
     normalizeEquipmentSelections: catalogModule.normalizeEquipmentSelections,
     sanitizeEquippedState: stateModule.sanitizeEquippedState,
     sanitizeSphereEquippedState: stateModule.sanitizeSphereEquippedState,
@@ -125,6 +128,7 @@ export function createAppRuntime(context) {
     saveSidebarTabState: stateModule.saveSidebarTabState,
     saveClassState: stateModule.saveClassState,
     sanitizeEquippedState: stateModule.sanitizeEquippedState,
+    sanitizeSphereEquippedState: stateModule.sanitizeSphereEquippedState,
     renderAll: (...args) => refs.renderAll(...args),
     collectEquippedStats: statsModule.collectEquippedStats,
     getDisplayStatsFromMap: statsModule.getDisplayStatsFromMap,
@@ -136,6 +140,7 @@ export function createAppRuntime(context) {
     parseNumericStat: statsModule.parseNumericStat,
     escapeHtml,
     formatUpgradeSuffix: catalogModule.formatUpgradeSuffix,
+    getMorphSphereRequiredLevel: catalogModule.getMorphSphereRequiredLevel,
     shouldShowSphereUpgrade: catalogModule.shouldShowSphereUpgrade,
     getLevelKeys: catalogModule.getLevelKeys,
     CLASS_CONFIGS,
@@ -168,6 +173,8 @@ export function createAppRuntime(context) {
     getSphereItemsForSlot: catalogModule.getSphereItemsForSlot,
     getSphereCategoryGroups: catalogModule.getSphereCategoryGroups,
     getPrimarySphereSlot: catalogModule.getPrimarySphereSlot,
+    getMorphSphereRequiredLevel: catalogModule.getMorphSphereRequiredLevel,
+    isSphereAllowedForLevel: catalogModule.isSphereAllowedForLevel,
     shouldShowSphereUpgrade: catalogModule.shouldShowSphereUpgrade,
     shouldDisplayUpgradeLevel: catalogModule.shouldDisplayUpgradeLevel,
     renderSphereDescription: renderModule.renderSphereDescription,
@@ -243,6 +250,7 @@ export function createAppRuntime(context) {
       renderModule.bindSidebarTabs();
       renderModule.bindStatsSourceTabs();
       renderModule.bindWorkspaceTabs();
+      renderModule.bindMobileNav();
       renderModule.bindClassControls();
     } catch (err) {
       const categoryList = document.getElementById("category-list");

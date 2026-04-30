@@ -25,9 +25,24 @@
     <section class="panel panel-topbar" aria-label="Панель сборки">
       <div class="profile-toolbar">
         <div class="profile-primary-controls">
+          <button
+            id="mobile-nav-toggle"
+            class="mobile-nav-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="mobile-nav-drawer"
+            aria-label="Мобильная навигация"
+          >
+            <span class="mobile-nav-toggle-icon" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+            <span class="mobile-nav-toggle-text">Меню</span>
+          </button>
+
           <div id="language-switch" class="language-switch" aria-label="Переключатель языка">
-            <button id="lang-ru-button" class="language-button is-active" type="button" data-language="ru" aria-pressed="true">RU</button>
-            <button id="lang-en-button" class="language-button" type="button" data-language="en" aria-pressed="false">EN</button>
+            <button id="language-cycle-button" class="language-button" type="button" data-language="en">EN</button>
           </div>
 
           <div id="build-picker" class="build-picker" aria-label="Выбор сборки"></div>
@@ -41,6 +56,9 @@
       </div>
     </section>
   </header>
+
+  <div id="mobile-nav-backdrop" class="mobile-nav-backdrop" hidden></div>
+  <aside id="mobile-nav-drawer" class="mobile-nav-drawer" aria-hidden="true"></aside>
 
   <div class="app-shell">
     <aside class="panel panel-sidebar">
