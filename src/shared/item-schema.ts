@@ -1,4 +1,5 @@
 import { decodeMojibakeText } from "./i18n";
+import { normalizeCatalogLocales } from "./catalog-locales";
 
 const REQUIRED_ITEM_FIELDS = [
   "kind",
@@ -42,7 +43,11 @@ function omitKnownFields(raw) {
     "upgrade_levels",
     "descriptionLines",
     "description_lines",
+    "description",
     "classes",
+    "legacyIds",
+    "legacy_ids",
+    "locales",
     "sourceMeta",
     "wiki_url",
     "source_image_url",
@@ -58,12 +63,17 @@ export function normalizeCatalogItem(kind, rawItem, index = 0, options: Normaliz
   const descriptionLines = normalizeLines(rawItem?.descriptionLines || rawItem?.description_lines);
   const upgradeLevels = normalizeUpgradeLevels(rawItem?.upgradeLevels || rawItem?.upgrade_levels);
   const id = rawItem?.id ?? `${kind}-${index}`;
+  const locales = normalizeCatalogLocales(rawItem || {});
+  const legacyIds = Array.isArray(rawItem?.legacyIds || rawItem?.legacy_ids)
+    ? [...new Set((rawItem?.legacyIds || rawItem?.legacy_ids).map((entry) => String(entry || "").trim()).filter(Boolean))]
+    : [];
 
   return {
     ...rawItem,
     kind,
     id,
     name: decodeMojibakeText(rawItem?.name || ""),
+    description: decodeMojibakeText(rawItem?.description || descriptionLines[0] || ""),
     slotCode,
     slot_code: slotCode,
     image: resolveImageAssetPath(rawItem?.image || ""),
@@ -71,6 +81,9 @@ export function normalizeCatalogItem(kind, rawItem, index = 0, options: Normaliz
     upgrade_levels: upgradeLevels,
     descriptionLines,
     description_lines: descriptionLines,
+    locales,
+    legacyIds,
+    legacy_ids: legacyIds,
     sourceMeta: {
       wikiUrl: String(rawItem?.wiki_url || rawItem?.sourceMeta?.wikiUrl || ""),
       sourceImageUrl: String(rawItem?.source_image_url || rawItem?.sourceMeta?.sourceImageUrl || ""),

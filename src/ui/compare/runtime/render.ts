@@ -15,6 +15,26 @@ export function createCompareRenderModule(deps) {
     return app.localizeText(value);
   }
 
+  function catalogName(item) {
+    return app.getLocalizedCatalogField(item, "name", { fallbackToRu: true });
+  }
+
+  function catalogLines(item) {
+    return app.getLocalizedCatalogLines(item, "descriptionLines", { fallbackToRu: true });
+  }
+
+  function catalogCategory(item) {
+    return app.getLocalizedCatalogField(item, "category", { fallbackToRu: true });
+  }
+
+  function catalogVariant(item) {
+    return app.getLocalizedCatalogField(item, "variant", { fallbackToRu: true });
+  }
+
+  function catalogElement(item) {
+    return app.getLocalizedCatalogField(item, "element", { fallbackToRu: true });
+  }
+
   function applyStaticLocalization() {
     document.documentElement.lang = app.getCurrentLanguage();
 
@@ -71,11 +91,11 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
+        ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(catalogName(item))}" loading="lazy">`
         : "";
       const upgradeControl = item ? renderStaticUpgradeBadge("slot-upgrade-select", level) : "";
       const slotTitle = item
-        ? `${localize(slot.label)}: ${localize(item.name)}${app.formatUpgradeTitleSuffix(level)}`
+        ? `${localize(slot.label)}: ${catalogName(item)}${app.formatUpgradeTitleSuffix(level)}`
         : localize(slot.label);
 
       return `
@@ -104,7 +124,7 @@ export function createCompareRenderModule(deps) {
     }
 
     const passiveImageHtml = passiveItem?.image
-      ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(localize(passiveItem.name))}" loading="lazy">`
+      ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(catalogName(passiveItem))}" loading="lazy">`
       : "";
     const passiveUpgradeControl = passiveItem ? renderStaticUpgradeBadge("slot-upgrade-select", passiveLevel) : "";
     const passiveSlotHtml = passiveItem && passiveSlot
@@ -114,8 +134,8 @@ export function createCompareRenderModule(deps) {
             <div
               class="slot-pin compare-static-slot-pin"
               role="img"
-              aria-label="${app.escapeHtml(`${localize(passiveSlot.label)}: ${localize(passiveItem.name)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
-              title="${app.escapeHtml(`${localize(passiveSlot.label)}: ${localize(passiveItem.name)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              aria-label="${app.escapeHtml(`${localize(passiveSlot.label)}: ${catalogName(passiveItem)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              title="${app.escapeHtml(`${localize(passiveSlot.label)}: ${catalogName(passiveItem)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
             >
               <span class="slot-item-visual" aria-hidden="true">${passiveImageHtml}</span>
             </div>
@@ -152,11 +172,11 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
+        ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(catalogName(item))}" loading="lazy">`
         : "";
       const upgradeControl = item && showUpgrade ? renderStaticUpgradeBadge("sphere-upgrade-select", level) : "";
       const slotTitle = item
-        ? `${localize(slot.label)}: ${localize(item.name)}${showUpgrade ? app.formatUpgradeTitleSuffix(level) : ""}`
+        ? `${localize(slot.label)}: ${catalogName(item)}${showUpgrade ? app.formatUpgradeTitleSuffix(level) : ""}`
         : localize(slot.label);
 
       return `
@@ -196,11 +216,11 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
+        ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(catalogName(item))}" loading="lazy">`
         : "";
       const upgradeControl = item ? renderStaticUpgradeBadge("trophy-upgrade-select", level) : "";
       const slotTitle = item
-        ? `${localize(slot.label)}: ${localize(item.name)}${app.formatUpgradeTitleSuffix(level)}`
+        ? `${localize(slot.label)}: ${catalogName(item)}${app.formatUpgradeTitleSuffix(level)}`
         : localize(slot.label);
 
       return `
@@ -270,8 +290,9 @@ export function createCompareRenderModule(deps) {
     }
 
     const { pet, stats, effects } = petData;
-    const subtitle = localize(app.normalizeText(pet.description_lines?.[0]) || `${pet.element} (${pet.variant})`);
-    const categoryLabel = localize(app.PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label || pet.category);
+    const subtitle = app.normalizeText(catalogLines(pet)[0] || `${catalogElement(pet)} (${catalogVariant(pet)})`);
+    const categoryConfigLabel = app.PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label;
+    const categoryLabel = categoryConfigLabel ? localize(categoryConfigLabel) : catalogCategory(pet);
 
     return `
       <section class="pet-column compare-stage-column">
@@ -279,12 +300,12 @@ export function createCompareRenderModule(deps) {
           <article class="pet-card">
             <div class="pet-card-head">
               <div class="pet-card-portrait">
-                <img src="${app.escapeHtml(pet.image)}" alt="${app.escapeHtml(localize(pet.name))}" loading="lazy">
+                <img src="${app.escapeHtml(pet.image)}" alt="${app.escapeHtml(catalogName(pet))}" loading="lazy">
               </div>
               <div class="pet-card-copy">
                 <div class="pet-card-kicker">${app.escapeHtml(categoryLabel)}</div>
                 <div class="pet-card-title-row">
-                  <h3>${app.escapeHtml(localize(pet.name))}</h3>
+                  <h3>${app.escapeHtml(catalogName(pet))}</h3>
                 </div>
                 <div class="pet-card-meta">${app.escapeHtml(subtitle)}</div>
               </div>
