@@ -11,8 +11,10 @@ export function createProfilesModule(deps) {
     saveActiveProfileIdState,
     persistLegacyStateSnapshot,
     getSlotConfig,
+    getSphereSlotConfig,
     getValidUpgradeLevel,
     matchesEquipmentSlot,
+    isSphereAllowedForLevel,
     normalizeEquipmentSelections,
     sanitizeEquippedState,
     sanitizeSphereEquippedState,
@@ -72,6 +74,27 @@ export function createProfilesModule(deps) {
     return next;
   }
 
+  function normalizeProfileSphereEquipped(sphereEquipped, classLevel) {
+    const source = sphereEquipped && typeof sphereEquipped === "object" ? sphereEquipped : {};
+    const next = {};
+
+    Object.entries(source).forEach(([slotKey, selection]) => {
+      const slot = getSphereSlotConfig(slotKey);
+      const item = state.sphereItemsById.get(String(selection?.itemId));
+
+      if (!slot || !item || !slot.matches(item) || !isSphereAllowedForLevel(item, classLevel)) {
+        return;
+      }
+
+      next[slotKey] = {
+        itemId: String(item.uid),
+        upgradeLevel: getValidUpgradeLevel(item, selection?.upgradeLevel),
+      };
+    });
+
+    return next;
+  }
+
   function normalizeProfileRecord(profile, index = 0) {
     const fallbackName = getProfileFallbackName(index);
     const classConfig = profile?.classConfig && typeof profile.classConfig === "object"
@@ -87,7 +110,7 @@ export function createProfilesModule(deps) {
       name: sanitizeProfileName(profile?.name, fallbackName),
       classConfig: normalizedClassConfig,
       equipped: normalizeProfileEquipped(profile?.equipped, normalizedClassConfig.classKey),
-      sphereEquipped: profile?.sphereEquipped && typeof profile.sphereEquipped === "object" ? deepClone(profile.sphereEquipped) : {},
+      sphereEquipped: normalizeProfileSphereEquipped(profile?.sphereEquipped, normalizedClassConfig.level),
       trophyEquipped: profile?.trophyEquipped && typeof profile.trophyEquipped === "object" ? deepClone(profile.trophyEquipped) : {},
       petEquipped: profile?.petEquipped && typeof profile.petEquipped === "object" ? deepClone(profile.petEquipped) : null,
       activeWorkspaceTab: sanitizeWorkspaceTab(profile?.activeWorkspaceTab),
