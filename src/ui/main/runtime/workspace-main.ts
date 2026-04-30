@@ -35,7 +35,9 @@ export function createMainWorkspaceModule(deps) {
     renderTrophyDescription,
     saveTrophyEquippedState,
     getPetCategoryGroups,
-    getParamsForLevel,
+    getLocalizedCatalogField,
+    getLocalizedCatalogLines,
+    getLocalizedCatalogUpgradeLines,
     normalizeText,
     renderItemIcon,
     renderStatRows,
@@ -57,6 +59,30 @@ export function createMainWorkspaceModule(deps) {
 
 function localize(value) {
   return localizeText(value);
+}
+
+function catalogName(item) {
+  return getLocalizedCatalogField(item, "name", { fallbackToRu: true });
+}
+
+function catalogLines(item) {
+  return getLocalizedCatalogLines(item, "descriptionLines", { fallbackToRu: true });
+}
+
+function catalogUpgradeLines(item, level) {
+  return getLocalizedCatalogUpgradeLines(item, level, { fallbackToRu: true });
+}
+
+function catalogCategory(item) {
+  return getLocalizedCatalogField(item, "category", { fallbackToRu: true });
+}
+
+function catalogVariant(item) {
+  return getLocalizedCatalogField(item, "variant", { fallbackToRu: true });
+}
+
+function catalogElement(item) {
+  return getLocalizedCatalogField(item, "element", { fallbackToRu: true });
 }
 
 function scrollCategoryIntoView(slotKey) {
@@ -82,7 +108,7 @@ function equipItem(slotKey, itemId) {
   state.expandedCategories = new Set([slotKey]);
   saveEquippedState();
   renderAll();
-  setLastAction(`${slot.label}: надет предмет "${item.name}".`);
+  setLastAction(`${slot.label}: надет предмет "${catalogName(item)}".`);
 }
 
 function clearSlot(slotKey) {
@@ -204,12 +230,12 @@ function renderDollSlots() {
     if (!items.length) classes.push("is-unavailable");
 
     const ariaText = item
-      ? `${localize(slot.label)}: ${localize(item.name)}${formatUpgradeTitleSuffix(level)}`
+      ? `${localize(slot.label)}: ${catalogName(item)}${formatUpgradeTitleSuffix(level)}`
       : items.length
         ? `${localize(slot.label)}: ${localize(`${items.length} предметов`)}`
         : `${localize(slot.label)}: ${localize("данных нет")}`;
     const imageHtml = item?.image
-      ? `<img class="slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(localize(item.name))}" loading="lazy">`
+      ? `<img class="slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(catalogName(item))}" loading="lazy">`
       : "";
     const upgradeControl = item
       ? renderUpgradeStepperControl(
@@ -303,12 +329,12 @@ function renderPassiveMorphRingSlot() {
   }
 
   const titleText = item
-      ? `${localize(slot.label)}: ${localize(item.name)}${formatUpgradeTitleSuffix(level)}`
+      ? `${localize(slot.label)}: ${catalogName(item)}${formatUpgradeTitleSuffix(level)}`
     : items.length
       ? `${localize(slot.label)}: ${localize(`${items.length} колец`)}`
       : `${localize(slot.label)}: ${localize("данных нет")}`;
   const imageHtml = item?.image
-    ? `<img class="slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(localize(item.name))}" loading="lazy">`
+    ? `<img class="slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(catalogName(item))}" loading="lazy">`
     : "";
   const upgradeControl = item
     ? renderUpgradeStepperControl(
@@ -399,7 +425,7 @@ function equipPet(itemId) {
   state.expandedPetCategories = new Set(state.activePetCategory ? [state.activePetCategory] : []);
   savePetEquippedState();
   renderAll();
-  setLastAction(`Питомец "${item.name}" выбран.`);
+  setLastAction(`Питомец "${catalogName(item)}" выбран.`);
 }
 
 function clearPet() {
@@ -441,7 +467,7 @@ function changePetMergeCount(mergeKey, delta) {
   renderAll();
 
   const totalBonus = getPetMergeBonusValue(mergeConfig, cappedValue);
-  setLastAction(`Слияние "${mergeConfig.label}": ${cappedValue}. Бонус ${mergeConfig.statLabel} ${formatStatValue(totalBonus, mergeConfig.unit)}.`);
+  setLastAction(`Слияние "${localize(mergeConfig.label)}": ${cappedValue}. Бонус ${localize(mergeConfig.statLabel)} ${formatStatValue(totalBonus, mergeConfig.unit)}.`);
 }
 
 function getPetWorkspaceData(item, selection = state.petEquipped) {
@@ -480,10 +506,10 @@ function renderPetMergeTable(selection = state.petEquipped) {
               return `
                 <tr>
                   <td>
-                    <div class="pet-merge-element">${escapeHtml(entry.label)}</div>
+                    <div class="pet-merge-element">${escapeHtml(localize(entry.label))}</div>
                   </td>
                   <td>
-                    <div class="pet-merge-stat">${escapeHtml(entry.statLabel)}</div>
+                    <div class="pet-merge-stat">${escapeHtml(localize(entry.statLabel))}</div>
                   </td>
                   <td>
                     <div class="pet-merge-controls">
@@ -522,19 +548,20 @@ function renderPetWorkspace() {
   }
 
   const { stats, effects } = getPetWorkspaceData(pet, state.petEquipped);
-  const subtitle = localize(normalizeText(pet.description_lines?.[0]) || `${pet.element} (${pet.variant})`);
-  const categoryLabel = localize(PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label || pet.category);
+  const subtitle = normalizeText(catalogLines(pet)[0] || `${catalogElement(pet)} (${catalogVariant(pet)})`);
+  const categoryConfigLabel = PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label;
+  const categoryLabel = categoryConfigLabel ? localize(categoryConfigLabel) : catalogCategory(pet);
 
   container.innerHTML = `
     <article class="pet-card">
       <div class="pet-card-head">
         <div class="pet-card-portrait">
-          <img src="${escapeHtml(pet.image)}" alt="${escapeHtml(localize(pet.name))}" loading="lazy">
+          <img src="${escapeHtml(pet.image)}" alt="${escapeHtml(catalogName(pet))}" loading="lazy">
         </div>
         <div class="pet-card-copy">
           <div class="pet-card-kicker">${escapeHtml(categoryLabel)}</div>
           <div class="pet-card-title-row">
-            <h3>${escapeHtml(localize(pet.name))}</h3>
+            <h3>${escapeHtml(catalogName(pet))}</h3>
             <button type="button" class="pet-remove-btn" data-pet-clear="1">${escapeHtml(localize("Снять"))}</button>
           </div>
           <div class="pet-card-meta">${escapeHtml(subtitle)}</div>
@@ -612,7 +639,7 @@ function equipSphere(slotKey, itemId) {
   }
   saveSphereEquippedState();
   renderAll();
-  setLastAction(`${slot.label}: вставлена "${item.name}".`);
+  setLastAction(`${slot.label}: вставлена "${catalogName(item)}".`);
 }
 
 function clearSphereSlot(slotKey) {
@@ -688,10 +715,10 @@ function renderSphereSlots() {
     }
 
     const imageHtml = item?.image
-      ? `<img class="sphere-slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(localize(item.name))}" loading="lazy">`
+      ? `<img class="sphere-slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(catalogName(item))}" loading="lazy">`
       : "";
     const titleText = item
-      ? `${localize(slot.label)}: ${localize(item.name)}${showUpgrade ? formatUpgradeTitleSuffix(level) : ""}`
+      ? `${localize(slot.label)}: ${catalogName(item)}${showUpgrade ? formatUpgradeTitleSuffix(level) : ""}`
       : items.length
         ? `${localize(slot.label)}: ${localize(`${items.length} сфер`)}`
         : `${localize(slot.label)}: ${localize("данных нет")}`;
@@ -775,7 +802,7 @@ function equipTrophy(slotKey, itemId) {
   state.activeTrophySlot = slotKey;
   saveTrophyEquippedState();
   renderAll();
-  setLastAction(`${slot.label}: установлен "${item.name}".`);
+  setLastAction(`${slot.label}: установлен "${catalogName(item)}".`);
 }
 
 function clearTrophySlot(slotKey) {
@@ -846,10 +873,10 @@ function renderTrophySlots() {
     }
 
     const imageHtml = item?.image
-      ? `<img class="trophy-slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(localize(item.name))}" loading="lazy">`
+      ? `<img class="trophy-slot-item-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(catalogName(item))}" loading="lazy">`
       : "";
     const titleText = item
-      ? `${localize(slot.label)}: ${localize(item.name)}${formatUpgradeTitleSuffix(level)}`
+      ? `${localize(slot.label)}: ${catalogName(item)}${formatUpgradeTitleSuffix(level)}`
       : items.length
         ? `${localize(slot.label)}: ${localize(`${items.length} трофей`)}`
         : `${localize(slot.label)}: ${localize("данных нет")}`;
@@ -986,11 +1013,11 @@ function renderCategoryList() {
       if (isExpanded && group.items.length) {
         itemsHtml = group.items.map((item) => {
           const previewLevel = getDefaultUpgradeLevel(item);
-          const params = getParamsForLevel(item, previewLevel);
-          const previewText = localize(params[0] || normalizeText(item.description_lines?.[0]) || "Без параметров");
+          const params = catalogUpgradeLines(item, previewLevel);
+          const previewText = normalizeText(params[0] || catalogLines(item)[0] || localize("Без параметров"));
           const isEquipped = String(item.uid) === String(selectedItemId);
           const metaParts = [];
-          const subtitle = localize(normalizeText(item.description_lines?.[0]));
+          const subtitle = normalizeText(catalogLines(item)[0]);
 
           if (subtitle) {
             metaParts.push(subtitle);
@@ -1002,7 +1029,7 @@ function renderCategoryList() {
               <div class="item-row">
                 ${renderItemIcon(item)}
                 <div class="item-info">
-                  <div class="item-name">${escapeHtml(localize(item.name))}</div>
+                  <div class="item-name">${escapeHtml(catalogName(item))}</div>
                   <div class="item-meta">${escapeHtml(metaParts.join(" · "))}</div>
                 </div>
                 <button
@@ -1062,14 +1089,14 @@ function renderCategoryList() {
       if (isExpanded && group.items.length) {
         const renderSphereCatalogItem = (item, showCategory = true) => {
           const previewLevel = getDefaultUpgradeLevel(item);
-          const params = getParamsForLevel(item, previewLevel);
-          const previewText = localize(params[0] || item.description || "Без параметров");
+          const params = catalogUpgradeLines(item, previewLevel);
+          const previewText = normalizeText(params[0] || catalogLines(item)[0] || localize("Без параметров"));
           const targetSlot = getPrimarySphereSlot(item);
           const selectedItemId = targetSlot ? state.sphereEquipped[targetSlot.key]?.itemId : null;
           const isEquipped = String(item.uid) === String(selectedItemId || "");
           const metaParts = [];
           if (showCategory) {
-            metaParts.push(localize(item.category));
+            metaParts.push(catalogCategory(item));
           }
           if (shouldShowSphereUpgrade(item, targetSlot) && shouldDisplayUpgradeLevel(previewLevel)) {
             metaParts.push(previewLevel);
@@ -1081,7 +1108,7 @@ function renderCategoryList() {
               <div class="item-row">
                 ${renderItemIcon(item)}
                 <div class="item-info">
-                  <div class="item-name">${escapeHtml(localize(item.name))}</div>
+                  <div class="item-name">${escapeHtml(catalogName(item))}</div>
                   <div class="item-meta">${escapeHtml(metaParts.join(" · "))}</div>
                 </div>
                 <button
@@ -1101,7 +1128,7 @@ function renderCategoryList() {
 
         if (group.key === "sphere_type_1") {
           const activeTab = SPHERE_TYPE_ONE_TABS.find((tab) => tab.category === state.activeSphereTypeOneTab) || SPHERE_TYPE_ONE_TABS[0];
-          const categoryItems = group.items.filter((item) => item.category === activeTab.category);
+          const categoryItems = group.items.filter((item) => catalogCategory(item) === activeTab.category);
           const tabsHtml = `
             <div class="sphere-type-tabs" role="tablist" aria-label="${escapeHtml(localize("Подтипы сфер 1-го типа"))}">
               ${SPHERE_TYPE_ONE_TABS.map((tab) => `
@@ -1177,8 +1204,8 @@ function renderCategoryList() {
       if (isExpanded && items.length) {
         itemsHtml = items.map((item) => {
           const previewLevel = getDefaultUpgradeLevel(item);
-          const params = getParamsForLevel(item, previewLevel);
-          const previewText = localize(params[0] || "Без параметров");
+          const params = catalogUpgradeLines(item, previewLevel);
+          const previewText = normalizeText(params[0] || catalogLines(item)[0] || localize("Без параметров"));
           const isEquipped = String(item.uid) === String(selectedItemId || "");
 
           return `
@@ -1186,7 +1213,7 @@ function renderCategoryList() {
               <div class="item-row">
                 ${renderItemIcon(item)}
                 <div class="item-info">
-                  <div class="item-name">${escapeHtml(localize(item.name))}</div>
+                  <div class="item-name">${escapeHtml(catalogName(item))}</div>
                   <div class="item-meta">${escapeHtml(shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
                 </div>
                 <button
@@ -1246,16 +1273,16 @@ function renderCategoryList() {
     if (isExpanded && items.length) {
       itemsHtml = items.map((item) => {
         const previewLevel = getDefaultUpgradeLevel(item);
-        const params = getParamsForLevel(item, previewLevel);
+        const params = catalogUpgradeLines(item, previewLevel);
         const isEquipped = String(item.uid) === String(selectedItemId || "");
-        const previewText = localize(params[0] || "Без параметров");
+        const previewText = normalizeText(params[0] || catalogLines(item)[0] || localize("Без параметров"));
 
         return `
           <div class="catalog-item ${isEquipped ? "is-selected" : ""}" data-id="${escapeHtml(item.uid)}">
             <div class="item-row">
               ${renderItemIcon(item)}
               <div class="item-info">
-                <div class="item-name">${escapeHtml(localize(item.name))}</div>
+                <div class="item-name">${escapeHtml(catalogName(item))}</div>
                 <div class="item-meta">${escapeHtml(shouldDisplayUpgradeLevel(previewLevel) ? `${previewLevel} · ${previewText}` : previewText)}</div>
               </div>
               <button class="equip-btn ${isEquipped ? "is-selected" : ""}" type="button" data-slot="${slot.key}" data-id="${escapeHtml(item.uid)}" data-action="${isEquipped ? "remove" : "equip"}">

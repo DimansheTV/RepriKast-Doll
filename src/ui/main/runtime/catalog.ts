@@ -13,6 +13,11 @@ import {
 import { SPHERE_SLOT_CONFIG, SPHERE_CATEGORY_CONFIG, SPHERE_TYPE_ONE_TABS } from "../../../domain/spheres/config";
 import { TROPHY_SLOT_CONFIG } from "../../../domain/trophies/config";
 import { PET_CATEGORY_CONFIG, PET_MERGE_CONFIG, PET_MERGE_TOTAL_LIMIT } from "../../../domain/pets/config";
+import {
+  getLocalizedCatalogField,
+  getLocalizedCatalogLines,
+  getLocalizedCatalogUpgradeLines,
+} from "../../../shared/catalog-locales";
 import { normalizeText, escapeHtml } from "./utils";
 import {
   parseNumericStat,
@@ -30,7 +35,43 @@ export function createCatalogModule(deps) {
   const { state, localizeText = (value) => String(value || ""), getCurrentLanguage = () => "ru" } = deps;
 
 function sortByLocalizedName(left, right) {
-  return localizeText(left?.name || "").localeCompare(localizeText(right?.name || ""), getCurrentLanguage());
+  return getLocalizedItemName(left).localeCompare(getLocalizedItemName(right), getCurrentLanguage());
+}
+
+function getLocalizedField(item, field, options = {}) {
+  return getLocalizedCatalogField(item, field, getCurrentLanguage(), options);
+}
+
+function getLocalizedLines(item, field, options = {}) {
+  return getLocalizedCatalogLines(item, field, getCurrentLanguage(), options);
+}
+
+function getLocalizedUpgradeLines(item, level, options = {}) {
+  return getLocalizedCatalogUpgradeLines(item, level, getCurrentLanguage(), options);
+}
+
+function getLocalizedItemName(item, options = {}) {
+  return getLocalizedField(item, "name", options);
+}
+
+function getLocalizedItemDescription(item, options = {}) {
+  const description = getLocalizedField(item, "description", options);
+  if (description) {
+    return description;
+  }
+  return getLocalizedLines(item, "descriptionLines", options)[0] || "";
+}
+
+function getLocalizedItemCategory(item, options = {}) {
+  return getLocalizedField(item, "category", options);
+}
+
+function getLocalizedItemVariant(item, options = {}) {
+  return getLocalizedField(item, "variant", options);
+}
+
+function getLocalizedItemElement(item, options = {}) {
+  return getLocalizedField(item, "element", options);
 }
 
 function getSphereSlotConfig(slotKey) {
@@ -160,6 +201,11 @@ function formatUpgradeTitleSuffix(level) {
 
 function getParamsForLevel(item, level) {
   const params = item?.upgrade_levels?.[level] || [];
+  return applyEquipmentDefenseUpgradeRules(item, level, params);
+}
+
+function getLocalizedParamsForLevel(item, level) {
+  const params = getLocalizedUpgradeLines(item, level, { fallbackToRu: true });
   return applyEquipmentDefenseUpgradeRules(item, level, params);
 }
 
@@ -632,7 +678,7 @@ function getActiveProfile() {
 }
 
 function createItemUid(item, index) {
-  return `${item.slot_code}:${item.name}:${index}`;
+  return `equipment:${item.id ?? index}`;
 }
 
 function createSphereUid(item, index) {
@@ -664,7 +710,17 @@ function createPetUid(item, index) {
       ...item,
       uid: createPetUid(item, index),
     }));
-    state.itemsById = new Map(state.items.map((item) => [item.uid, item]));
+    state.itemsById = new Map();
+    state.items.forEach((item, index) => {
+      state.itemsById.set(item.uid, item);
+      const fallbackLegacyId = `${item.slot_code}:${item.name}:${index}`;
+      const legacyIds = new Set([fallbackLegacyId, ...(Array.isArray(item.legacy_ids) ? item.legacy_ids : [])]);
+      legacyIds.forEach((legacyId) => {
+        if (legacyId && !state.itemsById.has(legacyId)) {
+          state.itemsById.set(legacyId, item);
+        }
+      });
+    });
     state.sphereItemsById = new Map(state.sphereItems.map((item) => [item.uid, item]));
     state.trophyItemsById = new Map(state.trophyItems.map((item) => [item.uid, item]));
     state.petItemsById = new Map(state.petItems.map((item) => [item.uid, item]));
@@ -699,6 +755,7 @@ function createPetUid(item, index) {
     formatUpgradeSuffix,
     formatUpgradeTitleSuffix,
     getParamsForLevel,
+    getLocalizedParamsForLevel,
     getSlotConfig,
     isClassRestrictedEquipmentSlot,
     getEquipmentClasses,
@@ -721,6 +778,14 @@ function createPetUid(item, index) {
     getPetMergeBonusValue,
     createPetSelection,
     getPetMergeStats,
+    getLocalizedCatalogField: getLocalizedField,
+    getLocalizedCatalogLines: getLocalizedLines,
+    getLocalizedCatalogUpgradeLines: getLocalizedUpgradeLines,
+    getLocalizedItemName,
+    getLocalizedItemDescription,
+    getLocalizedItemCategory,
+    getLocalizedItemVariant,
+    getLocalizedItemElement,
     createItemUid,
     createSphereUid,
     createTrophyUid,

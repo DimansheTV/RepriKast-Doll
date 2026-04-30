@@ -50,6 +50,9 @@ export function createAppRuntime(context) {
   getCurrentLanguage = () => normalizeLanguage(stateModule.state.language || DEFAULT_LANGUAGE);
   const localize = (value) => localizeText(value, getCurrentLanguage());
   const translate = (key, params = {}) => t(key, getCurrentLanguage(), params);
+  const getLocalizedCatalogField = (item, field, options) => catalogModule.getLocalizedCatalogField(item, field, options);
+  const getLocalizedCatalogLines = (item, field, options) => catalogModule.getLocalizedCatalogLines(item, field, options);
+  const getLocalizedCatalogUpgradeLines = (item, level, options) => catalogModule.getLocalizedCatalogUpgradeLines(item, level, options);
   const setLanguage = (language) => {
     const nextLanguage = normalizeLanguage(language);
     if (stateModule.state.language === nextLanguage) {
@@ -102,6 +105,7 @@ export function createAppRuntime(context) {
     getEquippedSphereSlots: catalogModule.getEquippedSphereSlots,
     getEquippedTrophySlots: catalogModule.getEquippedTrophySlots,
     localizeText: (value) => localize(value),
+    getLocalizedCatalogField,
     getCurrentLanguage,
   });
 
@@ -132,12 +136,16 @@ export function createAppRuntime(context) {
     formatBoardPrimaryValue: statsModule.formatBoardPrimaryValue,
     formatStatValue: statsModule.formatStatValue,
     getParamsForLevel: catalogModule.getParamsForLevel,
+    getLocalizedParamsForLevel: catalogModule.getLocalizedParamsForLevel,
     normalizeText,
     parseNumericStat: statsModule.parseNumericStat,
     escapeHtml,
     formatUpgradeSuffix: catalogModule.formatUpgradeSuffix,
     shouldShowSphereUpgrade: catalogModule.shouldShowSphereUpgrade,
     getLevelKeys: catalogModule.getLevelKeys,
+    getLocalizedCatalogField,
+    getLocalizedCatalogLines,
+    getLocalizedCatalogUpgradeLines,
     CLASS_CONFIGS,
     sanitizeClassLevel,
     t: (...args) => translate(...args),
@@ -178,7 +186,6 @@ export function createAppRuntime(context) {
     renderTrophyDescription: renderModule.renderTrophyDescription,
     saveTrophyEquippedState: stateModule.saveTrophyEquippedState,
     getPetCategoryGroups: catalogModule.getPetCategoryGroups,
-    getParamsForLevel: catalogModule.getParamsForLevel,
     normalizeText,
     renderItemIcon: statsModule.renderItemIcon,
     renderStatRows: renderModule.renderStatRows,
@@ -195,6 +202,9 @@ export function createAppRuntime(context) {
     savePetEquippedState: stateModule.savePetEquippedState,
     createPetSelection: catalogModule.createPetSelection,
     localizeText: (value) => localize(value),
+    getLocalizedCatalogField,
+    getLocalizedCatalogLines,
+    getLocalizedCatalogUpgradeLines,
     t: (...args) => translate(...args),
   });
 
@@ -223,6 +233,9 @@ export function createAppRuntime(context) {
     sanitizeClassLevel,
     escapeHtml,
     localizeText: (value) => localize(value),
+    getLocalizedCatalogField,
+    getLocalizedCatalogLines,
+    getLocalizedCatalogUpgradeLines,
     t: (...args) => translate(...args),
     setLanguage,
     getCurrentLanguage,

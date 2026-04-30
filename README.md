@@ -75,6 +75,40 @@ corepack pnpm catalog:trophy
 
 `equipment` и `pet` сейчас валидируют уже подготовленные JSON. `sphere` и `trophy` могут обращаться к r2online.ru, скачивать недостающие изображения и перезаписывать соответствующие JSON.
 
+Полная пересборка `equipment` из wiki выключена по умолчанию и запускается только явным флагом:
+
+```bash
+corepack pnpm catalog:build -- --kind equipment --rebuild-from-wiki
+```
+
+Английская локализация каталогов обновляется отдельным шагом через OpenAI API:
+
+```bash
+corepack pnpm catalog:build -- --kind equipment --translate-en
+```
+
+Для `--translate-en` нужен секретный ключ OpenAI в переменной окружения `OPENAI_API_KEY`. Ключ не хранится в репозитории: каждый разработчик использует свой собственный ключ локально.
+
+Пример для PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY="sk-..."
+corepack pnpm catalog:build -- --kind equipment --translate-en
+```
+
+Можно комбинировать пересборку и перевод в одном запуске:
+
+```bash
+corepack pnpm catalog:build -- --kind equipment --rebuild-from-wiki --translate-en
+```
+
+Важно:
+
+- обычные `corepack pnpm build` и `corepack pnpm test:e2e` не требуют `OPENAI_API_KEY`;
+- без `--translate-en` проект не обращается к OpenAI API;
+- если `--translate-en` запущен без ключа, команда завершится с ошибкой;
+- `.env` и `.env.*` игнорируются через `.gitignore`, поэтому локальный ключ не должен попадать в коммит.
+
 ## Деплой
 
 Для деплоя нужен только каталог `dist/`.

@@ -823,17 +823,7 @@ export function localizeText(value: unknown, language: Language): string {
     return exact;
   }
 
-  const statLine = translateStatLine(decoded);
-  if (statLine) {
-    return statLine;
-  }
-
-  const templated = translateTemplateText(decoded);
-  if (templated) {
-    return templated;
-  }
-
-  const translated = applyRegexTranslations(translateCompositeText(decoded));
+  const translated = applyRegexTranslations(decoded);
   return hasCyrillic(translated) ? decoded : translated;
 }
 

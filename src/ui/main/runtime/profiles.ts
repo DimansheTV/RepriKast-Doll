@@ -250,7 +250,8 @@ export function createProfilesModule(deps) {
   }
 
   function initializeProfilesState() {
-    const loadedProfiles = loadProfilesState().map((profile, index) => normalizeProfileRecord(profile, index));
+    const rawProfiles = loadProfilesState();
+    const loadedProfiles = rawProfiles.map((profile, index) => normalizeProfileRecord(profile, index));
     const activeProfileId = loadActiveProfileIdState();
 
     if (!loadedProfiles.length) {
@@ -275,6 +276,9 @@ export function createProfilesModule(deps) {
     }
 
     state.profiles = loadedProfiles;
+    if (JSON.stringify(rawProfiles) !== JSON.stringify(loadedProfiles)) {
+      saveProfilesState();
+    }
     const selectedProfile = loadedProfiles.find((profile) => profile.id === activeProfileId) || loadedProfiles[0];
     activateSavedProfile(selectedProfile, { announce: false });
   }

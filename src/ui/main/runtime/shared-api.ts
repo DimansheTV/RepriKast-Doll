@@ -1,7 +1,22 @@
 // @ts-nocheck
 import { MAIN_STATS, SECONDARY_STAT_PRIORITY, BAPHOMET_SET_BONUSES, IFRIT_SET_BONUSES, CLASS_CONFIGS } from "./stats";
 
-export function createSharedRuntimeApi({ stateModule, catalogModule, profilesModule, statsModule, normalizeText, sanitizeClassLevel, escapeHtml, localizeText, t, setLanguage, getCurrentLanguage }) {
+export function createSharedRuntimeApi({
+  stateModule,
+  catalogModule,
+  profilesModule,
+  statsModule,
+  normalizeText,
+  sanitizeClassLevel,
+  escapeHtml,
+  localizeText,
+  getLocalizedCatalogField,
+  getLocalizedCatalogLines,
+  getLocalizedCatalogUpgradeLines,
+  t,
+  setLanguage,
+  getCurrentLanguage,
+}) {
   return {
     SLOT_CONFIG: catalogModule.SLOT_CONFIG,
     SPHERE_SLOT_CONFIG: catalogModule.SPHERE_SLOT_CONFIG,
@@ -41,6 +56,9 @@ export function createSharedRuntimeApi({ stateModule, catalogModule, profilesMod
     matchesEquipmentSlot: catalogModule.matchesEquipmentSlot,
     normalizeText,
     localizeText,
+    getLocalizedCatalogField,
+    getLocalizedCatalogLines,
+    getLocalizedCatalogUpgradeLines,
     t,
     setLanguage,
     getCurrentLanguage,

@@ -29,12 +29,15 @@ export function createMainRenderModule(deps) {
     formatBoardPrimaryValue,
     formatStatValue,
     getParamsForLevel,
+    getLocalizedParamsForLevel,
     normalizeText,
     parseNumericStat,
     escapeHtml,
     formatUpgradeSuffix,
     shouldShowSphereUpgrade,
     getLevelKeys,
+    getLocalizedCatalogField,
+    getLocalizedCatalogLines,
     CLASS_CONFIGS: runtimeClassConfigs = CLASS_CONFIGS,
     sanitizeClassLevel,
     t,
@@ -157,26 +160,10 @@ function renderEquipmentDescription(slot, item, level) {
     return "";
   }
 
-  const params = getParamsForLevel(item, level);
-  const descriptionLines = Array.isArray(item.description_lines)
-    ? item.description_lines.filter((line) => normalizeText(line))
-    : [];
-  const currentParamLabels = new Set(
-    params
-      .map((line) => parseNumericStat(line))
-      .filter(Boolean)
-      .map((stat) => stat.label),
-  );
-  const mergedLines = [
-    ...params,
-    ...descriptionLines.filter((line) => {
-      const parsed = parseNumericStat(line);
-      if (!parsed) {
-        return !params.includes(line);
-      }
-      return !currentParamLabels.has(parsed.label);
-    }),
-  ];
+  const params = getLocalizedParamsForLevel(item, level);
+  const descriptionLines = getLocalizedCatalogLines(item, "descriptionLines", { fallbackToRu: true })
+    .filter((line) => normalizeText(line));
+  const mergedLines = [...new Set([...params, ...descriptionLines])];
   const paramsHtml = mergedLines.length
     ? mergedLines.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
     : `<li>${escapeHtml(t("empty.noParams"))}</li>`;
@@ -184,7 +171,7 @@ function renderEquipmentDescription(slot, item, level) {
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(formatUpgradeSuffix(level))}</div>
+        <div class="equipment-description-name">${escapeHtml(getLocalizedCatalogField(item, "name", { fallbackToRu: true }))}${escapeHtml(formatUpgradeSuffix(level))}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -196,26 +183,10 @@ function renderSphereDescription(slot, item, level) {
     return "";
   }
 
-  const params = getParamsForLevel(item, level);
-  const descriptionLines = Array.isArray(item.description_lines)
-    ? item.description_lines.filter((line) => normalizeText(line))
-    : [];
-  const currentParamLabels = new Set(
-    params
-      .map((line) => parseNumericStat(line))
-      .filter(Boolean)
-      .map((stat) => stat.label),
-  );
-  const mergedLines = [
-    ...params,
-    ...descriptionLines.filter((line) => {
-      const parsed = parseNumericStat(line);
-      if (!parsed) {
-        return !params.includes(line);
-      }
-      return !currentParamLabels.has(parsed.label);
-    }),
-  ];
+  const params = getLocalizedParamsForLevel(item, level);
+  const descriptionLines = getLocalizedCatalogLines(item, "descriptionLines", { fallbackToRu: true })
+    .filter((line) => normalizeText(line));
+  const mergedLines = [...new Set([...params, ...descriptionLines])];
   const paramsHtml = mergedLines.length
     ? mergedLines.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
     : `<li>${escapeHtml(t("empty.noParams"))}</li>`;
@@ -226,7 +197,7 @@ function renderSphereDescription(slot, item, level) {
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(displayLevel)}</div>
+        <div class="equipment-description-name">${escapeHtml(getLocalizedCatalogField(item, "name", { fallbackToRu: true }))}${escapeHtml(displayLevel)}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -238,14 +209,14 @@ function renderTrophyDescription(slot, item, level) {
     return "";
   }
 
-  const params = getParamsForLevel(item, level);
+  const params = getLocalizedParamsForLevel(item, level);
   const paramsHtml = params.length
     ? params.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
     : `<li>${escapeHtml(t("empty.noParams"))}</li>`;
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(formatUpgradeSuffix(level))}</div>
+        <div class="equipment-description-name">${escapeHtml(getLocalizedCatalogField(item, "name", { fallbackToRu: true }))}${escapeHtml(formatUpgradeSuffix(level))}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>

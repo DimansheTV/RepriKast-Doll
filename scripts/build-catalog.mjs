@@ -1,4 +1,6 @@
 import { loadJson, validateCatalog } from "./data/common.mjs";
+import { translateCatalogFile } from "./data/catalog-translate-openai.mjs";
+import { build as buildEquipment } from "./data/equipment-builder.mjs";
 import { build as buildSphere } from "./data/sphere-builder.mjs";
 import { build as buildTrophy } from "./data/trophy-builder.mjs";
 
@@ -10,7 +12,7 @@ const CATALOG_PATHS = {
 };
 
 function parseArgs(argv) {
-  const result = { kind: "", validateOnly: false };
+  const result = { kind: "", validateOnly: false, rebuildFromWiki: false, translateEn: false };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -23,6 +25,14 @@ function parseArgs(argv) {
       result.validateOnly = true;
       continue;
     }
+    if (arg === "--rebuild-from-wiki") {
+      result.rebuildFromWiki = true;
+      continue;
+    }
+    if (arg === "--translate-en") {
+      result.translateEn = true;
+      continue;
+    }
     if (arg === "--help" || arg === "-h") {
       result.help = true;
     }
@@ -32,10 +42,15 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`Usage: node scripts/build-catalog.mjs --kind equipment|sphere|trophy|pet [--validate-only]
+  console.log(`Usage: node scripts/build-catalog.mjs --kind equipment|sphere|trophy|pet [--validate-only] [--rebuild-from-wiki] [--translate-en]
 
-equipment and pet validate existing local JSON.
-sphere and trophy rebuild from r2online.ru unless --validate-only is passed.`);
+Default behavior:
+- equipment and pet validate existing local JSON.
+- sphere and trophy rebuild from r2online.ru unless --validate-only is passed.
+
+Optional maintenance flags:
+- --rebuild-from-wiki: rebuild equipment from r2online.ru (default off)
+- --translate-en: update locales.en via OpenAI API using OPENAI_API_KEY`);
 }
 
 async function validateExisting(kind) {
@@ -58,19 +73,29 @@ async function main() {
     throw new Error(`Missing or invalid --kind: ${kind || "(empty)"}`);
   }
 
-  if (args.validateOnly || kind === "equipment" || kind === "pet") {
+  if (args.validateOnly || (kind === "equipment" && !args.rebuildFromWiki && !args.translateEn) || (kind === "pet" && !args.translateEn)) {
     await validateExisting(kind);
     return;
   }
 
+  if (kind === "equipment" && args.rebuildFromWiki) {
+    await buildEquipment();
+  }
+
   if (kind === "sphere") {
     await buildSphere();
-    return;
   }
 
   if (kind === "trophy") {
     await buildTrophy();
   }
+
+  if (args.translateEn) {
+    await translateCatalogFile(kind, CATALOG_PATHS[kind]);
+    return;
+  }
+
+  await validateExisting(kind);
 }
 
 main().catch((error) => {
