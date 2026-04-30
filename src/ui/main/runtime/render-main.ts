@@ -1,5 +1,8 @@
 // @ts-nocheck
 import { CLASS_CONFIGS, CLASS_PRIMARY_ATTRIBUTES } from "../../../domain/stats/runtime-config";
+import copyIconUrl from "../../../resources/images/icons/copy.svg";
+import editIconUrl from "../../../resources/images/icons/edit.svg";
+import trashIconUrl from "../../../resources/images/icons/trash.svg";
 
 export function createMainRenderModule(deps) {
   const {
@@ -22,6 +25,7 @@ export function createMainRenderModule(deps) {
     saveSidebarTabState,
     saveClassState,
     sanitizeEquippedState,
+    sanitizeSphereEquippedState,
     renderAll,
     collectEquippedStats,
     getDisplayStatsFromMap,
@@ -33,6 +37,7 @@ export function createMainRenderModule(deps) {
     parseNumericStat,
     escapeHtml,
     formatUpgradeSuffix,
+    getMorphSphereRequiredLevel,
     shouldShowSphereUpgrade,
     getLevelKeys,
     CLASS_CONFIGS: runtimeClassConfigs = CLASS_CONFIGS,
@@ -44,35 +49,53 @@ export function createMainRenderModule(deps) {
   const CLASS_CONFIGS = runtimeClassConfigs;
   let toastTimer = 0;
   let suppressBuildNameBlur = false;
+  const LANGUAGE_SEQUENCE = ["ru", "en"];
 
 function localize(value) {
   return localizeText(value);
 }
 
-function setTextContent(selector, value) {
-  const element = document.querySelector(selector);
-  if (element) {
-    element.textContent = value;
+function getNextLanguage(language) {
+  const index = LANGUAGE_SEQUENCE.indexOf(language);
+  if (index === -1) {
+    return LANGUAGE_SEQUENCE[0];
   }
+
+  return LANGUAGE_SEQUENCE[(index + 1) % LANGUAGE_SEQUENCE.length];
+}
+
+function getLanguageButtonLabel(language) {
+  return language === "en" ? t("button.languageEn") : t("button.languageRu");
+}
+
+function setTextContent(selector, value) {
+  document.querySelectorAll(selector).forEach((element) => {
+    element.textContent = value;
+  });
 }
 
 function setAttributeValue(selector, attribute, value) {
-  const element = document.querySelector(selector);
-  if (element) {
+  document.querySelectorAll(selector).forEach((element) => {
     element.setAttribute(attribute, value);
-  }
+  });
+}
+
+function renderToolbarIcon(iconUrl, altText) {
+  return `<img src="${escapeHtml(iconUrl)}" alt="" aria-hidden="true" class="build-picker-icon-image">`;
 }
 
 function applyStaticLocalization() {
   document.documentElement.lang = state.language || "ru";
+  const nextLanguage = getNextLanguage(state.language || "ru");
+  const nextLanguageLabel = getLanguageButtonLabel(nextLanguage);
 
   setAttributeValue("body[data-page='main'] .panel-topbar", "aria-label", t("toolbar.buildPanel"));
   setAttributeValue("#build-picker", "aria-label", t("toolbar.buildPicker"));
   setAttributeValue("#language-switch", "aria-label", t("toolbar.languageSwitcher"));
-  setAttributeValue("#lang-ru-button", "aria-pressed", state.language === "ru" ? "true" : "false");
-  setAttributeValue("#lang-en-button", "aria-pressed", state.language === "en" ? "true" : "false");
-  document.getElementById("lang-ru-button")?.classList.toggle("is-active", state.language === "ru");
-  document.getElementById("lang-en-button")?.classList.toggle("is-active", state.language === "en");
+  setAttributeValue("#language-cycle-button", "data-language", nextLanguage);
+  setAttributeValue("#language-cycle-button", "aria-label", `${t("toolbar.languageSwitcher")}: ${nextLanguageLabel}`);
+  setAttributeValue("#language-cycle-button", "title", `${t("toolbar.languageSwitcher")}: ${nextLanguageLabel}`);
+  setTextContent("#language-cycle-button", nextLanguageLabel);
 
   setTextContent("#profile-save-button", t("button.save"));
   setTextContent("#profile-compare-link", t("button.compare"));
@@ -123,6 +146,17 @@ function applyStaticLocalization() {
   setAttributeValue('.sphere-stage', "aria-label", t("workspace.sphereSlots"));
   setAttributeValue('.pet-stage', "aria-label", t("workspace.petStage"));
   setAttributeValue('.trophy-stage', "aria-label", t("workspace.trophySlots"));
+
+  setAttributeValue("#mobile-nav-toggle", "aria-label", t("toolbar.mobileNav"));
+  setAttributeValue("#mobile-nav-toggle", "title", t("button.mainMenu"));
+  setTextContent(".mobile-nav-toggle-text", t("button.menu"));
+  setTextContent("#mobile-nav-title", t("toolbar.mobileNav"));
+  setTextContent("#mobile-nav-subtitle", t("mobileNav.quickJump"));
+  setTextContent("#mobile-nav-sidebar-label", t("mobileNav.sidebar"));
+  setTextContent("#mobile-nav-workspace-label", t("mobileNav.workspace"));
+  setTextContent("#mobile-nav-compare-link", t("button.compare"));
+  setAttributeValue("#mobile-nav-close", "aria-label", t("button.close"));
+  setAttributeValue("#mobile-nav-close", "title", t("button.close"));
 }
 
 
@@ -197,6 +231,8 @@ function renderSphereDescription(slot, item, level) {
   }
 
   const params = getParamsForLevel(item, level);
+  const requiredLevel = getMorphSphereRequiredLevel(item);
+  const requirementLine = requiredLevel > 0 ? [`Уровень экипировки ${requiredLevel}`] : [];
   const descriptionLines = Array.isArray(item.description_lines)
     ? item.description_lines.filter((line) => normalizeText(line))
     : [];
@@ -207,6 +243,7 @@ function renderSphereDescription(slot, item, level) {
       .map((stat) => stat.label),
   );
   const mergedLines = [
+    ...requirementLine,
     ...params,
     ...descriptionLines.filter((line) => {
       const parsed = parseNumericStat(line);
@@ -426,8 +463,8 @@ function bindClassControls() {
   const applyClassLevel = (nextLevel) => {
     state.classConfig.level = sanitizeClassLevel(nextLevel);
     saveClassState();
-    renderClassPanel();
-    renderBoardTotalStats();
+    sanitizeSphereEquippedState();
+    renderAll();
   };
 
   select.addEventListener("change", () => {
@@ -496,14 +533,14 @@ function renderProfileBar() {
   const copyButtonHtml = canCopy
     ? `
       <button type="button" class="build-picker-icon-button" aria-label="${escapeHtml(t("toolbar.copyBuild"))}" title="${escapeHtml(t("toolbar.copyBuild"))}" data-build-copy>
-        <svg viewBox="0 0 16 16" focusable="false"><rect x="5.5" y="3.5" width="7" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3.5 11.5h-.8A1.2 1.2 0 0 1 1.5 10.3V3.7A1.2 1.2 0 0 1 2.7 2.5h5.6A1.2 1.2 0 0 1 9.5 3.7v.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        ${renderToolbarIcon(copyIconUrl, t("toolbar.copyBuild"))}
       </button>
     `
     : "";
   const deleteButtonHtml = canDelete
     ? `
       <button type="button" class="build-picker-icon-button build-picker-icon-button-danger" aria-label="${escapeHtml(t("toolbar.deleteBuild"))}" title="${escapeHtml(t("toolbar.deleteBuild"))}" data-build-delete>
-        <svg viewBox="0 0 16 16" focusable="false"><path d="M3 4.5h10m-8.2 0V3.3c0-.7.6-1.3 1.3-1.3h3.8c.7 0 1.3.6 1.3 1.3v1.2m-6 0v7.2c0 .8.6 1.3 1.3 1.3h3.4c.8 0 1.3-.5 1.3-1.3V4.5M6.6 6.8v3.8m2.8-3.8v3.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.2"/></svg>
+        ${renderToolbarIcon(trashIconUrl, t("toolbar.deleteBuild"))}
       </button>
     `
     : "";
@@ -544,7 +581,7 @@ function renderProfileBar() {
         </div>
         <div class="build-picker-tools">
           <button type="button" class="build-picker-icon-button" aria-label="${escapeHtml(t("toolbar.renameBuild"))}" title="${escapeHtml(t("toolbar.renameBuild"))}" data-build-edit>
-            <svg viewBox="0 0 16 16" focusable="false"><path d="m10.9 2.2 2.9 2.9-7.6 7.6-3.6.7.7-3.6 7.6-7.6Zm0 0 1.2-1.2a1.4 1.4 0 0 1 2 0l.9.9a1.4 1.4 0 0 1 0 2l-1.2 1.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"/></svg>
+            ${renderToolbarIcon(editIconUrl, t("toolbar.renameBuild"))}
           </button>
           ${copyButtonHtml}
           ${deleteButtonHtml}
@@ -582,7 +619,7 @@ function syncBuildToolbarState() {
     trigger.disabled = !canOpenMenu;
   }
 
-  saveButton.disabled = state.isBuildNameEditing || !state.isBuildDirty || !activeProfile;
+  saveButton.disabled = !state.isBuildDirty || !activeProfile;
   const shouldShowCancel = state.isBuildDirty || state.isBuildNameEditing;
   newButton.textContent = shouldShowCancel ? t("button.cancel") : t("button.newBuild");
   if (shouldShowCancel) {
@@ -618,12 +655,12 @@ function bindProfileControls() {
         return;
       }
 
-      const button = target.closest("[data-language]");
+      const button = target.closest("#language-cycle-button");
       if (!button) {
         return;
       }
 
-      setLanguage(button.getAttribute("data-language") || "ru");
+      setLanguage(button.getAttribute("data-language") || getNextLanguage(state.language || "ru"));
     });
   }
 
@@ -754,7 +791,12 @@ function bindProfileControls() {
     saveButton.addEventListener("click", (event) => {
       if (state.isBuildNameEditing) {
         event.preventDefault();
-        return;
+        const nameInput = buildPicker.querySelector("[data-build-name-input]");
+        if (nameInput instanceof HTMLInputElement) {
+          finishBuildNameEditing(nameInput.value);
+        } else {
+          finishBuildNameEditing(state.activeDraftName);
+        }
       }
 
       saveActiveProfileExplicitly();
@@ -900,6 +942,58 @@ function bindWorkspaceTabs() {
   });
 }
 
+function bindMobileNav() {
+  const body = document.body;
+  const toggle = document.getElementById("mobile-nav-toggle");
+  const drawer = document.getElementById("mobile-nav-drawer");
+  const backdrop = document.getElementById("mobile-nav-backdrop");
+
+  if (!body || !toggle || !backdrop) {
+    return;
+  }
+
+  const syncMobileNavState = (isOpen) => {
+    toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    drawer?.setAttribute("aria-hidden", isOpen ? "false" : "true");
+    backdrop.hidden = !isOpen;
+    body.classList.toggle("mobile-nav-open", isOpen);
+  };
+
+  const closeMobileNav = () => {
+    syncMobileNavState(false);
+  };
+
+  const openMobileNav = () => {
+    syncMobileNavState(true);
+  };
+
+  toggle.addEventListener("click", () => {
+    const isOpen = toggle.getAttribute("aria-expanded") === "true";
+    if (isOpen) {
+      closeMobileNav();
+      return;
+    }
+
+    openMobileNav();
+  });
+
+  backdrop.addEventListener("click", closeMobileNav);
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {
+      closeMobileNav();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 899) {
+      closeMobileNav();
+    }
+  });
+
+  syncMobileNavState(false);
+}
+
 
   return {
     renderStatRows,
@@ -926,5 +1020,6 @@ function bindWorkspaceTabs() {
     bindSidebarTabs,
     bindStatsSourceTabs,
     bindWorkspaceTabs,
+    bindMobileNav,
   };
 }

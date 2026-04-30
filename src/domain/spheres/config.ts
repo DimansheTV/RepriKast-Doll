@@ -60,10 +60,10 @@
 ];
 
 const SPHERE_CATEGORY_CONFIG = [
-  { key: "sphere_type_1", label: "Сферы 1-го типа" },
-  { key: "sphere_type_2", label: "Сферы 2-го типа" },
-  { key: "sphere_type_3", label: "Сферы 3-го типа" },
-  { key: "sphere_type_4", label: "Сферы 4-го типа" },
+  { key: "sphere_type_1", label: "Основные сферы" },
+  { key: "sphere_type_2", label: "Сферы добычи" },
+  { key: "sphere_type_3", label: "Особые сферы" },
+  { key: "sphere_type_4", label: "Сферы перевоплощения" },
 ];
 
 const SPHERE_TYPE_ONE_TABS = [

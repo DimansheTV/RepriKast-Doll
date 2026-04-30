@@ -154,10 +154,28 @@ async function expectCompareSecondaryStored(page: Page, predicateSource: string)
 }
 
 async function switchLanguage(page: Page, language: "ru" | "en") {
-  const button = page.locator(`#lang-${language}-button`);
+  const button = page.locator("#language-cycle-button");
   await expect(button).toBeVisible();
-  await button.click();
-  await expect(button).toHaveAttribute("aria-pressed", "true");
+  for (let index = 0; index < 2; index += 1) {
+    const currentLanguage = await page.locator("html").getAttribute("lang");
+    if (currentLanguage === language) {
+      return;
+    }
+
+    await button.click();
+  }
+
+  await expect(page.locator("html")).toHaveAttribute("lang", language);
+}
+
+async function openMorphSphereCatalog(page: Page) {
+  await page.locator('.workspace-tab[data-workspace-tab="spheres"]').click();
+  const categoryBlock = page.locator('.category-block[data-sphere-category="sphere_type_4"]');
+  const categoryHeader = page.locator('.category-header[data-sphere-category="sphere_type_4"]');
+  await expect(categoryHeader).toBeVisible();
+  if (!await categoryBlock.locator(".category-items.expanded").count()) {
+    await categoryHeader.click();
+  }
 }
 
 test("production dist entrypoints load bundled assets", async ({ page }) => {
@@ -216,9 +234,21 @@ test("english localization translates catalog names and descriptions through sha
   expect(localizeText("Кольцо, увеличивающее уровень концентрации.", "en")).toBe("A ring that increases concentration level.");
   expect(localizeText("Награда за 5-е место в гонках.", "en")).toBe("Reward for 5th place in the races.");
   expect(localizeText("Награда за 2-е место в гонках.", "en")).toBe("Reward for 2nd place in the races.");
+  expect(localizeText("Могучая сила, ур. 4", "en")).toBe("Mighty Strength, Lv. 4");
+  expect(localizeText("Базовый уровень атаки 5.5", "en")).toBe("Base attack level 5.5");
+  expect(localizeText("Ожог (-30 HP в секунду)", "en")).toBe("Burn (-30 HP per second)");
+  expect(localizeText("Weight", "ru")).toBe("Вес");
+  expect(localizeText("HP regeneration", "ru")).toBe("Восстановление HP");
+  expect(localizeText("Critical damage bonus", "ru")).toBe("Доп. урон при крит. ударе");
+  expect(localizeText("All attack levels +5", "ru")).toBe("Уровень всех атак +5");
+  expect(localizeText("Destruction Sphere Lv. 4 (Legendary)", "ru")).toBe("Сфера разрушения ур. 4 (Легендарная)");
+  expect(localizeText("A sphere filled with destructive power.", "ru")).toBe("Сфера, наполненная разрушительной мощью.");
 
   const sphereItems = JSON.parse(readFileSync("src/resources/data/sphere-items.json", "utf8"));
   const equipmentItems = JSON.parse(readFileSync("src/resources/data/equipment-items.json", "utf8"));
+  const trophyItems = JSON.parse(readFileSync("src/resources/data/trophy-items.json", "utf8"));
+  const petItems = JSON.parse(readFileSync("src/resources/data/pet-items.json", "utf8"));
+  const cyrillicPattern = /[\u0400-\u04FF]/u;
   const suspiciousPatterns = [
     /Sfera/i,
     /alchn/i,
@@ -245,9 +275,16 @@ test("english localization translates catalog names and descriptions through sha
     /sergi/i,
     /ozherel/i,
     /remen/i,
+    /shlem/i,
+    /mech/i,
+    /luk/i,
+    /yatagan/i,
+    /posoh/i,
+    /skipetr/i,
+    /koltso/i,
   ];
 
-  const findings = [...sphereItems, ...equipmentItems]
+  const findings = [...sphereItems, ...equipmentItems, ...trophyItems, ...petItems]
     .flatMap((item) => ["name", "description"]
       .map((field) => {
         const source = item[field];
@@ -256,7 +293,8 @@ test("english localization translates catalog names and descriptions through sha
         }
 
         const localized = localizeText(source, "en");
-        const looksBroken = suspiciousPatterns.some((pattern) => pattern.test(localized));
+        const looksBroken = cyrillicPattern.test(localized)
+          || suspiciousPatterns.some((pattern) => pattern.test(localized));
 
         return looksBroken ? { field, source, localized } : null;
       })
@@ -264,6 +302,31 @@ test("english localization translates catalog names and descriptions through sha
     .slice(0, 10);
 
   expect(findings).toEqual([]);
+
+  const recursiveFindings: Array<{ source: string; localized: string }> = [];
+  const walkCatalogStrings = (value: unknown) => {
+    if (typeof value === "string") {
+      const localized = localizeText(value, "en");
+      const looksBroken = cyrillicPattern.test(localized)
+        || suspiciousPatterns.some((pattern) => pattern.test(localized));
+      if (looksBroken) {
+        recursiveFindings.push({ source: value, localized });
+      }
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(walkCatalogStrings);
+      return;
+    }
+
+    if (value && typeof value === "object") {
+      Object.values(value).forEach(walkCatalogStrings);
+    }
+  };
+
+  [sphereItems, equipmentItems, trophyItems, petItems].forEach((catalog) => catalog.forEach(walkCatalogStrings));
+  expect(recursiveFindings.slice(0, 10)).toEqual([]);
 });
 
 test("default knight baseline stats match origin/main", async ({ page }) => {
@@ -297,6 +360,30 @@ test("class controls recalculate baseline totals from the UI", async ({ page }) 
 
   await page.locator("#class-select").selectOption("mage");
   await expect.poll(async () => (await readBoardMainStats(page)).HP).not.toBe("758");
+});
+
+test("morph spheres show required level, stay locked below it, and are removed when level drops", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await openMorphSphereCatalog(page);
+
+  const morphSphereItem = page.locator(".catalog-item-sphere").filter({ hasText: "Сфера перевоплощения 50+ уровня" }).first();
+  await expect(morphSphereItem).toBeVisible();
+  await expect(morphSphereItem).toContainText("Уровень экипировки 50");
+  await expect(morphSphereItem.locator(".equip-btn")).toBeDisabled();
+
+  await page.locator("#class-level-input").fill("50");
+  await page.locator("#class-level-input").press("Enter");
+
+  await openMorphSphereCatalog(page);
+  await expect(morphSphereItem.locator(".equip-btn")).toBeEnabled();
+  await morphSphereItem.locator(".equip-btn").click();
+  await expect(page.locator('.sphere-slot-cell[data-sphere-slot="sphere_morph"]')).toHaveClass(/is-filled/);
+
+  await page.locator("#class-level-input").fill("49");
+  await page.locator("#class-level-input").press("Enter");
+
+  await expect(page.locator('.sphere-slot-cell[data-sphere-slot="sphere_morph"]')).not.toHaveClass(/is-filled/);
 });
 
 test("main page keeps explicit build save flow and dirty-state controls", async ({ page }) => {
@@ -352,17 +439,30 @@ test("main page keeps explicit build save flow and dirty-state controls", async 
   await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
 });
 
+test("save stays active during build name editing and commits the typed name", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator("[data-build-edit]").click();
+  const nameInput = page.locator("[data-build-name-input]");
+  await expect(nameInput).toBeVisible();
+
+  await nameInput.fill("Edited while typing");
+  await expect(page.locator("#profile-save-button")).toBeEnabled();
+
+  await page.locator("#profile-save-button").click();
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Edited while typing");
+  await expect(page.locator("#profile-new-button")).toHaveText("Новая сборка");
+});
+
 test("language switch localizes the main page, persists after reload, and applies on compare", async ({ page }) => {
   await page.goto("/index.html");
 
   await expect(page.locator("#language-switch")).toBeVisible();
-  await expect(page.locator("#lang-ru-button")).toHaveText("RU");
-  await expect(page.locator("#lang-en-button")).toHaveText("EN");
-  await expect(page.locator("#lang-ru-button")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#lang-en-button")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#language-cycle-button")).toHaveText("EN");
 
   await switchLanguage(page, "en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#language-cycle-button")).toHaveText("RU");
   await expect(page.locator("#profile-new-button")).toHaveText("New build");
   await expect(page.locator("#profile-save-button")).toHaveText("Save");
   await expect(page.locator("#profile-compare-link")).toHaveText("Compare");
@@ -406,6 +506,7 @@ test("language switch localizes the main page, persists after reload, and applie
 
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#language-cycle-button")).toHaveText("RU");
   await expect(page.locator("#profile-compare-link")).toHaveText("Compare");
   await expect.poll(async () => page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEYS.language)).toBe("en");
 
