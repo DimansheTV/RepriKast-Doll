@@ -97,6 +97,7 @@ const UI_MESSAGES: Record<string, { ru: string; en: string }> = {
   "action.buildCopied": { ru: 'Создана копия сборки "{name}".', en: 'Created a copy of build "{name}".' },
   "action.buildCanceled": { ru: 'Изменения сборки "{name}" отменены.', en: 'Cancelled changes for build "{name}".' },
   "action.buildDeleted": { ru: 'Сборка "{name}" удалена.', en: 'Deleted build "{name}".' },
+  "confirm.deleteBuild": { ru: 'Удалить сборку "{name}"?', en: 'Delete build "{name}"?' },
   "error.loadData": { ru: "Не удалось загрузить данные", en: "Failed to load data" },
   "error.loadingFailed": { ru: "Загрузка не удалась.", en: "Loading failed." },
 };
