@@ -128,6 +128,7 @@ export function createStatsModule(deps) {
     getEquippedSphereSlots,
     getEquippedTrophySlots,
     localizeText = (value) => String(value ?? ""),
+    getLocalizedCatalogField = (item, field) => String(item?.[field] ?? ""),
     getCurrentLanguage = () => "ru",
   } = deps;
 
@@ -147,7 +148,7 @@ function renderItemIcon(item) {
 
   return `
     <span class="item-icon-frame">
-      <img src="${escapeHtml(item.image)}" alt="${escapeHtml(localizeText(item.name))}" loading="lazy">
+      <img src="${escapeHtml(item.image)}" alt="${escapeHtml(getLocalizedCatalogField(item, "name", { fallbackToRu: true }))}" loading="lazy">
     </span>
   `;
 }
