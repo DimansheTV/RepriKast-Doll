@@ -14,7 +14,7 @@ export function createAppContext({
     fetchImpl,
     storage,
     sessionStorage: sessionStorageImpl,
-    catalogRepository: createCatalogRepository(fetchImpl),
+    catalogRepository: createCatalogRepository(),
     profileRepository,
     uiStateRepository,
   };

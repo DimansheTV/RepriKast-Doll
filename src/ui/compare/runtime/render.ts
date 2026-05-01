@@ -15,11 +15,92 @@ export function createCompareRenderModule(deps) {
     return app.localizeText(value);
   }
 
+  function catalogName(item) {
+    return app.getLocalizedCatalogField(item, "name", { fallbackToRu: true });
+  }
+
+  function catalogLines(item) {
+    return app.getLocalizedCatalogLines(item, "descriptionLines", { fallbackToRu: true });
+  }
+
+  function catalogCategory(item) {
+    return app.getLocalizedCatalogField(item, "category", { fallbackToRu: true });
+  }
+
+  function catalogVariant(item) {
+    return app.getLocalizedCatalogField(item, "variant", { fallbackToRu: true });
+  }
+
+  function catalogElement(item) {
+    return app.getLocalizedCatalogField(item, "element", { fallbackToRu: true });
+  }
+
+  function isBaseDefenseLevelLine(line) {
+    return /^(?:Базовый уровень защиты|Base defense level)\s*:?\s*[+-]?\d+(?:[.,]\d+)?$/iu.test(app.normalizeText(line));
+  }
+
+  function renderCompareItemDescription(item, level, options = {}) {
+    if (!item) {
+      return "";
+    }
+
+    const {
+      className = "",
+      displayLevel = true,
+      prefixLines = [],
+    } = options;
+    const params = app.getLocalizedParamsForLevel(item, level);
+    const normalizedPrefixLines = prefixLines.map((line) => app.normalizeText(line)).filter(Boolean);
+    const currentParamLabels = new Set(
+      params
+        .map((line) => app.parseNumericStat(line))
+        .filter(Boolean)
+        .map((stat) => stat.label),
+    );
+    const descriptionLines = catalogLines(item)
+      .filter((line) => app.normalizeText(line))
+      .filter((line) => !params.includes(line))
+      .filter((line) => !(currentParamLabels.has("Защита") && isBaseDefenseLevelLine(line)));
+    const mergedLines = [
+      ...normalizedPrefixLines,
+      ...params,
+      ...descriptionLines.filter((line) => {
+        const parsed = app.parseNumericStat(line);
+        if (!parsed) {
+          return !normalizedPrefixLines.includes(line);
+        }
+        return !currentParamLabels.has(parsed.label);
+      }),
+    ];
+    const paramsHtml = mergedLines.length
+      ? mergedLines.map((param) => `<li>${app.escapeHtml(localize(param))}</li>`).join("")
+      : `<li>${app.escapeHtml(app.t("empty.noParams"))}</li>`;
+    const suffix = displayLevel ? app.formatUpgradeSuffix(level) : "";
+
+    return `
+      <div class="equipment-description ${className}">
+        <div class="equipment-description-card">
+          <div class="equipment-description-content">
+            <div class="equipment-description-name">${app.escapeHtml(catalogName(item))}${app.escapeHtml(suffix)}</div>
+            <ul class="equipment-description-params">${paramsHtml}</ul>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function applyStaticLocalization() {
     document.documentElement.lang = app.getCurrentLanguage();
 
     const topbar = document.querySelector("body[data-page='compare'] .panel-topbar");
     topbar?.setAttribute("aria-label", app.t("compare.toolbar"));
+
+    document.getElementById("mobile-nav-toggle")?.setAttribute("aria-label", app.t("toolbar.mobileNav"));
+    document.getElementById("mobile-nav-toggle")?.setAttribute("title", app.t("button.mainMenu"));
+    const mobileToggleText = document.querySelector(".mobile-nav-toggle-text");
+    if (mobileToggleText) {
+      mobileToggleText.textContent = app.t("button.menu");
+    }
 
     const backLink = document.querySelector(".compare-topbar-actions .profile-link-button");
     if (backLink) {
@@ -40,7 +121,7 @@ export function createCompareRenderModule(deps) {
     document.getElementById("compare-secondary-select")?.setAttribute("aria-label", app.t("compare.secondarySelect"));
     document.querySelector(".compare-profile-panel:first-of-type")?.setAttribute("aria-label", app.t("compare.primaryBuild"));
     document.querySelector(".compare-profile-panel:nth-of-type(2)")?.setAttribute("aria-label", app.t("compare.secondaryBuild"));
-    document.querySelector(".compare-summary-panel")?.setAttribute("aria-label", app.t("compare.stats"));
+    document.querySelector(".compare-summary-panel")?.setAttribute("aria-label", app.t("compare.summaryPanel"));
   }
 
   function renderStaticUpgradeBadge(controlClass, level) {
@@ -71,24 +152,29 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
+        ? `<img class="slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(catalogName(item))}" loading="lazy">`
         : "";
       const upgradeControl = item ? renderStaticUpgradeBadge("slot-upgrade-select", level) : "";
+      const descriptionHtml = item
+        ? renderCompareItemDescription(item, level)
+        : "";
       const slotTitle = item
-        ? `${localize(slot.label)}: ${localize(item.name)}${app.formatUpgradeTitleSuffix(level)}`
+        ? `${localize(slot.label)}: ${catalogName(item)}${app.formatUpgradeTitleSuffix(level)}`
         : localize(slot.label);
 
       return `
-        <div class="${classes.join(" ")}" style="grid-column: ${slot.col}; grid-row: ${slot.row};">
+        <div class="${classes.join(" ")}" data-slot="${slot.key}" style="grid-column: ${slot.col}; grid-row: ${slot.row};">
           <div
             class="slot-pin compare-static-slot-pin"
             role="img"
+            tabindex="0"
             aria-label="${app.escapeHtml(slotTitle)}"
             title="${app.escapeHtml(slotTitle)}"
           >
             <span class="slot-item-visual" aria-hidden="true">${imageHtml}</span>
           </div>
           ${upgradeControl}
+          ${descriptionHtml}
         </div>
       `;
     }).join("");
@@ -104,9 +190,12 @@ export function createCompareRenderModule(deps) {
     }
 
     const passiveImageHtml = passiveItem?.image
-      ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(localize(passiveItem.name))}" loading="lazy">`
+      ? `<img class="slot-item-image" src="${app.escapeHtml(passiveItem.image)}" alt="${app.escapeHtml(catalogName(passiveItem))}" loading="lazy">`
       : "";
     const passiveUpgradeControl = passiveItem ? renderStaticUpgradeBadge("slot-upgrade-select", passiveLevel) : "";
+    const passiveDescriptionHtml = passiveItem
+      ? renderCompareItemDescription(passiveItem, passiveLevel)
+      : "";
     const passiveSlotHtml = passiveItem && passiveSlot
       ? `
         <section class="compare-passive-slot-panel">
@@ -114,12 +203,14 @@ export function createCompareRenderModule(deps) {
             <div
               class="slot-pin compare-static-slot-pin"
               role="img"
-              aria-label="${app.escapeHtml(`${localize(passiveSlot.label)}: ${localize(passiveItem.name)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
-              title="${app.escapeHtml(`${localize(passiveSlot.label)}: ${localize(passiveItem.name)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              tabindex="0"
+              aria-label="${app.escapeHtml(`${localize(passiveSlot.label)}: ${catalogName(passiveItem)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              title="${app.escapeHtml(`${localize(passiveSlot.label)}: ${catalogName(passiveItem)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
             >
               <span class="slot-item-visual" aria-hidden="true">${passiveImageHtml}</span>
             </div>
             ${passiveUpgradeControl}
+            ${passiveDescriptionHtml}
           </div>
         </section>
       `
@@ -152,11 +243,22 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
+        ? `<img class="sphere-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(catalogName(item))}" loading="lazy">`
         : "";
       const upgradeControl = item && showUpgrade ? renderStaticUpgradeBadge("sphere-upgrade-select", level) : "";
+      const requiredLevel = item ? app.getMorphSphereRequiredLevel(item) : 0;
+      const requirementLine = requiredLevel > 0
+        ? [app.getCurrentLanguage() === "en" ? `Required level ${requiredLevel}` : `Уровень экипировки ${requiredLevel}`]
+        : [];
+      const descriptionHtml = item
+        ? renderCompareItemDescription(item, level, {
+            className: "sphere-description",
+            displayLevel: showUpgrade && app.getLevelKeys(item).length > 1,
+            prefixLines: requirementLine,
+          })
+        : "";
       const slotTitle = item
-        ? `${localize(slot.label)}: ${localize(item.name)}${showUpgrade ? app.formatUpgradeTitleSuffix(level) : ""}`
+        ? `${localize(slot.label)}: ${catalogName(item)}${showUpgrade ? app.formatUpgradeTitleSuffix(level) : ""}`
         : localize(slot.label);
 
       return `
@@ -164,12 +266,14 @@ export function createCompareRenderModule(deps) {
           <div
             class="sphere-slot-button compare-static-sphere-slot"
             role="img"
+            tabindex="0"
             aria-label="${app.escapeHtml(slotTitle)}"
             title="${app.escapeHtml(slotTitle)}"
           >
             <span class="sphere-slot-item-visual" aria-hidden="true">${imageHtml}</span>
           </div>
           ${upgradeControl}
+          ${descriptionHtml}
         </div>
       `;
     }).join("");
@@ -196,11 +300,14 @@ export function createCompareRenderModule(deps) {
       }
 
       const imageHtml = item?.image
-        ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(localize(item.name))}" loading="lazy">`
+        ? `<img class="trophy-slot-item-image" src="${app.escapeHtml(item.image)}" alt="${app.escapeHtml(catalogName(item))}" loading="lazy">`
         : "";
       const upgradeControl = item ? renderStaticUpgradeBadge("trophy-upgrade-select", level) : "";
+      const descriptionHtml = item
+        ? renderCompareItemDescription(item, level, { className: "trophy-description" })
+        : "";
       const slotTitle = item
-        ? `${localize(slot.label)}: ${localize(item.name)}${app.formatUpgradeTitleSuffix(level)}`
+        ? `${localize(slot.label)}: ${catalogName(item)}${app.formatUpgradeTitleSuffix(level)}`
         : localize(slot.label);
 
       return `
@@ -208,12 +315,14 @@ export function createCompareRenderModule(deps) {
           <div
             class="trophy-slot-button compare-static-trophy-slot"
             role="img"
+            tabindex="0"
             aria-label="${app.escapeHtml(slotTitle)}"
             title="${app.escapeHtml(slotTitle)}"
           >
             <span class="trophy-slot-item-visual" aria-hidden="true">${imageHtml}</span>
           </div>
           ${upgradeControl}
+          ${descriptionHtml}
         </div>
       `;
     }).join("");
@@ -270,8 +379,9 @@ export function createCompareRenderModule(deps) {
     }
 
     const { pet, stats, effects } = petData;
-    const subtitle = localize(app.normalizeText(pet.description_lines?.[0]) || `${pet.element} (${pet.variant})`);
-    const categoryLabel = localize(app.PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label || pet.category);
+    const subtitle = app.normalizeText(catalogLines(pet)[0] || `${catalogElement(pet)} (${catalogVariant(pet)})`);
+    const categoryConfigLabel = app.PET_CATEGORY_CONFIG.find((entry) => entry.key === pet.variant)?.label;
+    const categoryLabel = categoryConfigLabel ? localize(categoryConfigLabel) : catalogCategory(pet);
 
     return `
       <section class="pet-column compare-stage-column">
@@ -279,12 +389,12 @@ export function createCompareRenderModule(deps) {
           <article class="pet-card">
             <div class="pet-card-head">
               <div class="pet-card-portrait">
-                <img src="${app.escapeHtml(pet.image)}" alt="${app.escapeHtml(localize(pet.name))}" loading="lazy">
+                <img src="${app.escapeHtml(pet.image)}" alt="${app.escapeHtml(catalogName(pet))}" loading="lazy">
               </div>
               <div class="pet-card-copy">
                 <div class="pet-card-kicker">${app.escapeHtml(categoryLabel)}</div>
                 <div class="pet-card-title-row">
-                  <h3>${app.escapeHtml(localize(pet.name))}</h3>
+                  <h3>${app.escapeHtml(catalogName(pet))}</h3>
                 </div>
                 <div class="pet-card-meta">${app.escapeHtml(subtitle)}</div>
               </div>
@@ -349,8 +459,6 @@ export function createCompareRenderModule(deps) {
           <button class="workspace-tab ${editor.activeWorkspaceTab === "trophies" ? "is-active" : ""}" type="button" data-compare-workspace-tab="trophies">${app.escapeHtml(app.t("workspace.trophies"))}</button>
         </nav>
 
-        <div class="compare-readonly-note">${app.escapeHtml(app.t("compare.readonly"))}</div>
-
         <section class="compare-editor-stage compare-editor-stage-readonly">
           <div class="compare-editor-stage-view">
             ${stageHtml}
@@ -378,14 +486,6 @@ export function createCompareRenderModule(deps) {
 
     container.innerHTML = `
       <section class="compare-summary-shell">
-        <div class="section-title-row compare-summary-heading">
-          <div class="compare-summary-headline">
-            <span class="compare-editor-tag compare-editor-tag-summary">${app.escapeHtml(app.t("compare.analytics"))}</span>
-            <h2>${app.escapeHtml(app.t("compare.stats"))}</h2>
-            <span class="section-note">${app.escapeHtml(primaryProfile.name)} vs ${app.escapeHtml(secondaryProfile.name)}</span>
-          </div>
-        </div>
-
         <div class="compare-summary-strip">
           <div class="compare-summary-chip is-better">${app.escapeHtml(app.t("compare.better"))}: ${app.escapeHtml(betterCount)}</div>
           <div class="compare-summary-chip is-worse">${app.escapeHtml(app.t("compare.worse"))}: ${app.escapeHtml(worseCount)}</div>

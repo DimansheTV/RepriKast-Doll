@@ -19,6 +19,48 @@
         "Вероятность выпадения трофеев +5%",
         "Количество получаемых очков опыта +5%"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Защита",
+        "description": "Луна (I)",
+        "descriptionLines": [
+          "Луна (I)"
+        ],
+        "category": "Направление I",
+        "variant": "I",
+        "element": "Луна",
+        "upgradeLevels": {
+          "+0": [
+            "HP +400",
+            "Защита +10",
+            "Периодический урон -6",
+            "Получаемый урон -15%",
+            "Вероятность выпадения трофеев +5%",
+            "Количество получаемых очков опыта +5%"
+          ]
+        }
+      },
+      "en": {
+        "name": "Defense",
+        "description": "Moon (I)",
+        "descriptionLines": [
+          "Moon (I)"
+        ],
+        "category": "Type I",
+        "variant": "I",
+        "element": "Moon",
+        "upgradeLevels": {
+          "+0": [
+            "HP +400",
+            "Defense +10",
+            "Damage over time -6",
+            "Incoming damage -15%",
+            "Trophy drop chance +5%",
+            "Experience gain +5%"
+          ]
+        }
+      }
     }
   },
   {
@@ -42,6 +84,50 @@
         "Вероятность выпадения трофеев +5%",
         "Количество получаемых очков опыта +5%"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Ближний бой",
+        "description": "Огонь (I)",
+        "descriptionLines": [
+          "Огонь (I)"
+        ],
+        "category": "Направление I",
+        "variant": "I",
+        "element": "Огонь",
+        "upgradeLevels": {
+          "+0": [
+            "Уровень ближних атак +8",
+            "Точность ближних атак +8",
+            "Сила +4",
+            "Шанс нанести крит. удар +5",
+            "Доп. урон при крит. ударе +3",
+            "Вероятность выпадения трофеев +5%",
+            "Количество получаемых очков опыта +5%"
+          ]
+        }
+      },
+      "en": {
+        "name": "Melee",
+        "description": "Fire (I)",
+        "descriptionLines": [
+          "Fire (I)"
+        ],
+        "category": "Type I",
+        "variant": "I",
+        "element": "Fire",
+        "upgradeLevels": {
+          "+0": [
+            "Melee attack level +8",
+            "Melee accuracy +8",
+            "Strength +4",
+            "Critical hit chance +5",
+            "Critical damage bonus +3",
+            "Trophy drop chance +5%",
+            "Experience gain +5%"
+          ]
+        }
+      }
     }
   },
   {
@@ -65,6 +151,50 @@
         "Вероятность выпадения трофеев +5%",
         "Количество получаемых очков опыта +5%"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Дальний бой",
+        "description": "Земля (I)",
+        "descriptionLines": [
+          "Земля (I)"
+        ],
+        "category": "Направление I",
+        "variant": "I",
+        "element": "Земля",
+        "upgradeLevels": {
+          "+0": [
+            "Уровень дальних атак +8",
+            "Точность дальних атак +8",
+            "Ловкость +4",
+            "Шанс нанести крит. удар +5",
+            "Доп. урон при крит. ударе +3",
+            "Вероятность выпадения трофеев +5%",
+            "Количество получаемых очков опыта +5%"
+          ]
+        }
+      },
+      "en": {
+        "name": "Ranged",
+        "description": "Earth (I)",
+        "descriptionLines": [
+          "Earth (I)"
+        ],
+        "category": "Type I",
+        "variant": "I",
+        "element": "Earth",
+        "upgradeLevels": {
+          "+0": [
+            "Ranged attack level +8",
+            "Ranged accuracy +8",
+            "Dexterity +4",
+            "Critical hit chance +5",
+            "Critical damage bonus +3",
+            "Trophy drop chance +5%",
+            "Experience gain +5%"
+          ]
+        }
+      }
     }
   },
   {
@@ -88,6 +218,50 @@
         "Вероятность выпадения трофеев +5%",
         "Количество получаемых очков опыта +5%"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Магический бой",
+        "description": "Энергия (I)",
+        "descriptionLines": [
+          "Энергия (I)"
+        ],
+        "category": "Направление I",
+        "variant": "I",
+        "element": "Энергия",
+        "upgradeLevels": {
+          "+0": [
+            "Уровень магических атак +8",
+            "Точность магических атак +8",
+            "Интеллект +4",
+            "Шанс нанести крит. удар +5",
+            "Доп. урон при крит. ударе +3",
+            "Вероятность выпадения трофеев +5%",
+            "Количество получаемых очков опыта +5%"
+          ]
+        }
+      },
+      "en": {
+        "name": "Magic",
+        "description": "Energy (I)",
+        "descriptionLines": [
+          "Energy (I)"
+        ],
+        "category": "Type I",
+        "variant": "I",
+        "element": "Energy",
+        "upgradeLevels": {
+          "+0": [
+            "Magic attack level +8",
+            "Magic accuracy +8",
+            "Intelligence +4",
+            "Critical hit chance +5",
+            "Critical damage bonus +3",
+            "Trophy drop chance +5%",
+            "Experience gain +5%"
+          ]
+        }
+      }
     }
   },
   {
@@ -110,6 +284,48 @@
         "Вероятность выпадения трофеев +5%",
         "Количество получаемых очков опыта +5%"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Скорость бега/атаки",
+        "description": "Ветер (I)",
+        "descriptionLines": [
+          "Ветер (I)"
+        ],
+        "category": "Направление I",
+        "variant": "I",
+        "element": "Ветер",
+        "upgradeLevels": {
+          "+0": [
+            "Скорость бега +65",
+            "Скорость атаки +20%",
+            "Точность всех атак +8",
+            "Все параметры +3",
+            "Вероятность выпадения трофеев +5%",
+            "Количество получаемых очков опыта +5%"
+          ]
+        }
+      },
+      "en": {
+        "name": "Move/attack speed",
+        "description": "Wind (I)",
+        "descriptionLines": [
+          "Wind (I)"
+        ],
+        "category": "Type I",
+        "variant": "I",
+        "element": "Wind",
+        "upgradeLevels": {
+          "+0": [
+            "Move speed +65",
+            "Attack speed +20%",
+            "All attack accuracy +8",
+            "All stats +3",
+            "Trophy drop chance +5%",
+            "Experience gain +5%"
+          ]
+        }
+      }
     }
   },
   {
@@ -132,6 +348,48 @@
         "Вероятность выпадения трофеев +5%",
         "Количество получаемых очков опыта +5%"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Уклонение",
+        "description": "Солнце (I)",
+        "descriptionLines": [
+          "Солнце (I)"
+        ],
+        "category": "Направление I",
+        "variant": "I",
+        "element": "Солнце",
+        "upgradeLevels": {
+          "+0": [
+            "Уклонение +13",
+            "Шанс получить крит. удар -10",
+            "Получаемый крит. урон -6",
+            "Все параметры +3",
+            "Вероятность выпадения трофеев +5%",
+            "Количество получаемых очков опыта +5%"
+          ]
+        }
+      },
+      "en": {
+        "name": "Evasion",
+        "description": "Sun (I)",
+        "descriptionLines": [
+          "Sun (I)"
+        ],
+        "category": "Type I",
+        "variant": "I",
+        "element": "Sun",
+        "upgradeLevels": {
+          "+0": [
+            "Evasion +13",
+            "Incoming critical hit chance -10",
+            "Incoming critical damage -6",
+            "All stats +3",
+            "Trophy drop chance +5%",
+            "Experience gain +5%"
+          ]
+        }
+      }
     }
   },
   {
@@ -154,6 +412,47 @@
         "Вероятность выпадения трофеев +5%",
         "Количество получаемых очков опыта +5%"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Мана",
+        "description": "Вода (I)",
+        "descriptionLines": [
+          "Вода (I)"
+        ],
+        "category": "Направление I",
+        "variant": "I",
+        "element": "Вода",
+        "upgradeLevels": {
+          "+0": [
+            "MP +1500",
+            "Особое восстановление MP +5,5",
+            "Расход MP -15%",
+            "Интеллект +5",
+            "Вероятность выпадения трофеев +5%",
+            "Количество получаемых очков опыта +5%"
+          ]
+        }
+      },
+      "en": {
+        "name": "Mana",
+        "description": "Water (I)",
+        "descriptionLines": [
+          "Water (I)"
+        ],
+        "category": "Type I",
+        "variant": "I",
+        "element": "Water",
+        "upgradeLevels": {
+          "+0": [
+            "MP +1500",
+            "Special MP regeneration +5,5",
+            "Intelligence +5",
+            "Trophy drop chance +5%",
+            "Experience gain +5%"
+          ]
+        }
+      }
     }
   },
   {
@@ -176,6 +475,48 @@
         "Защита +10",
         "Вес +1500"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Защита + опыт/дроп",
+        "description": "Луна (II)",
+        "descriptionLines": [
+          "Луна (II)"
+        ],
+        "category": "Направление II",
+        "variant": "II",
+        "element": "Луна",
+        "upgradeLevels": {
+          "+0": [
+            "Вероятность выпадения трофеев +105%",
+            "Количество получаемых очков опыта +110%",
+            "HP +400",
+            "Особое восстановление HP +3",
+            "Защита +10",
+            "Вес +1500"
+          ]
+        }
+      },
+      "en": {
+        "name": "Defense + XP/drop",
+        "description": "Moon (II)",
+        "descriptionLines": [
+          "Moon (II)"
+        ],
+        "category": "Type II",
+        "variant": "II",
+        "element": "Moon",
+        "upgradeLevels": {
+          "+0": [
+            "Trophy drop chance +105%",
+            "Experience gain +110%",
+            "HP +400",
+            "Special HP regeneration +3",
+            "Defense +10",
+            "Weight +1500"
+          ]
+        }
+      }
     }
   },
   {
@@ -199,6 +540,50 @@
         "Шанс нанести крит. удар +3",
         "Вес +1500"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Ближний бой + опыт/дроп",
+        "description": "Огонь (II)",
+        "descriptionLines": [
+          "Огонь (II)"
+        ],
+        "category": "Направление II",
+        "variant": "II",
+        "element": "Огонь",
+        "upgradeLevels": {
+          "+0": [
+            "Вероятность выпадения трофеев +105%",
+            "Количество получаемых очков опыта +110%",
+            "Уровень ближних атак +4",
+            "Точность ближних атак +5",
+            "Сила +5",
+            "Шанс нанести крит. удар +3",
+            "Вес +1500"
+          ]
+        }
+      },
+      "en": {
+        "name": "Melee + XP/drop",
+        "description": "Fire (II)",
+        "descriptionLines": [
+          "Fire (II)"
+        ],
+        "category": "Type II",
+        "variant": "II",
+        "element": "Fire",
+        "upgradeLevels": {
+          "+0": [
+            "Trophy drop chance +105%",
+            "Experience gain +110%",
+            "Melee attack level +4",
+            "Melee accuracy +5",
+            "Strength +5",
+            "Critical hit chance +3",
+            "Weight +1500"
+          ]
+        }
+      }
     }
   },
   {
@@ -222,6 +607,50 @@
         "Шанс нанести крит. удар +3",
         "Вес +1500"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Дальний бой + опыт/дроп",
+        "description": "Земля (II)",
+        "descriptionLines": [
+          "Земля (II)"
+        ],
+        "category": "Направление II",
+        "variant": "II",
+        "element": "Земля",
+        "upgradeLevels": {
+          "+0": [
+            "Вероятность выпадения трофеев +105%",
+            "Количество получаемых очков опыта +110%",
+            "Уровень дальних атак +4",
+            "Точность дальних атак +5",
+            "Ловкость +3",
+            "Шанс нанести крит. удар +3",
+            "Вес +1500"
+          ]
+        }
+      },
+      "en": {
+        "name": "Ranged + XP/drop",
+        "description": "Earth (II)",
+        "descriptionLines": [
+          "Earth (II)"
+        ],
+        "category": "Type II",
+        "variant": "II",
+        "element": "Earth",
+        "upgradeLevels": {
+          "+0": [
+            "Trophy drop chance +105%",
+            "Experience gain +110%",
+            "Ranged attack level +4",
+            "Ranged accuracy +5",
+            "Dexterity +3",
+            "Critical hit chance +3",
+            "Weight +1500"
+          ]
+        }
+      }
     }
   },
   {
@@ -245,6 +674,50 @@
         "Шанс нанести крит. удар +3",
         "Вес +1500"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Магический бой + опыт/дроп",
+        "description": "Энергия (II)",
+        "descriptionLines": [
+          "Энергия (II)"
+        ],
+        "category": "Направление II",
+        "variant": "II",
+        "element": "Энергия",
+        "upgradeLevels": {
+          "+0": [
+            "Вероятность выпадения трофеев +105%",
+            "Количество получаемых очков опыта +110%",
+            "Уровень магических атак +4",
+            "Точность магических атак +5",
+            "Интеллект +5",
+            "Шанс нанести крит. удар +3",
+            "Вес +1500"
+          ]
+        }
+      },
+      "en": {
+        "name": "Magic + XP/drop",
+        "description": "Energy (II)",
+        "descriptionLines": [
+          "Energy (II)"
+        ],
+        "category": "Type II",
+        "variant": "II",
+        "element": "Energy",
+        "upgradeLevels": {
+          "+0": [
+            "Trophy drop chance +105%",
+            "Experience gain +110%",
+            "Magic attack level +4",
+            "Magic accuracy +5",
+            "Intelligence +5",
+            "Critical hit chance +3",
+            "Weight +1500"
+          ]
+        }
+      }
     }
   },
   {
@@ -267,6 +740,48 @@
         "Точность всех атак +1",
         "Вес +1500"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Скорость бега + опыт/дроп",
+        "description": "Ветер (II)",
+        "descriptionLines": [
+          "Ветер (II)"
+        ],
+        "category": "Направление II",
+        "variant": "II",
+        "element": "Ветер",
+        "upgradeLevels": {
+          "+0": [
+            "Вероятность выпадения трофеев +105%",
+            "Количество получаемых очков опыта +110%",
+            "Скорость бега +70",
+            "Все параметры +3",
+            "Точность всех атак +1",
+            "Вес +1500"
+          ]
+        }
+      },
+      "en": {
+        "name": "Move speed + XP/drop",
+        "description": "Wind (II)",
+        "descriptionLines": [
+          "Wind (II)"
+        ],
+        "category": "Type II",
+        "variant": "II",
+        "element": "Wind",
+        "upgradeLevels": {
+          "+0": [
+            "Trophy drop chance +105%",
+            "Experience gain +110%",
+            "Move speed +70",
+            "All stats +3",
+            "All attack accuracy +1",
+            "Weight +1500"
+          ]
+        }
+      }
     }
   },
   {
@@ -288,6 +803,46 @@
         "Все параметры +3",
         "Вес +1500"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Уклонение + опыт/дроп",
+        "description": "Солнце (II)",
+        "descriptionLines": [
+          "Солнце (II)"
+        ],
+        "category": "Направление II",
+        "variant": "II",
+        "element": "Солнце",
+        "upgradeLevels": {
+          "+0": [
+            "Вероятность выпадения трофеев +105%",
+            "Количество получаемых очков опыта +110%",
+            "Уклонение +13",
+            "Все параметры +3",
+            "Вес +1500"
+          ]
+        }
+      },
+      "en": {
+        "name": "Evasion + XP/drop",
+        "description": "Sun (II)",
+        "descriptionLines": [
+          "Sun (II)"
+        ],
+        "category": "Type II",
+        "variant": "II",
+        "element": "Sun",
+        "upgradeLevels": {
+          "+0": [
+            "Trophy drop chance +105%",
+            "Experience gain +110%",
+            "Evasion +13",
+            "All stats +3",
+            "Weight +1500"
+          ]
+        }
+      }
     }
   },
   {
@@ -311,6 +866,49 @@
         "Вес +1500",
         "Реген MP от зелий"
       ]
+    },
+    "locales": {
+      "ru": {
+        "name": "Мана + опыт/дроп",
+        "description": "Вода (II)",
+        "descriptionLines": [
+          "Вода (II)"
+        ],
+        "category": "Направление II",
+        "variant": "II",
+        "element": "Вода",
+        "upgradeLevels": {
+          "+0": [
+            "Вероятность выпадения трофеев +105%",
+            "Количество получаемых очков опыта +110%",
+            "MP +500",
+            "Особое восстановление MP +1,7",
+            "Интеллект +3",
+            "Вес +1500",
+            "Реген MP от зелий"
+          ]
+        }
+      },
+      "en": {
+        "name": "Mana + XP/drop",
+        "description": "Water (II)",
+        "descriptionLines": [
+          "Water (II)"
+        ],
+        "category": "Type II",
+        "variant": "II",
+        "element": "Water",
+        "upgradeLevels": {
+          "+0": [
+            "Trophy drop chance +105%",
+            "Experience gain +110%",
+            "MP +500",
+            "Special MP regeneration +1,7",
+            "Intelligence +3",
+            "Weight +1500"
+          ]
+        }
+      }
     }
   }
 ]

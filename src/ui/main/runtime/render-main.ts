@@ -33,6 +33,7 @@ export function createMainRenderModule(deps) {
     formatBoardPrimaryValue,
     formatStatValue,
     getParamsForLevel,
+    getLocalizedParamsForLevel,
     normalizeText,
     parseNumericStat,
     escapeHtml,
@@ -40,6 +41,8 @@ export function createMainRenderModule(deps) {
     getMorphSphereRequiredLevel,
     shouldShowSphereUpgrade,
     getLevelKeys,
+    getLocalizedCatalogField,
+    getLocalizedCatalogLines,
     CLASS_CONFIGS: runtimeClassConfigs = CLASS_CONFIGS,
     sanitizeClassLevel,
     t,
@@ -53,6 +56,10 @@ export function createMainRenderModule(deps) {
 
 function localize(value) {
   return localizeText(value);
+}
+
+function isBaseDefenseLevelLine(line) {
+  return /^(?:Базовый уровень защиты|Base defense level)\s*:?\s*[+-]?\d+(?:[.,]\d+)?$/iu.test(normalizeText(line));
 }
 
 function getNextLanguage(language) {
@@ -116,8 +123,8 @@ function applyStaticLocalization() {
   setAttributeValue("#class-level-input", "aria-label", t("class.characterLevel"));
   setAttributeValue("#class-level-increase", "aria-label", t("class.increaseLevel"));
 
-  setTextContent('[data-tab-panel="class"] .stats-section:nth-of-type(1) h3', t("stats.fromLevel"));
-  setTextContent('[data-tab-panel="class"] .stats-section:nth-of-type(2) h3', t("stats.derivedFromLevel"));
+  setTextContent("#class-base-stats-title", t("stats.fromLevel"));
+  setTextContent("#class-derived-stats-title", t("stats.derivedFromLevel"));
 
   setAttributeValue(".stats-source-tabs", "aria-label", t("stats.sources"));
   setTextContent('.stats-source-tab[data-stats-tab="inventory"]', t("stats.inventory"));
@@ -191,16 +198,17 @@ function renderEquipmentDescription(slot, item, level) {
     return "";
   }
 
-  const params = getParamsForLevel(item, level);
-  const descriptionLines = Array.isArray(item.description_lines)
-    ? item.description_lines.filter((line) => normalizeText(line))
-    : [];
+  const params = getLocalizedParamsForLevel(item, level);
   const currentParamLabels = new Set(
     params
       .map((line) => parseNumericStat(line))
       .filter(Boolean)
       .map((stat) => stat.label),
   );
+  const descriptionLines = getLocalizedCatalogLines(item, "descriptionLines", { fallbackToRu: true })
+    .filter((line) => normalizeText(line))
+    .filter((line) => !params.includes(line))
+    .filter((line) => !(currentParamLabels.has("Защита") && isBaseDefenseLevelLine(line)));
   const mergedLines = [
     ...params,
     ...descriptionLines.filter((line) => {
@@ -218,7 +226,7 @@ function renderEquipmentDescription(slot, item, level) {
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(formatUpgradeSuffix(level))}</div>
+        <div class="equipment-description-name">${escapeHtml(getLocalizedCatalogField(item, "name", { fallbackToRu: true }))}${escapeHtml(formatUpgradeSuffix(level))}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -230,12 +238,14 @@ function renderSphereDescription(slot, item, level) {
     return "";
   }
 
-  const params = getParamsForLevel(item, level);
+  const params = getLocalizedParamsForLevel(item, level);
   const requiredLevel = getMorphSphereRequiredLevel(item);
-  const requirementLine = requiredLevel > 0 ? [`Уровень экипировки ${requiredLevel}`] : [];
-  const descriptionLines = Array.isArray(item.description_lines)
-    ? item.description_lines.filter((line) => normalizeText(line))
+  const requirementLine = requiredLevel > 0
+    ? [state.language === "en" ? `Required level ${requiredLevel}` : `Уровень экипировки ${requiredLevel}`]
     : [];
+  const descriptionLines = getLocalizedCatalogLines(item, "descriptionLines", { fallbackToRu: true })
+    .filter((line) => normalizeText(line))
+    .filter((line) => !params.includes(line));
   const currentParamLabels = new Set(
     params
       .map((line) => parseNumericStat(line))
@@ -248,7 +258,7 @@ function renderSphereDescription(slot, item, level) {
     ...descriptionLines.filter((line) => {
       const parsed = parseNumericStat(line);
       if (!parsed) {
-        return !params.includes(line);
+        return !requirementLine.includes(line);
       }
       return !currentParamLabels.has(parsed.label);
     }),
@@ -263,7 +273,7 @@ function renderSphereDescription(slot, item, level) {
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(displayLevel)}</div>
+        <div class="equipment-description-name">${escapeHtml(getLocalizedCatalogField(item, "name", { fallbackToRu: true }))}${escapeHtml(displayLevel)}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -275,14 +285,14 @@ function renderTrophyDescription(slot, item, level) {
     return "";
   }
 
-  const params = getParamsForLevel(item, level);
+  const params = getLocalizedParamsForLevel(item, level);
   const paramsHtml = params.length
     ? params.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
     : `<li>${escapeHtml(t("empty.noParams"))}</li>`;
   return `
     <div class="equipment-description-card">
       <div class="equipment-description-content">
-        <div class="equipment-description-name">${escapeHtml(localize(item.name))}${escapeHtml(formatUpgradeSuffix(level))}</div>
+        <div class="equipment-description-name">${escapeHtml(getLocalizedCatalogField(item, "name", { fallbackToRu: true }))}${escapeHtml(formatUpgradeSuffix(level))}</div>
         <ul class="equipment-description-params">${paramsHtml}</ul>
       </div>
     </div>
@@ -948,9 +958,11 @@ function bindMobileNav() {
   const drawer = document.getElementById("mobile-nav-drawer");
   const backdrop = document.getElementById("mobile-nav-backdrop");
 
-  if (!body || !toggle || !backdrop) {
+  if (!body || !toggle || !backdrop || toggle.dataset.bound === "1") {
     return;
   }
+
+  toggle.dataset.bound = "1";
 
   const syncMobileNavState = (isOpen) => {
     toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
@@ -978,6 +990,16 @@ function bindMobileNav() {
   });
 
   backdrop.addEventListener("click", closeMobileNav);
+  drawer?.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    if (target.closest("[data-mobile-nav-close]")) {
+      closeMobileNav();
+    }
+  });
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {

@@ -13,6 +13,11 @@ import {
 import { SPHERE_SLOT_CONFIG, SPHERE_CATEGORY_CONFIG, SPHERE_TYPE_ONE_TABS } from "../../../domain/spheres/config";
 import { TROPHY_SLOT_CONFIG } from "../../../domain/trophies/config";
 import { PET_CATEGORY_CONFIG, PET_MERGE_CONFIG, PET_MERGE_TOTAL_LIMIT } from "../../../domain/pets/config";
+import {
+  getLocalizedCatalogField,
+  getLocalizedCatalogLines,
+  getLocalizedCatalogUpgradeLines,
+} from "../../../shared/catalog-locales";
 import { normalizeText, escapeHtml, sanitizeClassLevel } from "./utils";
 import {
   parseNumericStat,
@@ -30,28 +35,43 @@ export function createCatalogModule(deps) {
   const { state, localizeText = (value) => String(value || ""), getCurrentLanguage = () => "ru" } = deps;
 
 function sortByLocalizedName(left, right) {
-  return localizeText(left?.name || "").localeCompare(localizeText(right?.name || ""), getCurrentLanguage());
+  return getLocalizedItemName(left).localeCompare(getLocalizedItemName(right), getCurrentLanguage());
 }
 
-function getMorphSphereRequiredLevel(item) {
-  const match = String(item?.name || "").match(/(\d+)\+\s*уров/i);
-  return match ? Number(match[1]) : -1;
+function getLocalizedField(item, field, options = {}) {
+  return getLocalizedCatalogField(item, field, getCurrentLanguage(), options);
 }
 
-function isSphereAllowedForLevel(item, classLevel = state.classConfig.level) {
-  const requiredLevel = getMorphSphereRequiredLevel(item);
-  return requiredLevel < 0 || sanitizeClassLevel(classLevel ?? 1) >= requiredLevel;
+function getLocalizedLines(item, field, options = {}) {
+  return getLocalizedCatalogLines(item, field, getCurrentLanguage(), options);
 }
 
-function sortSphereCategoryItems(left, right, categoryKey) {
-  if (categoryKey === "sphere_type_4") {
-    const levelDelta = getMorphSphereRequiredLevel(right) - getMorphSphereRequiredLevel(left);
-    if (levelDelta !== 0) {
-      return levelDelta;
-    }
+function getLocalizedUpgradeLines(item, level, options = {}) {
+  return getLocalizedCatalogUpgradeLines(item, level, getCurrentLanguage(), options);
+}
+
+function getLocalizedItemName(item, options = {}) {
+  return getLocalizedField(item, "name", options);
+}
+
+function getLocalizedItemDescription(item, options = {}) {
+  const description = getLocalizedField(item, "description", options);
+  if (description) {
+    return description;
   }
+  return getLocalizedLines(item, "descriptionLines", options)[0] || "";
+}
 
-  return sortByLocalizedName(left, right);
+function getLocalizedItemCategory(item, options = {}) {
+  return getLocalizedField(item, "category", options);
+}
+
+function getLocalizedItemVariant(item, options = {}) {
+  return getLocalizedField(item, "variant", options);
+}
+
+function getLocalizedItemElement(item, options = {}) {
+  return getLocalizedField(item, "element", options);
 }
 
 function getSphereSlotConfig(slotKey) {
@@ -72,6 +92,55 @@ function getPrimarySphereSlot(item) {
 
 function shouldShowSphereUpgrade(item, slot = getPrimarySphereSlot(item)) {
   return slot?.categoryKey === "sphere_type_1";
+}
+
+function getMorphSphereRequiredLevel(item) {
+  if (!item) {
+    return 0;
+  }
+
+  const candidates = [
+    item.name,
+    item?.locales?.ru?.name,
+    item?.locales?.en?.name,
+    getLocalizedItemName(item, { fallbackToRu: true }),
+  ]
+    .filter(Boolean)
+    .map((value) => normalizeText(value));
+
+  for (const candidate of candidates) {
+    const directLevelMatch = candidate.match(/(\d+)\+\s*уровня/i);
+    if (directLevelMatch) {
+      return Number(directLevelMatch[1]) || 0;
+    }
+
+    const localizedLevelMatch = candidate.match(/(?:lv\.?|level)\s*(\d+)\+/i);
+    if (localizedLevelMatch) {
+      return Number(localizedLevelMatch[1]) || 0;
+    }
+  }
+
+  return 0;
+}
+
+function isSphereAllowedForLevel(item, classLevel = state.classConfig.level) {
+  const requiredLevel = getMorphSphereRequiredLevel(item);
+  if (!requiredLevel) {
+    return true;
+  }
+
+  return sanitizeClassLevel(classLevel) >= requiredLevel;
+}
+
+function sortSphereCategoryItems(left, right, categoryKey) {
+  if (categoryKey === "sphere_type_4") {
+    const levelDelta = getMorphSphereRequiredLevel(right) - getMorphSphereRequiredLevel(left);
+    if (levelDelta !== 0) {
+      return levelDelta;
+    }
+  }
+
+  return sortByLocalizedName(left, right);
 }
 
 function getSphereItemsForSlot(slotKey) {
@@ -181,13 +250,82 @@ function formatUpgradeTitleSuffix(level) {
 
 function getParamsForLevel(item, level) {
   const params = item?.upgrade_levels?.[level] || [];
-  return applyEquipmentDefenseUpgradeRules(item, level, params);
+  return applyEquipmentDefenseUpgradeRules(item, level, params, "ru");
 }
 
-function applyEquipmentDefenseUpgradeRules(item, level, params) {
-  if (!Array.isArray(params) || !params.length) {
-    return params;
+function getLocalizedParamsForLevel(item, level) {
+  const params = getLocalizedUpgradeLines(item, level, { fallbackToRu: true });
+  return applyEquipmentDefenseUpgradeRules(item, level, params, getCurrentLanguage());
+}
+
+function isDefenseStatEntry(stat) {
+  if (!stat || stat.unit) {
+    return false;
   }
+
+  const normalizedLabel = normalizeText(stat.label).toLowerCase();
+  return normalizedLabel === "защита" || normalizedLabel === "defense";
+}
+
+function parseBaseDefenseLevelValue(line) {
+  const match = normalizeText(line).match(/^(?:Базовый уровень защиты|Base defense level)\s*:?\s*([+-]?\d+(?:[.,]\d+)?)$/iu);
+  if (!match) {
+    return null;
+  }
+
+  const value = Number(match[1].replace(",", "."));
+  return Number.isFinite(value) ? value : null;
+}
+
+function getBaseDefenseSourceLines(item) {
+  const lines = [];
+  const firstLevel = getDefaultUpgradeLevel(item);
+
+  function appendLine(value) {
+    const normalized = normalizeText(value);
+    if (normalized) {
+      lines.push(normalized);
+    }
+  }
+
+  function appendLines(values) {
+    if (!Array.isArray(values)) {
+      return;
+    }
+
+    values.forEach((line) => appendLine(line));
+  }
+
+  appendLines(item?.upgrade_levels?.["+0"]);
+  appendLines(item?.upgradeLevels?.["+0"]);
+  if (firstLevel !== "+0") {
+    appendLines(item?.upgrade_levels?.[firstLevel]);
+    appendLines(item?.upgradeLevels?.[firstLevel]);
+  }
+  appendLine(item?.description);
+  appendLines(item?.description_lines);
+  appendLines(item?.descriptionLines);
+
+  ["ru", "en"].forEach((language) => {
+    const locale = item?.locales?.[language];
+    appendLine(locale?.description);
+    appendLines(locale?.descriptionLines);
+    appendLines(locale?.upgradeLevels?.["+0"]);
+    if (firstLevel !== "+0") {
+      appendLines(locale?.upgradeLevels?.[firstLevel]);
+    }
+  });
+
+  return [...new Set(lines)];
+}
+
+function formatDefenseStatLine(value, language = "ru") {
+  const label = language === "en" ? "Defense" : "Защита";
+  return `${label} ${formatStatValue(value)}`;
+}
+
+function applyEquipmentDefenseUpgradeRules(item, level, params, language = "ru") {
+  const sourceParams = Array.isArray(params) ? params : [];
 
   const defenseRule = [
     { matches: isPlainVelkenOrMythrilDefenseItem, singleStepCap: 7 },
@@ -199,41 +337,61 @@ function applyEquipmentDefenseUpgradeRules(item, level, params) {
   ].find((rule) => rule.matches(item));
 
   if (!defenseRule) {
-    return params;
+    return sourceParams;
   }
 
   const baseDefense = getBaseDefenseForItem(item);
   if (!Number.isFinite(baseDefense)) {
-    return params;
+    return sourceParams;
   }
 
-  const defenseValue = getScaledDefenseValueForUpgrade(baseDefense, getUpgradeNumber(level), defenseRule.singleStepCap);
+  const defenseValue = getScaledDefenseValueForUpgrade(
+    baseDefense,
+    getUpgradeNumber(level),
+    defenseRule.singleStepCap,
+  );
   let replaced = false;
 
-  return params.map((line) => {
+  const nextParams = sourceParams.map((line) => {
     const parsed = parseNumericStat(line);
-    if (!replaced && parsed?.label === "Защита" && !parsed.unit) {
+    if (!replaced && isDefenseStatEntry(parsed)) {
       replaced = true;
-      return `Защита ${formatStatValue(defenseValue)}`;
+      return formatDefenseStatLine(defenseValue, language);
     }
     return line;
   });
+
+  if (replaced) {
+    return nextParams;
+  }
+
+  return [formatDefenseStatLine(defenseValue, language), ...nextParams];
 }
 
 function getBaseDefenseForItem(item) {
-  const baseParams = item?.upgrade_levels?.["+0"] || [];
-  const baseDefense = baseParams
-    .map((line) => parseNumericStat(line))
-    .find((stat) => stat?.label === "Защита" && !stat.unit);
+  for (const line of getBaseDefenseSourceLines(item)) {
+    const numericStat = parseNumericStat(line);
+    if (isDefenseStatEntry(numericStat)) {
+      return numericStat.value;
+    }
 
-  return baseDefense?.value ?? null;
+    const baseDefense = parseBaseDefenseLevelValue(line);
+    if (Number.isFinite(baseDefense)) {
+      return baseDefense;
+    }
+  }
+
+  return null;
+}
+
+function getDefenseUpgradeBonus(upgradeNumber, singleStepCap) {
+  const safeUpgrade = Math.max(0, Math.floor(Number(upgradeNumber) || 0));
+  const safeCap = Math.max(0, Math.floor(Number(singleStepCap) || 0));
+  return safeUpgrade <= safeCap ? safeUpgrade : safeCap + (safeUpgrade - safeCap) * 2;
 }
 
 function getScaledDefenseValueForUpgrade(baseDefense, upgradeNumber, singleStepCap) {
-  const safeUpgrade = Math.max(0, Math.floor(Number(upgradeNumber) || 0));
-  const safeCap = Math.max(0, Math.floor(Number(singleStepCap) || 0));
-  const bonus = safeUpgrade <= safeCap ? safeUpgrade : safeCap + (safeUpgrade - safeCap) * 2;
-  return baseDefense + bonus;
+  return baseDefense + getDefenseUpgradeBonus(upgradeNumber, singleStepCap);
 }
 
 function getSlotConfig(slotKey) {
@@ -653,7 +811,7 @@ function getActiveProfile() {
 }
 
 function createItemUid(item, index) {
-  return `${item.slot_code}:${item.name}:${index}`;
+  return `equipment:${item.id ?? index}`;
 }
 
 function createSphereUid(item, index) {
@@ -685,7 +843,17 @@ function createPetUid(item, index) {
       ...item,
       uid: createPetUid(item, index),
     }));
-    state.itemsById = new Map(state.items.map((item) => [item.uid, item]));
+    state.itemsById = new Map();
+    state.items.forEach((item, index) => {
+      state.itemsById.set(item.uid, item);
+      const fallbackLegacyId = `${item.slot_code}:${item.name}:${index}`;
+      const legacyIds = new Set([fallbackLegacyId, ...(Array.isArray(item.legacy_ids) ? item.legacy_ids : [])]);
+      legacyIds.forEach((legacyId) => {
+        if (legacyId && !state.itemsById.has(legacyId)) {
+          state.itemsById.set(legacyId, item);
+        }
+      });
+    });
     state.sphereItemsById = new Map(state.sphereItems.map((item) => [item.uid, item]));
     state.trophyItemsById = new Map(state.trophyItems.map((item) => [item.uid, item]));
     state.petItemsById = new Map(state.petItems.map((item) => [item.uid, item]));
@@ -722,6 +890,7 @@ function createPetUid(item, index) {
     formatUpgradeSuffix,
     formatUpgradeTitleSuffix,
     getParamsForLevel,
+    getLocalizedParamsForLevel,
     getSlotConfig,
     isClassRestrictedEquipmentSlot,
     getEquipmentClasses,
@@ -744,6 +913,14 @@ function createPetUid(item, index) {
     getPetMergeBonusValue,
     createPetSelection,
     getPetMergeStats,
+    getLocalizedCatalogField: getLocalizedField,
+    getLocalizedCatalogLines: getLocalizedLines,
+    getLocalizedCatalogUpgradeLines: getLocalizedUpgradeLines,
+    getLocalizedItemName,
+    getLocalizedItemDescription,
+    getLocalizedItemCategory,
+    getLocalizedItemVariant,
+    getLocalizedItemElement,
     createItemUid,
     createSphereUid,
     createTrophyUid,

@@ -155,7 +155,6 @@ export function createRuntimeState(deps) {
 
   function saveWorkspaceTabState() {
     uiStateRepository.saveWorkspaceTab(state.activeWorkspaceTab);
-    markBuildAsDirty("workspace");
   }
 
   function saveProfilesState() {

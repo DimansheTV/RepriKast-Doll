@@ -159,7 +159,7 @@ export class WikiClient {
       headers.Cookie = cookie;
     }
 
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, redirect: "manual" });
     this.storeCookies(response.headers);
     return response;
   }
@@ -178,18 +178,31 @@ export class WikiClient {
   }
 
   async getText(url) {
-    let response = await this.request(url);
-    const hadChallenge = !this.challengePassed && this.cookies.has("__js_p_");
-    await this.passChallengeIfNeeded();
-    if (hadChallenge) {
-      response = await this.request(url);
+    let currentUrl = url;
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      let response = await this.request(currentUrl);
+      let text = await response.text();
+
+      if ((text.includes("get_jhash") || text.includes("__js_p_")) && this.cookies.has("__js_p_")) {
+        await this.passChallengeIfNeeded();
+        response = await this.request(currentUrl);
+        text = await response.text();
+      }
+
+      if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
+        currentUrl = new URL(response.headers.get("location"), currentUrl).toString();
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`GET ${currentUrl} failed: ${response.status} ${response.statusText}`);
+      }
+
+      return text;
     }
 
-    if (!response.ok) {
-      throw new Error(`GET ${url} failed: ${response.status} ${response.statusText}`);
-    }
-
-    return response.text();
+    throw new Error(`GET ${url} failed: too many challenge or redirect attempts`);
   }
 
   async downloadFile(url, destination) {

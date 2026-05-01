@@ -61,6 +61,7 @@ export function createComparePageApp({ app, ready, uiStateRepository }) {
         stateModule.resetEditorState("primary", stateModule.getPrimaryProfile(), true);
         stateModule.resetEditorState("secondary", stateModule.getSecondaryProfile(), true);
         bindingsModule.bindTopbar();
+        bindingsModule.bindMobileNav();
         bindingsModule.bindEditor("primary", "compare-primary-editor");
         bindingsModule.bindEditor("secondary", "compare-secondary-editor");
         renderModule.renderComparePage();

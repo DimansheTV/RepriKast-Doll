@@ -27,9 +27,7 @@ const UI_MESSAGES: Record<string, { ru: string; en: string }> = {
   "compare.secondaryBuild": { ru: "Сборка 2", en: "Build 2" },
   "compare.primarySelect": { ru: "Основная сборка", en: "Primary build" },
   "compare.secondarySelect": { ru: "Вторая сборка", en: "Secondary build" },
-  "compare.stats": { ru: "Сравнение параметров", en: "Stat comparison" },
-  "compare.readonly": { ru: "Режим просмотра: изменения в compare недоступны.", en: "View mode: editing is unavailable in compare." },
-  "compare.analytics": { ru: "Аналитика", en: "Analytics" },
+  "compare.summaryPanel": { ru: "Итоги сравнения", en: "Comparison summary" },
   "compare.better": { ru: "Лучше", en: "Better" },
   "compare.worse": { ru: "Хуже", en: "Worse" },
   "compare.equal": { ru: "Равно", en: "Equal" },
@@ -598,7 +596,6 @@ const EXACT_TRANSLATIONS = new Map<string, string>([
   ["Кольцо грозового дракона", "Ring of the storm dragon"],
   ["Кольцо перевоплощения (легендарное)", "Morph Ring (Legendary)"],
   ["Кольцо перевоплощения (редкое)", "Morph Ring (Rare)"],
-  ["Кольцо перевоплощения (эпич.) (врем.)", "Morph Ring (Epic) (Temporary)"],
   ["Кольцо перевоплощения (эпическое)", "Morph Ring (Epic)"],
   ["Кольцо преграды", "Ring of barrier"],
   ["Кольцо разрушения", "Ring of destruction"],
@@ -611,6 +608,14 @@ const EXACT_TRANSLATIONS = new Map<string, string>([
   ["Кольцо шипастого дракона", "Ring of the spiked dragon"],
   ["Мана", "Mana"],
 ]);
+
+const REVERSE_EXACT_TRANSLATIONS = new Map<string, string>();
+
+for (const [source, target] of EXACT_TRANSLATIONS.entries()) {
+  if (!REVERSE_EXACT_TRANSLATIONS.has(target)) {
+    REVERSE_EXACT_TRANSLATIONS.set(target, source);
+  }
+}
 
 const REGEX_TRANSLATIONS: Array<[RegExp, string]> = [
   [/\bсписок открыт\b/giu, "list opened"],
@@ -642,14 +647,6 @@ const REGEX_TRANSLATIONS: Array<[RegExp, string]> = [
   [/\bОсновные сферы: выбрана вкладка\b/gu, "Core spheres: selected tab"],
   [/\bГлавное меню\b/giu, "Main menu"],
 ];
-
-const REVERSE_EXACT_TRANSLATIONS = new Map<string, string>();
-
-for (const [source, target] of EXACT_TRANSLATIONS.entries()) {
-  if (!REVERSE_EXACT_TRANSLATIONS.has(target)) {
-    REVERSE_EXACT_TRANSLATIONS.set(target, source);
-  }
-}
 
 function interpolate(template: string, params: Record<string, string | number> = {}): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? ""));
@@ -692,11 +689,15 @@ function hasCyrillic(value: string): boolean {
   return /[А-Яа-яЁё]/u.test(value);
 }
 
+function hasLatin(value: string): boolean {
+  return /[A-Za-z]/u.test(value);
+}
+
 function translateExact(value: string): string | null {
   return EXACT_TRANSLATIONS.get(value) || null;
 }
 
-function reverseTranslateExact(value: string): string | null {
+function translateExactReverse(value: string): string | null {
   return REVERSE_EXACT_TRANSLATIONS.get(value) || null;
 }
 
@@ -704,9 +705,8 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function translateCompositeText(value: string): string {
+function translateCompositeTextWithEntries(value: string, entries: Array<[string, string]>): string {
   let result = value;
-  const entries = [...EXACT_TRANSLATIONS.entries()].sort((left, right) => right[0].length - left[0].length);
 
   for (const [source, target] of entries) {
     if (!result.includes(source)) {
@@ -719,42 +719,51 @@ function translateCompositeText(value: string): string {
   return result;
 }
 
-function reverseTranslateCompositeText(value: string): string {
-  let result = value;
-  const entries = [...EXACT_TRANSLATIONS.entries()].sort((left, right) => right[1].length - left[1].length);
+const FORWARD_TRANSLATION_ENTRIES = [...EXACT_TRANSLATIONS.entries()]
+  .sort((left, right) => right[0].length - left[0].length);
 
-  for (const [source, target] of entries) {
-    if (!result.includes(target)) {
-      continue;
-    }
+const REVERSE_TRANSLATION_ENTRIES = [...REVERSE_EXACT_TRANSLATIONS.entries()]
+  .sort((left, right) => right[0].length - left[0].length);
 
-    result = result.replace(new RegExp(escapeRegex(target), "gu"), source);
-  }
-
-  return result;
+function translateCompositeText(value: string): string {
+  return translateCompositeTextWithEntries(value, FORWARD_TRANSLATION_ENTRIES);
 }
 
-function translateStatLine(value: string): string | null {
+function translateCompositeTextReverse(value: string): string {
+  return translateCompositeTextWithEntries(value, REVERSE_TRANSLATION_ENTRIES);
+}
+
+function translateStatLineWith(
+  value: string,
+  translateLabel: (label: string) => string,
+  shouldReject: (value: string) => boolean,
+): string | null {
   const match = value.match(/^(.*?)\s*([+-])\s*(\d+(?:[.,]\d+)?)\s*(%)?$/u);
   if (!match) {
     return null;
   }
 
-  const translatedLabel = translateExact(match[1].trim()) || translateCompositeText(match[1].trim());
-  if (hasCyrillic(translatedLabel)) {
+  const translatedLabel = translateLabel(match[1].trim());
+  if (shouldReject(translatedLabel)) {
     return null;
   }
   return `${translatedLabel} ${match[2]}${match[3]}${match[4] || ""}`.trim();
 }
 
-function reverseTranslateStatLine(value: string): string | null {
-  const match = value.match(/^(.*?)\s*([+-])\s*(\d+(?:[.,]\d+)?)\s*(%)?$/u);
-  if (!match) {
-    return null;
-  }
+function translateStatLine(value: string): string | null {
+  return translateStatLineWith(
+    value,
+    (label) => translateExact(label) || translateCompositeText(label),
+    hasCyrillic,
+  );
+}
 
-  const translatedLabel = reverseTranslateExact(match[1].trim()) || reverseTranslateCompositeText(match[1].trim());
-  return hasCyrillic(translatedLabel) ? `${translatedLabel} ${match[2]}${match[3]}${match[4] || ""}`.trim() : null;
+function translateStatLineReverse(value: string): string | null {
+  return translateStatLineWith(
+    value,
+    (label) => translateExactReverse(label) || translateCompositeTextReverse(label),
+    hasLatin,
+  );
 }
 
 const SEGMENT_TRANSLATION_ENTRIES = [...EXACT_TRANSLATIONS.entries()]
@@ -872,12 +881,12 @@ function reverseTranslateTextFragment(value: string): string {
     return trimmed;
   }
 
-  const exact = reverseTranslateExact(trimmed);
+  const exact = translateExactReverse(trimmed);
   if (exact) {
     return exact;
   }
 
-  return reverseTranslateCompositeText(trimmed);
+  return translateCompositeTextReverse(trimmed);
 }
 
 function translateTemplateText(value: string): string | null {
@@ -948,9 +957,9 @@ function translateTemplateText(value: string): string | null {
     return `Base attack level ${baseAttackLevelMatch[1]}`;
   }
 
-  const baseDefenseLevelMatch = value.match(/^Базовый уровень защиты:\s*([+-]?\d+(?:[.,]\d+)?)$/u);
+  const baseDefenseLevelMatch = value.match(/^Базовый уровень защиты:?\s*([+-]?\d+(?:[.,]\d+)?)$/u);
   if (baseDefenseLevelMatch) {
-    return `Base defense level: ${baseDefenseLevelMatch[1]}`;
+    return `Base defense level ${baseDefenseLevelMatch[1]}`;
   }
 
   const baseDamageMatch = value.match(/^Базовый урон\s+([+-]?\d+(?:[.,]\d+)?)$/u);
@@ -1131,23 +1140,27 @@ export function localizeText(value: unknown, language: Language): string {
   }
 
   if (language === "ru") {
-    const exact = reverseTranslateExact(decoded);
-    if (exact) {
-      return exact;
+    if (!hasLatin(decoded)) {
+      return decoded;
     }
 
-    const statLine = reverseTranslateStatLine(decoded);
-    if (statLine) {
-      return statLine;
+    const exactReverse = translateExactReverse(decoded);
+    if (exactReverse) {
+      return exactReverse;
     }
 
-    const templated = reverseTranslateTemplateText(decoded);
-    if (templated) {
-      return templated;
+    const templateReverse = reverseTranslateTemplateText(decoded);
+    if (templateReverse) {
+      return templateReverse;
     }
 
-    const translated = reverseTranslateCompositeText(decoded);
-    return hasCyrillic(translated) ? translated : decoded;
+    const statLineReverse = translateStatLineReverse(decoded);
+    if (statLineReverse) {
+      return statLineReverse;
+    }
+
+    const translatedReverse = translateCompositeTextReverse(decoded);
+    return hasLatin(translatedReverse) ? decoded : translatedReverse;
   }
 
   if (!/[А-Яа-яЁё]/u.test(decoded)) {
@@ -1159,17 +1172,17 @@ export function localizeText(value: unknown, language: Language): string {
     return exact;
   }
 
+  const template = translateTemplateText(decoded);
+  if (template) {
+    return template;
+  }
+
   const statLine = translateStatLine(decoded);
   if (statLine) {
     return statLine;
   }
 
-  const templated = translateTemplateText(decoded);
-  if (templated) {
-    return templated;
-  }
-
-  const translated = applyRegexTranslations(translateCompositeText(decoded));
+  const translated = applyRegexTranslations(decoded);
   return hasCyrillic(translated) ? decoded : translated;
 }
 
