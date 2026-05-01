@@ -135,8 +135,52 @@ export function createCompareBindingsModule(deps) {
     }
   }
 
+  function bindMobileNav() {
+    const body = document.body;
+    const toggle = document.getElementById("mobile-nav-toggle");
+    const drawer = document.getElementById("mobile-nav-drawer");
+    const backdrop = document.getElementById("mobile-nav-backdrop");
+
+    if (!body || !toggle || !backdrop || toggle.dataset.bound === "1") {
+      return;
+    }
+
+    toggle.dataset.bound = "1";
+
+    const syncMobileNavState = (isOpen) => {
+      toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      drawer?.setAttribute("aria-hidden", isOpen ? "false" : "true");
+      backdrop.hidden = !isOpen;
+      body.classList.toggle("mobile-nav-open", isOpen);
+    };
+
+    const closeMobileNav = () => syncMobileNavState(false);
+
+    toggle.addEventListener("click", () => {
+      const isOpen = toggle.getAttribute("aria-expanded") === "true";
+      syncMobileNavState(!isOpen);
+    });
+
+    backdrop.addEventListener("click", closeMobileNav);
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {
+        closeMobileNav();
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 899) {
+        closeMobileNav();
+      }
+    });
+
+    syncMobileNavState(false);
+  }
+
   return {
     bindEditor,
+    bindMobileNav,
     bindTopbar,
   };
 }

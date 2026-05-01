@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { localizeText } from "../../src/shared/i18n";
 
 type ProfileSeed = {
   id: string;
@@ -137,6 +138,18 @@ async function readBoardExtraStats(page: Page) {
   return readBoardStats(page, "#board-extra-stats");
 }
 
+async function readStatList(page: Page, selector: string) {
+  return page.locator(`${selector} .stat-row`).evaluateAll((rows) => {
+    return Object.fromEntries(
+      rows.map((row) => {
+        const name = row.querySelector(".stat-name")?.textContent?.trim() || "";
+        const value = row.querySelector(".stat-value")?.textContent?.trim() || "";
+        return [name, value];
+      }),
+    );
+  });
+}
+
 async function readCompareRow(page: Page, label: string) {
   return page.evaluate((targetLabel) => {
     const labelCells = [...document.querySelectorAll<HTMLElement>(".compare-table-label")];
@@ -240,19 +253,6 @@ async function selectSavedBuildByIndex(page: Page, index: number) {
   await page.locator("[data-build-option]").nth(index).click();
 }
 
-async function expectCompareSecondaryStored(page: Page, predicateSource: string) {
-  await expect
-    .poll(async () => page.evaluate(
-      ({ key, predicateBody }) => {
-        const profiles = JSON.parse(window.localStorage.getItem(key) || "[]");
-        const secondary = profiles.find((profile: { id: string }) => profile.id === "profile-secondary");
-        return Function("profile", `return (${predicateBody})(profile)`)(secondary);
-      },
-      { key: STORAGE_KEYS.profiles, predicateBody: predicateSource },
-    ))
-    .toBe(true);
-}
-
 async function switchLanguage(page: Page, language: "ru" | "en") {
   const button = page.locator("#language-cycle-button");
   await expect(button).toBeVisible();
@@ -266,6 +266,27 @@ async function switchLanguage(page: Page, language: "ru" | "en") {
   }
 
   await expect(page.locator("html")).toHaveAttribute("lang", language);
+}
+
+async function expectMobileMenuPanelCentered(page: Page) {
+  const metrics = await page.locator(".panel-topbar").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    const viewportWidth = document.documentElement.clientWidth;
+
+    return {
+      animationName: style.animationName,
+      centerOffset: Math.abs((rect.left + rect.width / 2) - viewportWidth / 2),
+      expectedMaxWidth: Math.min(viewportWidth - 32, 560),
+      position: style.position,
+      width: rect.width,
+    };
+  });
+
+  expect(metrics.position).toBe("fixed");
+  expect(metrics.centerOffset).toBeLessThanOrEqual(1);
+  expect(metrics.width).toBeLessThanOrEqual(metrics.expectedMaxWidth + 1);
+  expect(metrics.animationName).toContain("mobile-nav-pop-in");
 }
 
 async function openMorphSphereCatalog(page: Page) {
@@ -329,6 +350,19 @@ test("catalog CLI validates local equipment and pet data without network", () =>
 
   execSync("corepack pnpm catalog:build -- --kind equipment", { stdio: "pipe" });
   execSync("corepack pnpm catalog:build -- --kind pet", { stdio: "pipe" });
+});
+
+test("english localization translates shared catalog strings through shared rules", () => {
+  expect(localizeText("Сфера перевоплощения 70+ уровня", "en")).toBe("Morph Sphere Lv. 70+");
+  expect(localizeText("Увеличение уровня переносимого веса +100", "en")).toBe("Carry weight level +100");
+  expect(localizeText("Кольцо атаки", "en")).toBe("Ring of attack");
+  expect(localizeText("Серьги шпиона", "en")).toBe("Earrings of the spy");
+  expect(localizeText("Сфера алчности ур. 2", "en")).toBe("Sphere of greed Lv. 2");
+  expect(localizeText("Ожог (-30 HP в секунду)", "en")).toBe("Burn (-30 HP per second)");
+  expect(localizeText("Weight", "ru")).toBe("Вес");
+  expect(localizeText("HP regeneration", "ru")).toBe("Восстановление HP");
+  expect(localizeText("All attack levels +5", "ru")).toBe("Уровень всех атак +5");
+  expect(localizeText("Destruction Sphere Lv. 4 (Legendary)", "ru")).toBe("Сфера разрушения ур. 4 (Легендарная)");
 });
 
 test("english catalog locales stay free of cyrillic, raw wiki text, and temporary equipment", () => {
@@ -420,6 +454,13 @@ test("legacy equipment ids migrate to stable equipment ids and removed temporary
     });
 });
 
+test("russian localization restores english stat labels and stat lines", () => {
+  expect(localizeText("Weight", "ru")).toBe("Вес");
+  expect(localizeText("Critical damage bonus", "ru")).toBe("Доп. урон при крит. ударе");
+  expect(localizeText("Weight +90", "ru")).toBe("Вес +90");
+  expect(localizeText("Critical damage bonus +8", "ru")).toBe("Доп. урон при крит. ударе +8");
+});
+
 test("default knight baseline stats match origin/main", async ({ page }) => {
   await page.goto("/index.html");
 
@@ -464,6 +505,60 @@ test("class controls recalculate baseline totals from the UI", async ({ page }) 
 
   await page.locator("#class-select").selectOption("mage");
   await expect(page.locator("#class-select")).toHaveValue("mage");
+});
+
+test("equipment description stats contribute while upgrade stats still scale", async ({ page }) => {
+  await seedProfiles(page, [{
+    id: "atlanta-earrings-profile",
+    name: "Atlanta earrings",
+    classConfig: { classKey: "knight", level: 1 },
+    equipped: {
+      earring: { itemId: "equipment:13248", upgradeLevel: "+5" },
+    },
+    sphereEquipped: {},
+    trophyEquipped: {},
+    petEquipped: null,
+    activeWorkspaceTab: "inventory",
+  }], "atlanta-earrings-profile");
+
+  await page.goto("/index.html");
+
+  await expect(readStatList(page, "#stats-inventory-list")).resolves.toMatchObject({
+    HP: "+175",
+    "Сила": "+17",
+    "Ловкость": "+17",
+    "Интеллект": "+17",
+    "Скорость бега": "+30",
+    "Поглощение": "+9",
+  });
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="earring"] .equipment-description')).toContainText("Все параметры +17");
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="earring"] .equipment-description-params li').first()).toHaveText("Все параметры +17");
+});
+
+test("equipment threshold stats scale from upgrade levels", async ({ page }) => {
+  await seedProfiles(page, [{
+    id: "baphomet-boots-profile",
+    name: "Baphomet boots",
+    classConfig: { classKey: "knight", level: 1 },
+    equipped: {
+      boots: { itemId: "equipment:6107", upgradeLevel: "+9" },
+    },
+    sphereEquipped: {},
+    trophyEquipped: {},
+    petEquipped: null,
+    activeWorkspaceTab: "inventory",
+  }], "baphomet-boots-profile");
+
+  await page.goto("/index.html");
+
+  await expect(readStatList(page, "#stats-inventory-list")).resolves.toMatchObject({
+    "Защита": "+18",
+    "Сила": "+6",
+    "Ловкость": "+6",
+    "Интеллект": "+6",
+    "Получаемый крит. урон": "-3",
+  });
+  await expect(page.locator('#slot-grid .slot-cell[data-slot="boots"] .equipment-description')).toContainText("Все параметры +6");
 });
 
 test.skip("morph spheres show required level, stay locked below it, and are removed when level drops", async ({ page }) => {
@@ -667,7 +762,7 @@ test("language switch localizes the main page, persists after reload, and applie
   await expect(page.locator(".compare-topbar-actions .profile-link-button")).toHaveText("Main menu");
   await expect(page.locator(".compare-topbar-field").first().locator(".summary-label")).toHaveText("Build 1");
   await expect(page.locator(".compare-topbar-field").nth(1).locator(".summary-label")).toHaveText("Build 2");
-  await expect(page.locator(".compare-summary-panel")).toHaveAttribute("aria-label", "Stat comparison");
+  await expect(page.locator(".compare-summary-panel")).toHaveAttribute("aria-label", "Comparison summary");
   await expectLocatorTextWithoutCyrillic(page.locator("#compare-primary-editor .compare-editor-stage-view"), "compare primary editor stage");
   const secondaryStage = page.locator("#compare-secondary-editor .compare-editor-stage-view");
   if (await secondaryStage.count()) {
@@ -717,25 +812,17 @@ test("entering name edit mode immediately blocks copy and delete and swaps new t
   await expect(page.locator("[data-build-copy]")).toHaveCount(1);
 });
 
-test("save button stays inactive and does not save while name edit mode is open", async ({ page }) => {
+test("save stays active during build name editing and commits the typed name", async ({ page }) => {
   await page.goto("/index.html");
 
   await page.locator("[data-build-edit]").click();
   const input = page.locator("[data-build-name-input]");
   await expect(input).toBeVisible();
-  await input.fill("Draft name");
-
-  const saveButton = page.locator("#profile-save-button");
-  await expect(saveButton).toBeDisabled();
-
-  const box = await saveButton.boundingBox();
-  if (!box) {
-    throw new Error("Save button has no bounding box");
-  }
-
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-  await expect(page.locator("[data-build-name-input]")).toBeVisible();
-  await expect(page.locator("[data-build-toast]")).not.toHaveText("Сборка успешно сохранена");
+  await input.fill("Edited while typing");
+  await expect(page.locator("#profile-save-button")).toBeEnabled();
+  await page.locator("#profile-save-button").click();
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Edited while typing");
+  await expect(page.locator("#profile-new-button")).toHaveText("Новая сборка");
 });
 
 test("cancel button discards new and copied drafts back to the previous saved build", async ({ page }) => {
@@ -835,6 +922,19 @@ test("main page equipment, pet, sphere and trophy workflows recalculate and pers
   await page.locator('[data-workspace-tab="trophies"]').click();
   await expect(page.locator("#trophy-slot-grid .trophy-slot-cell.is-filled")).toHaveCount(1);
   await expect(page.locator("#trophy-slot-grid .upgrade-stepper-value").first()).toHaveText("+1");
+});
+
+test("main trophy slot click opens the matching trophy category", async ({ page }) => {
+  await page.goto("/index.html");
+
+  await page.locator('[data-workspace-tab="trophies"]').click();
+  const targetSlotKey = "trophy_middle_right";
+  await page.locator(`#trophy-slot-grid .trophy-slot-button[data-trophy-slot="${targetSlotKey}"]`).click();
+
+  const targetCategory = page.locator(`.category-block[data-trophy-category="${targetSlotKey}"]`);
+  await expect(targetCategory).toHaveClass(/active/);
+  await expect(targetCategory.locator(".category-items")).toHaveClass(/expanded/);
+  await expect(targetCategory.locator("[data-trophy-id]")).not.toHaveCount(0);
 });
 
 test("main page filters class-restricted equipment and removes incompatible gear on class change", async ({ page }) => {
@@ -1083,6 +1183,169 @@ test("compare page preserves baseline math and reverse-stat direction", async ({
   expect(reverseRow?.deltaClass).toContain("is-worse");
 });
 
+test("compare mobile burger reveals the same topbar items as the main page", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedProfiles(
+    page,
+    [
+      {
+        id: "profile-primary",
+        name: "Primary",
+        classConfig: { classKey: "knight", level: 90 },
+        equipped: {},
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+      {
+        id: "profile-secondary",
+        name: "Secondary",
+        classConfig: { classKey: "knight", level: 90 },
+        equipped: {},
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+    ],
+    "profile-primary",
+    "profile-secondary",
+  );
+
+  await page.goto("/compare.html");
+
+  const toggle = page.locator("#mobile-nav-toggle");
+  const mainMenu = page.locator(".compare-topbar-actions .profile-link-button");
+  const buildFields = page.locator(".compare-topbar-field");
+
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveText("Меню");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(mainMenu).toBeHidden();
+  await expect(buildFields.first()).toBeHidden();
+  await expect(buildFields.nth(1)).toBeHidden();
+
+  await toggle.click();
+
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(mainMenu).toBeVisible();
+  await expect(mainMenu).toHaveText("Главное меню");
+  await expect(buildFields.first()).toBeVisible();
+  await expect(buildFields.first().locator(".summary-label")).toHaveText("Сборка 1");
+  await expect(buildFields.nth(1)).toBeVisible();
+  await expect(buildFields.nth(1).locator(".summary-label")).toHaveText("Сборка 2");
+
+  await page.locator("#mobile-nav-backdrop").click();
+
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(mainMenu).toBeHidden();
+  await expect(buildFields.first()).toBeHidden();
+});
+
+test("mobile burger menu opens centered with animation on main and compare", async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 844 });
+
+  await page.goto("/index.html");
+  await expect(page.locator("#mobile-nav-toggle")).toBeVisible();
+  await page.locator("#mobile-nav-toggle").click();
+  await expect(page.locator("#mobile-nav-toggle")).toHaveAttribute("aria-expanded", "true");
+  await expectMobileMenuPanelCentered(page);
+
+  await seedProfiles(
+    page,
+    [
+      {
+        id: "profile-primary",
+        name: "Primary",
+        classConfig: { classKey: "knight", level: 1 },
+        equipped: {},
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+      {
+        id: "profile-secondary",
+        name: "Secondary",
+        classConfig: { classKey: "knight", level: 1 },
+        equipped: {},
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+    ],
+    "profile-primary",
+    "profile-secondary",
+  );
+
+  await page.goto("/compare.html");
+  await expect(page.locator("#mobile-nav-toggle")).toBeVisible();
+  await page.locator("#mobile-nav-toggle").click();
+  await expect(page.locator("#mobile-nav-toggle")).toHaveAttribute("aria-expanded", "true");
+  await expectMobileMenuPanelCentered(page);
+});
+
+test("compare mobile sphere upgrade markers stay circular", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedProfiles(
+    page,
+    [
+      {
+        id: "profile-primary",
+        name: "Primary",
+        classConfig: { classKey: "knight", level: 90 },
+        equipped: {},
+        sphereEquipped: {
+          sphere_life: { itemId: "sphere:Сферы жизни:40090", upgradeLevel: "+1" },
+          sphere_mastery: { itemId: "sphere:Сферы мастерства:40570", upgradeLevel: "+1" },
+          sphere_soul: { itemId: "sphere:Сферы души:40210", upgradeLevel: "+1" },
+          sphere_destruction: { itemId: "sphere:Сферы разрушения:40330", upgradeLevel: "+1" },
+          sphere_protection: { itemId: "sphere:Сферы защиты:40450", upgradeLevel: "+1" },
+        },
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "spheres",
+      },
+      {
+        id: "profile-secondary",
+        name: "Secondary",
+        classConfig: { classKey: "knight", level: 90 },
+        equipped: {},
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+    ],
+    "profile-primary",
+    "profile-secondary",
+  );
+
+  await page.goto("/compare.html");
+  await page.locator('#compare-primary-editor [data-compare-workspace-tab="spheres"]').click();
+
+  const badges = page.locator("#compare-primary-editor .compare-sphere-stage .sphere-upgrade-select");
+  await expect(badges).toHaveCount(5);
+  await expect(badges.first()).toHaveText("+1");
+
+  const boxes = await badges.evaluateAll((elements) => elements.map((element) => {
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    return {
+      width: rect.width,
+      height: rect.height,
+      radius: style.borderRadius,
+    };
+  }));
+
+  for (const box of boxes) {
+    expect(Math.abs(box.width - box.height)).toBeLessThanOrEqual(1);
+    expect(box.radius).toMatch(/50%|999px/);
+  }
+});
+
 test("compare inventory shows equipment upgrade as read-only", async ({ page }) => {
   await page.goto("/index.html");
 
@@ -1102,6 +1365,52 @@ test("compare inventory shows equipment upgrade as read-only", async ({ page }) 
   const readonlyBadge = page.locator("#compare-primary-editor .compare-equipment-stage .compare-readonly-upgrade-badge").first();
   await expect(readonlyBadge).toBeVisible();
   await expect(readonlyBadge.locator(".compare-readonly-upgrade-badge-value")).toHaveText("+1");
+});
+
+test("compare inventory shows item description on hover", async ({ page }) => {
+  await seedProfiles(
+    page,
+    [
+      {
+        id: "profile-primary",
+        name: "Primary",
+        classConfig: { classKey: "knight", level: 1 },
+        equipped: {
+          earring: { itemId: "equipment:13248", upgradeLevel: "+5" },
+        },
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+      {
+        id: "profile-secondary",
+        name: "Secondary",
+        classConfig: { classKey: "knight", level: 1 },
+        equipped: {},
+        sphereEquipped: {},
+        trophyEquipped: {},
+        petEquipped: null,
+        activeWorkspaceTab: "inventory",
+      },
+    ],
+    "profile-primary",
+    "profile-secondary",
+  );
+
+  await page.goto("/compare.html");
+
+  const slot = page.locator('#compare-primary-editor .compare-equipment-stage .slot-cell[data-slot="earring"]');
+  const description = slot.locator(".equipment-description");
+
+  await expect(description).toBeAttached();
+  await expect(description).not.toBeVisible();
+
+  await slot.hover();
+
+  await expect(description).toBeVisible();
+  await expect(description.locator(".equipment-description-name")).toHaveText("Серьги атланта +5");
+  await expect(description.locator(".equipment-description-params li").first()).toHaveText("Все параметры +17");
 });
 
 test("compare editor hides item selection on all workspace tabs", async ({ page }) => {

@@ -790,8 +790,14 @@ function selectTrophySlot(slotKey) {
   }
 
   state.activeTrophySlot = slotKey;
+  state.expandedTrophySlots = new Set([slotKey]);
   renderAll();
-  setLastAction(`${slot.label}: слот выбран.`);
+  const count = getTrophyItemsForSlot(slotKey).length;
+  if (count) {
+    setLastAction(`${slot.label}: доступно ${count} трофеев.`);
+  } else {
+    setLastAction(`${slot.label}: для этого слота пока нет трофеев.`);
+  }
 }
 
 function equipTrophy(slotKey, itemId) {
@@ -1105,6 +1111,9 @@ function renderCategoryList() {
           const metaParts = [];
           if (showCategory) {
             metaParts.push(catalogCategory(item));
+          }
+          if (requiredLevel > 0) {
+            metaParts.push(localize(`Уровень экипировки ${requiredLevel}`));
           }
           if (requiredLevel > 0) {
             metaParts.push(localize(`Уровень экипировки ${requiredLevel}`));

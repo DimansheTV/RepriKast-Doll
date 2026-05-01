@@ -132,6 +132,17 @@ function isSphereAllowedForLevel(item, classLevel = state.classConfig.level) {
   return sanitizeClassLevel(classLevel) >= requiredLevel;
 }
 
+function sortSphereCategoryItems(left, right, categoryKey) {
+  if (categoryKey === "sphere_type_4") {
+    const levelDelta = getMorphSphereRequiredLevel(right) - getMorphSphereRequiredLevel(left);
+    if (levelDelta !== 0) {
+      return levelDelta;
+    }
+  }
+
+  return sortByLocalizedName(left, right);
+}
+
 function getSphereItemsForSlot(slotKey) {
   const slot = getSphereSlotConfig(slotKey);
   if (!slot) {
@@ -164,7 +175,7 @@ function getSphereCategoryGroups() {
   return SPHERE_CATEGORY_CONFIG.map((group) => {
     const items = state.sphereItems
       .filter((item) => getCompatibleSphereSlots(item).some((slot) => slot.categoryKey === group.key))
-      .sort(sortByLocalizedName);
+      .sort((left, right) => sortSphereCategoryItems(left, right, group.key));
 
     return {
       ...group,
@@ -239,18 +250,82 @@ function formatUpgradeTitleSuffix(level) {
 
 function getParamsForLevel(item, level) {
   const params = item?.upgrade_levels?.[level] || [];
-  return applyEquipmentDefenseUpgradeRules(item, level, params);
+  return applyEquipmentDefenseUpgradeRules(item, level, params, "ru");
 }
 
 function getLocalizedParamsForLevel(item, level) {
   const params = getLocalizedUpgradeLines(item, level, { fallbackToRu: true });
-  return applyEquipmentDefenseUpgradeRules(item, level, params);
+  return applyEquipmentDefenseUpgradeRules(item, level, params, getCurrentLanguage());
 }
 
-function applyEquipmentDefenseUpgradeRules(item, level, params) {
-  if (!Array.isArray(params) || !params.length) {
-    return params;
+function isDefenseStatEntry(stat) {
+  if (!stat || stat.unit) {
+    return false;
   }
+
+  const normalizedLabel = normalizeText(stat.label).toLowerCase();
+  return normalizedLabel === "защита" || normalizedLabel === "defense";
+}
+
+function parseBaseDefenseLevelValue(line) {
+  const match = normalizeText(line).match(/^(?:Базовый уровень защиты|Base defense level)\s*:?\s*([+-]?\d+(?:[.,]\d+)?)$/iu);
+  if (!match) {
+    return null;
+  }
+
+  const value = Number(match[1].replace(",", "."));
+  return Number.isFinite(value) ? value : null;
+}
+
+function getBaseDefenseSourceLines(item) {
+  const lines = [];
+  const firstLevel = getDefaultUpgradeLevel(item);
+
+  function appendLine(value) {
+    const normalized = normalizeText(value);
+    if (normalized) {
+      lines.push(normalized);
+    }
+  }
+
+  function appendLines(values) {
+    if (!Array.isArray(values)) {
+      return;
+    }
+
+    values.forEach((line) => appendLine(line));
+  }
+
+  appendLines(item?.upgrade_levels?.["+0"]);
+  appendLines(item?.upgradeLevels?.["+0"]);
+  if (firstLevel !== "+0") {
+    appendLines(item?.upgrade_levels?.[firstLevel]);
+    appendLines(item?.upgradeLevels?.[firstLevel]);
+  }
+  appendLine(item?.description);
+  appendLines(item?.description_lines);
+  appendLines(item?.descriptionLines);
+
+  ["ru", "en"].forEach((language) => {
+    const locale = item?.locales?.[language];
+    appendLine(locale?.description);
+    appendLines(locale?.descriptionLines);
+    appendLines(locale?.upgradeLevels?.["+0"]);
+    if (firstLevel !== "+0") {
+      appendLines(locale?.upgradeLevels?.[firstLevel]);
+    }
+  });
+
+  return [...new Set(lines)];
+}
+
+function formatDefenseStatLine(value, language = "ru") {
+  const label = language === "en" ? "Defense" : "Защита";
+  return `${label} ${formatStatValue(value)}`;
+}
+
+function applyEquipmentDefenseUpgradeRules(item, level, params, language = "ru") {
+  const sourceParams = Array.isArray(params) ? params : [];
 
   const defenseRule = [
     { matches: isPlainVelkenOrMythrilDefenseItem, singleStepCap: 7 },
@@ -262,41 +337,61 @@ function applyEquipmentDefenseUpgradeRules(item, level, params) {
   ].find((rule) => rule.matches(item));
 
   if (!defenseRule) {
-    return params;
+    return sourceParams;
   }
 
   const baseDefense = getBaseDefenseForItem(item);
   if (!Number.isFinite(baseDefense)) {
-    return params;
+    return sourceParams;
   }
 
-  const defenseValue = getScaledDefenseValueForUpgrade(baseDefense, getUpgradeNumber(level), defenseRule.singleStepCap);
+  const defenseValue = getScaledDefenseValueForUpgrade(
+    baseDefense,
+    getUpgradeNumber(level),
+    defenseRule.singleStepCap,
+  );
   let replaced = false;
 
-  return params.map((line) => {
+  const nextParams = sourceParams.map((line) => {
     const parsed = parseNumericStat(line);
-    if (!replaced && parsed?.label === "Защита" && !parsed.unit) {
+    if (!replaced && isDefenseStatEntry(parsed)) {
       replaced = true;
-      return `Защита ${formatStatValue(defenseValue)}`;
+      return formatDefenseStatLine(defenseValue, language);
     }
     return line;
   });
+
+  if (replaced) {
+    return nextParams;
+  }
+
+  return [formatDefenseStatLine(defenseValue, language), ...nextParams];
 }
 
 function getBaseDefenseForItem(item) {
-  const baseParams = item?.upgrade_levels?.["+0"] || [];
-  const baseDefense = baseParams
-    .map((line) => parseNumericStat(line))
-    .find((stat) => stat?.label === "Защита" && !stat.unit);
+  for (const line of getBaseDefenseSourceLines(item)) {
+    const numericStat = parseNumericStat(line);
+    if (isDefenseStatEntry(numericStat)) {
+      return numericStat.value;
+    }
 
-  return baseDefense?.value ?? null;
+    const baseDefense = parseBaseDefenseLevelValue(line);
+    if (Number.isFinite(baseDefense)) {
+      return baseDefense;
+    }
+  }
+
+  return null;
+}
+
+function getDefenseUpgradeBonus(upgradeNumber, singleStepCap) {
+  const safeUpgrade = Math.max(0, Math.floor(Number(upgradeNumber) || 0));
+  const safeCap = Math.max(0, Math.floor(Number(singleStepCap) || 0));
+  return safeUpgrade <= safeCap ? safeUpgrade : safeCap + (safeUpgrade - safeCap) * 2;
 }
 
 function getScaledDefenseValueForUpgrade(baseDefense, upgradeNumber, singleStepCap) {
-  const safeUpgrade = Math.max(0, Math.floor(Number(upgradeNumber) || 0));
-  const safeCap = Math.max(0, Math.floor(Number(singleStepCap) || 0));
-  const bonus = safeUpgrade <= safeCap ? safeUpgrade : safeCap + (safeUpgrade - safeCap) * 2;
-  return baseDefense + bonus;
+  return baseDefense + getDefenseUpgradeBonus(upgradeNumber, singleStepCap);
 }
 
 function getSlotConfig(slotKey) {

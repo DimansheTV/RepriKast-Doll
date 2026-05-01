@@ -28,7 +28,7 @@ function loadCatalog(kind, rawItems) {
   return items;
 }
 
-export function createCatalogRepository(fetchImpl) {
+export function createCatalogRepository() {
   return {
     async loadAll() {
       const payloads = getCatalogPayloads();
