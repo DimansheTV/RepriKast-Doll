@@ -705,6 +705,13 @@ function bindProfileControls() {
       }
 
       if (target.closest("[data-build-delete]")) {
+        const shouldDelete = window.confirm(
+          t("confirm.deleteBuild", { name: getActiveDraftDisplayName() }),
+        );
+        if (!shouldDelete) {
+          return;
+        }
+
         deleteActiveProfile();
       }
     });
