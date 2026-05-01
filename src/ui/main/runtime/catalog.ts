@@ -94,6 +94,44 @@ function shouldShowSphereUpgrade(item, slot = getPrimarySphereSlot(item)) {
   return slot?.categoryKey === "sphere_type_1";
 }
 
+function getMorphSphereRequiredLevel(item) {
+  if (!item) {
+    return 0;
+  }
+
+  const candidates = [
+    item.name,
+    item?.locales?.ru?.name,
+    item?.locales?.en?.name,
+    getLocalizedItemName(item, { fallbackToRu: true }),
+  ]
+    .filter(Boolean)
+    .map((value) => normalizeText(value));
+
+  for (const candidate of candidates) {
+    const directLevelMatch = candidate.match(/(\d+)\+\s*уровня/i);
+    if (directLevelMatch) {
+      return Number(directLevelMatch[1]) || 0;
+    }
+
+    const localizedLevelMatch = candidate.match(/(?:lv\.?|level)\s*(\d+)\+/i);
+    if (localizedLevelMatch) {
+      return Number(localizedLevelMatch[1]) || 0;
+    }
+  }
+
+  return 0;
+}
+
+function isSphereAllowedForLevel(item, classLevel = state.classConfig.level) {
+  const requiredLevel = getMorphSphereRequiredLevel(item);
+  if (!requiredLevel) {
+    return true;
+  }
+
+  return sanitizeClassLevel(classLevel) >= requiredLevel;
+}
+
 function getSphereItemsForSlot(slotKey) {
   const slot = getSphereSlotConfig(slotKey);
   if (!slot) {
@@ -740,6 +778,8 @@ function createPetUid(item, index) {
     getTrophySlotConfig,
     getCompatibleSphereSlots,
     getPrimarySphereSlot,
+    getMorphSphereRequiredLevel,
+    isSphereAllowedForLevel,
     shouldShowSphereUpgrade,
     getSphereItemsForSlot,
     getTrophyItemsForSlot,

@@ -270,7 +270,7 @@ async function switchLanguage(page: Page, language: "ru" | "en") {
 
 async function openMorphSphereCatalog(page: Page) {
   const category = await openSphereCategory(page, "sphere_type_4");
-  await expect(page.locator('[data-sphere-id="morph_50"]').first()).toBeVisible();
+  await expect(page.locator('[data-sphere-id$="morph_50"]').first()).toBeVisible();
   return category;
 }
 
@@ -459,8 +459,8 @@ test("class controls recalculate baseline totals from the UI", async ({ page }) 
   await page.locator("#class-level-input").fill("10");
   await page.locator("#class-level-input").press("Enter");
 
-  await expect.poll(async () => (await readBoardMainStats(page)).HP).toBe("707");
-  await expect.poll(async () => (await readBoardMainStats(page)).MP).toBe("33");
+  await expect.poll(async () => (await readBoardMainStats(page)).HP).toBe("758");
+  await expect.poll(async () => (await readBoardMainStats(page)).MP).toBe("44");
 
   await page.locator("#class-select").selectOption("mage");
   await expect(page.locator("#class-select")).toHaveValue("mage");
@@ -495,7 +495,7 @@ test("morph spheres enforce level requirements and are removed when level drops"
 
   await openMorphSphereCatalog(page);
 
-  const morphSphereButton = page.locator('[data-sphere-id="morph_50"]').first();
+  const morphSphereButton = page.locator('[data-sphere-id$="morph_50"]').first();
   const morphSphereItem = morphSphereButton.locator("xpath=ancestor::div[contains(@class, 'catalog-item-sphere')][1]");
   await expect(morphSphereItem).toBeVisible();
   await expect(morphSphereItem).toContainText("50");

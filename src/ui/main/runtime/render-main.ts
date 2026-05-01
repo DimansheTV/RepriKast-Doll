@@ -22,6 +22,7 @@ export function createMainRenderModule(deps) {
     saveSidebarTabState,
     saveClassState,
     sanitizeEquippedState,
+    sanitizeSphereEquippedState,
     renderAll,
     collectEquippedStats,
     getDisplayStatsFromMap,
@@ -34,6 +35,7 @@ export function createMainRenderModule(deps) {
     parseNumericStat,
     escapeHtml,
     formatUpgradeSuffix,
+    getMorphSphereRequiredLevel,
     shouldShowSphereUpgrade,
     getLevelKeys,
     getLocalizedCatalogField,
@@ -167,11 +169,8 @@ function renderEquipmentDescription(slot, item, level) {
   }
 
   const params = getLocalizedParamsForLevel(item, level);
-  const descriptionLines = getLocalizedCatalogLines(item, "descriptionLines", { fallbackToRu: true })
-    .filter((line) => normalizeText(line));
-  const mergedLines = [...new Set([...params, ...descriptionLines])];
-  const paramsHtml = mergedLines.length
-    ? mergedLines.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
+  const paramsHtml = params.length
+    ? params.map((param) => `<li>${escapeHtml(localize(param))}</li>`).join("")
     : `<li>${escapeHtml(t("empty.noParams"))}</li>`;
 
   return `
@@ -406,9 +405,9 @@ function bindClassControls() {
 
   const applyClassLevel = (nextLevel) => {
     state.classConfig.level = sanitizeClassLevel(nextLevel);
+    sanitizeSphereEquippedState();
     saveClassState();
-    renderClassPanel();
-    renderBoardTotalStats();
+    renderAll();
   };
 
   select.addEventListener("change", () => {
@@ -881,6 +880,51 @@ function bindWorkspaceTabs() {
   });
 }
 
+function bindMobileNav() {
+  const toggleButton = document.getElementById("mobile-nav-toggle");
+  const drawer = document.getElementById("mobile-nav-drawer");
+  const backdrop = document.getElementById("mobile-nav-backdrop");
+  if (!toggleButton || !drawer || !backdrop || toggleButton.dataset.bound === "1") {
+    return;
+  }
+
+  const closeMobileNav = () => {
+    document.body.classList.remove("mobile-nav-open");
+    drawer.setAttribute("aria-hidden", "true");
+    backdrop.hidden = true;
+    toggleButton.setAttribute("aria-expanded", "false");
+  };
+
+  const openMobileNav = () => {
+    document.body.classList.add("mobile-nav-open");
+    drawer.setAttribute("aria-hidden", "false");
+    backdrop.hidden = false;
+    toggleButton.setAttribute("aria-expanded", "true");
+  };
+
+  toggleButton.dataset.bound = "1";
+  toggleButton.addEventListener("click", () => {
+    if (document.body.classList.contains("mobile-nav-open")) {
+      closeMobileNav();
+      return;
+    }
+
+    openMobileNav();
+  });
+
+  backdrop.addEventListener("click", closeMobileNav);
+  drawer.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    if (target.closest("[data-mobile-nav-close]")) {
+      closeMobileNav();
+    }
+  });
+}
+
 
   return {
     renderStatRows,
@@ -907,5 +951,6 @@ function bindWorkspaceTabs() {
     bindSidebarTabs,
     bindStatsSourceTabs,
     bindWorkspaceTabs,
+    bindMobileNav,
   };
 }
