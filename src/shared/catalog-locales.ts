@@ -1,5 +1,5 @@
 import type { Language } from "./i18n";
-import { decodeMojibakeText } from "./i18n";
+import { decodeMojibakeText, localizeText } from "./i18n";
 
 type CatalogLocaleBlock = {
   name?: string;
@@ -43,6 +43,22 @@ function normalizeUpgradeLevels(value: unknown): Record<string, string[]> {
       .filter(([level]) => typeof level === "string")
       .map(([level, lines]) => [level, normalizeLines(lines)]),
   );
+}
+
+function maybeLocalizeValue(value: string, language: Language): string {
+  if (!value || language === "ru") {
+    return value;
+  }
+
+  return localizeText(value, language);
+}
+
+function maybeLocalizeLines(lines: string[], language: Language): string[] {
+  if (language === "ru" || !lines.length) {
+    return lines;
+  }
+
+  return lines.map((line) => maybeLocalizeValue(line, language));
 }
 
 function normalizeLocaleBlock(value: unknown): CatalogLocaleBlock {
@@ -113,24 +129,24 @@ export function getLocalizedCatalogField(
   if (fallbackToRu && language !== "ru") {
     const fallback = getCatalogLocaleBlock(item, "ru")?.[field];
     if (typeof fallback === "string" && fallback) {
-      return fallback;
+      return maybeLocalizeValue(fallback, language);
     }
   }
 
   if (field === "name") {
-    return normalizeString(item?.name || "");
+    return maybeLocalizeValue(normalizeString(item?.name || ""), language);
   }
   if (field === "description") {
-    return normalizeString(item?.description || "");
+    return maybeLocalizeValue(normalizeString(item?.description || ""), language);
   }
   if (field === "category") {
-    return normalizeString(item?.category ?? sourceMeta?.category ?? "");
+    return maybeLocalizeValue(normalizeString(item?.category ?? sourceMeta?.category ?? ""), language);
   }
   if (field === "variant") {
-    return normalizeString(item?.variant ?? sourceMeta?.variant ?? "");
+    return maybeLocalizeValue(normalizeString(item?.variant ?? sourceMeta?.variant ?? ""), language);
   }
   if (field === "element") {
-    return normalizeString(item?.element ?? sourceMeta?.element ?? "");
+    return maybeLocalizeValue(normalizeString(item?.element ?? sourceMeta?.element ?? ""), language);
   }
 
   return "";
@@ -151,11 +167,11 @@ export function getLocalizedCatalogLines(
   if (fallbackToRu && language !== "ru") {
     const fallback = getCatalogLocaleBlock(item, "ru")?.[field];
     if (Array.isArray(fallback) && fallback.length) {
-      return fallback;
+      return maybeLocalizeLines(fallback, language);
     }
   }
 
-  return normalizeLines(item?.descriptionLines || item?.description_lines);
+  return maybeLocalizeLines(normalizeLines(item?.descriptionLines || item?.description_lines), language);
 }
 
 export function getLocalizedCatalogUpgradeLines(
@@ -173,9 +189,9 @@ export function getLocalizedCatalogUpgradeLines(
   if (fallbackToRu && language !== "ru") {
     const fallback = getCatalogLocaleBlock(item, "ru")?.upgradeLevels?.[level];
     if (Array.isArray(fallback) && fallback.length) {
-      return fallback;
+      return maybeLocalizeLines(fallback, language);
     }
   }
 
-  return normalizeLines(item?.upgradeLevels?.[level] || item?.upgrade_levels?.[level]);
+  return maybeLocalizeLines(normalizeLines(item?.upgradeLevels?.[level] || item?.upgrade_levels?.[level]), language);
 }
