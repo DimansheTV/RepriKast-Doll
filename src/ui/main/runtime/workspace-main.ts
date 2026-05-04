@@ -79,6 +79,11 @@ function catalogCategory(item) {
   return getLocalizedCatalogField(item, "category", { fallbackToRu: true });
 }
 
+function catalogSourceCategory(item) {
+  const sourceMeta = item?.sourceMeta && typeof item.sourceMeta === "object" ? item.sourceMeta : {};
+  return normalizeText(item?.category ?? sourceMeta?.category ?? "");
+}
+
 function catalogVariant(item) {
   return getLocalizedCatalogField(item, "variant", { fallbackToRu: true });
 }
@@ -1148,7 +1153,7 @@ function renderCategoryList() {
 
         if (group.key === "sphere_type_1") {
           const activeTab = SPHERE_TYPE_ONE_TABS.find((tab) => tab.category === state.activeSphereTypeOneTab) || SPHERE_TYPE_ONE_TABS[0];
-          const categoryItems = group.items.filter((item) => catalogCategory(item) === activeTab.category);
+          const categoryItems = group.items.filter((item) => catalogSourceCategory(item) === activeTab.category);
           const tabsHtml = `
             <div class="sphere-type-tabs" role="tablist" aria-label="${escapeHtml(localize("Подтипы сфер 1-го типа"))}">
               ${SPHERE_TYPE_ONE_TABS.map((tab) => `
