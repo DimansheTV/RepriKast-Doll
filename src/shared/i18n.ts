@@ -10,6 +10,7 @@ const UI_MESSAGES: Record<string, { ru: string; en: string }> = {
   "toolbar.renameBuild": { ru: "Переименовать сборку", en: "Rename build" },
   "toolbar.copyBuild": { ru: "Скопировать сборку", en: "Copy build" },
   "toolbar.deleteBuild": { ru: "Удалить сборку", en: "Delete build" },
+  "confirm.deleteBuild": { ru: 'Удалить сборку "{name}"?', en: 'Delete build "{name}"?' },
   "toolbar.buildName": { ru: "Название сборки", en: "Build name" },
   "toolbar.saved": { ru: "Сохранено", en: "Saved" },
   "toolbar.unsaved": { ru: "Не сохранено", en: "Unsaved" },
@@ -97,7 +98,6 @@ const UI_MESSAGES: Record<string, { ru: string; en: string }> = {
   "action.buildCopied": { ru: 'Создана копия сборки "{name}".', en: 'Created a copy of build "{name}".' },
   "action.buildCanceled": { ru: 'Изменения сборки "{name}" отменены.', en: 'Cancelled changes for build "{name}".' },
   "action.buildDeleted": { ru: 'Сборка "{name}" удалена.', en: 'Deleted build "{name}".' },
-  "confirm.deleteBuild": { ru: 'Удалить сборку "{name}"?', en: 'Delete build "{name}"?' },
   "error.loadData": { ru: "Не удалось загрузить данные", en: "Failed to load data" },
   "error.loadingFailed": { ru: "Загрузка не удалась.", en: "Loading failed." },
 };

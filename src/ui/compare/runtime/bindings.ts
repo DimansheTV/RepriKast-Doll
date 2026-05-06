@@ -12,7 +12,20 @@ export function createCompareBindingsModule(deps) {
     activateSlotPin,
     setPrimaryProfile,
     setSecondaryProfile,
+    setLanguage,
+    getCurrentLanguage,
+    renderComparePage,
   } = deps;
+  const LANGUAGE_SEQUENCE = ["ru", "en"];
+
+  function getNextLanguage(language) {
+    const index = LANGUAGE_SEQUENCE.indexOf(language);
+    if (index === -1) {
+      return LANGUAGE_SEQUENCE[0];
+    }
+
+    return LANGUAGE_SEQUENCE[(index + 1) % LANGUAGE_SEQUENCE.length];
+  }
 
   const COMPARE_TOOLTIP_HOST_ID = "compare-floating-tooltip";
   let activeTooltipAnchor = null;
@@ -258,6 +271,7 @@ export function createCompareBindingsModule(deps) {
   function bindTopbar() {
     const primarySelect = document.getElementById("compare-primary-select");
     const secondarySelect = document.getElementById("compare-secondary-select");
+    const languageSwitch = document.getElementById("compare-language-switch");
 
     if (primarySelect && primarySelect.dataset.bound !== "1") {
       primarySelect.dataset.bound = "1";
@@ -267,6 +281,24 @@ export function createCompareBindingsModule(deps) {
     if (secondarySelect && secondarySelect.dataset.bound !== "1") {
       secondarySelect.dataset.bound = "1";
       secondarySelect.addEventListener("change", () => setSecondaryProfile(secondarySelect.value));
+    }
+
+    if (languageSwitch && languageSwitch.dataset.bound !== "1") {
+      languageSwitch.dataset.bound = "1";
+      languageSwitch.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+          return;
+        }
+
+        const button = target.closest("#compare-language-cycle-button");
+        if (!button) {
+          return;
+        }
+
+        setLanguage(button.getAttribute("data-language") || getNextLanguage(getCurrentLanguage() || "ru"));
+        renderComparePage();
+      });
     }
   }
 
