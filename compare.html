@@ -40,10 +40,6 @@
           <span class="mobile-nav-toggle-text">Меню</span>
         </button>
 
-        <div class="compare-topbar-actions">
-          <a href="index.html" class="ghost-button profile-link-button" data-nav-direction="back">Главное меню</a>
-        </div>
-
         <div class="compare-topbar-fields">
           <label class="compare-topbar-field">
             <span class="summary-label">Сборка 1</span>
@@ -54,6 +50,13 @@
             <span class="summary-label">Сборка 2</span>
             <select id="compare-secondary-select" class="class-control" aria-label="Вторая сборка"></select>
           </label>
+        </div>
+
+        <div class="compare-topbar-actions">
+          <a href="index.html" class="ghost-button profile-link-button" data-nav-direction="back">Главное меню</a>
+          <div id="compare-language-switch" class="language-switch" aria-label="Переключатель языка">
+            <button id="compare-language-cycle-button" class="language-button" type="button" data-language="en">EN</button>
+          </div>
         </div>
       </div>
     </section>

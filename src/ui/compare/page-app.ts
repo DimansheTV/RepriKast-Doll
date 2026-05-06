@@ -52,6 +52,9 @@ export function createComparePageApp({ app, ready, uiStateRepository }) {
     activateSlotPin: interactionsModule.activateSlotPin,
     setPrimaryProfile: interactionsModule.setPrimaryProfile,
     setSecondaryProfile: interactionsModule.setSecondaryProfile,
+    setLanguage: app.setLanguage,
+    getCurrentLanguage: app.getCurrentLanguage,
+    renderComparePage: renderModule.renderComparePage,
   });
 
   return {

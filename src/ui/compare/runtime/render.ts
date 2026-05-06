@@ -10,9 +10,23 @@ export function createCompareRenderModule(deps) {
     buildComparisonRows,
     formatAbsoluteStat,
   } = deps;
+  const LANGUAGE_SEQUENCE = ["ru", "en"];
 
   function localize(value) {
     return app.localizeText(value);
+  }
+
+  function getNextLanguage(language) {
+    const index = LANGUAGE_SEQUENCE.indexOf(language);
+    if (index === -1) {
+      return LANGUAGE_SEQUENCE[0];
+    }
+
+    return LANGUAGE_SEQUENCE[(index + 1) % LANGUAGE_SEQUENCE.length];
+  }
+
+  function getLanguageButtonLabel(language) {
+    return language === "en" ? app.t("button.languageEn") : app.t("button.languageRu");
   }
 
   function catalogName(item) {
@@ -90,10 +104,24 @@ export function createCompareRenderModule(deps) {
   }
 
   function applyStaticLocalization() {
-    document.documentElement.lang = app.getCurrentLanguage();
+    const currentLanguage = app.getCurrentLanguage();
+    const nextLanguage = getNextLanguage(currentLanguage);
+    const nextLanguageLabel = getLanguageButtonLabel(nextLanguage);
+
+    document.documentElement.lang = currentLanguage;
 
     const topbar = document.querySelector("body[data-page='compare'] .panel-topbar");
     topbar?.setAttribute("aria-label", app.t("compare.toolbar"));
+
+    const languageSwitch = document.getElementById("compare-language-switch");
+    const languageButton = document.getElementById("compare-language-cycle-button");
+    languageSwitch?.setAttribute("aria-label", app.t("toolbar.languageSwitcher"));
+    if (languageButton) {
+      languageButton.setAttribute("data-language", nextLanguage);
+      languageButton.setAttribute("aria-label", `${app.t("toolbar.languageSwitcher")}: ${nextLanguageLabel}`);
+      languageButton.setAttribute("title", `${app.t("toolbar.languageSwitcher")}: ${nextLanguageLabel}`);
+      languageButton.textContent = nextLanguageLabel;
+    }
 
     document.getElementById("mobile-nav-toggle")?.setAttribute("aria-label", app.t("toolbar.mobileNav"));
     document.getElementById("mobile-nav-toggle")?.setAttribute("title", app.t("button.mainMenu"));
@@ -196,7 +224,12 @@ export function createCompareRenderModule(deps) {
     const passiveDescriptionHtml = passiveItem
       ? renderCompareItemDescription(passiveItem, passiveLevel)
       : "";
-    const passiveSlotHtml = passiveItem && passiveSlot
+    const passiveSlotTitle = passiveSlot
+      ? passiveItem
+        ? `${localize(passiveSlot.label)}: ${catalogName(passiveItem)}${app.formatUpgradeTitleSuffix(passiveLevel)}`
+        : localize(passiveSlot.label)
+      : "";
+    const passiveSlotHtml = passiveSlot
       ? `
         <section class="compare-passive-slot-panel">
           <div class="${passiveClasses.join(" ")}" data-slot="${passiveSlot.key}">
@@ -204,8 +237,8 @@ export function createCompareRenderModule(deps) {
               class="slot-pin compare-static-slot-pin"
               role="img"
               tabindex="0"
-              aria-label="${app.escapeHtml(`${localize(passiveSlot.label)}: ${catalogName(passiveItem)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
-              title="${app.escapeHtml(`${localize(passiveSlot.label)}: ${catalogName(passiveItem)}${app.formatUpgradeTitleSuffix(passiveLevel)}`)}"
+              aria-label="${app.escapeHtml(passiveSlotTitle)}"
+              title="${app.escapeHtml(passiveSlotTitle)}"
             >
               <span class="slot-item-visual" aria-hidden="true">${passiveImageHtml}</span>
             </div>

@@ -237,6 +237,7 @@ const CLASS_CONFIGS = {
       { label: "HP", base: 695, growthType: "per_level", amount: 5 },
       { label: "MP", base: 31, growthType: "per_level", amount: 1 },
       { label: "Вес", base: 3025, growthType: "per_level", amount: 25 },
+      { label: "Защита", base: 1, growthType: "per_level", amount: 0 },
     ],
     derivedStats(baseStats) {
       const strength = baseStats["Сила"] || 0;
@@ -264,9 +265,10 @@ const CLASS_CONFIGS = {
       { label: "Сила", base: 3, growthType: "interval", interval: 6, amount: 1 },
       { label: "Ловкость", base: 6, growthType: "interval", interval: 3, amount: 1 },
       { label: "Интеллект", base: 1, growthType: "interval", interval: 9, amount: 1 },
-      { label: "HP", base: 604, growthType: "per_level", amount: 4 },
-      { label: "MP", base: 30, growthType: "per_level", amount: 1 },
+      { label: "HP", base: 644, growthType: "per_level", amount: 4 },
+      { label: "MP", base: 31, growthType: "per_level", amount: 1 },
       { label: "Вес", base: 3000, growthType: "per_level", amount: 15 },
+      { label: "Защита", base: 1, growthType: "per_level", amount: 0 },
     ],
     derivedStats(baseStats) {
       const strength = baseStats["Сила"] || 0;
@@ -295,9 +297,10 @@ const CLASS_CONFIGS = {
       { label: "Сила", base: 6, growthType: "interval", interval: 3, amount: 1 },
       { label: "Ловкость", base: 2, growthType: "interval", interval: 7, amount: 1 },
       { label: "Интеллект", base: 4, growthType: "interval", interval: 4, amount: 1 },
-      { label: "HP", base: 356, growthType: "per_level", amount: 4 },
-      { label: "MP", base: 44, growthType: "per_level", amount: 2 },
+      { label: "HP", base: 744, growthType: "per_level", amount: 4 },
+      { label: "MP", base: 32, growthType: "per_level", amount: 2 },
       { label: "Вес", base: 3200, growthType: "per_level", amount: 20 },
+      { label: "Защита", base: 1, growthType: "per_level", amount: 0 },
     ],
     derivedStats(baseStats) {
       const strength = baseStats["Сила"] || 0;
@@ -327,9 +330,10 @@ const CLASS_CONFIGS = {
       { label: "Сила", base: 5, growthType: "interval", interval: 4, amount: 1 },
       { label: "Ловкость", base: 5, growthType: "interval", interval: 4, amount: 1 },
       { label: "Интеллект", base: 3, growthType: "interval", interval: 6, amount: 1 },
-      { label: "HP", base: 354, growthType: "per_level", amount: 4 },
-      { label: "MP", base: 37, growthType: "per_level", amount: 1 },
+      { label: "HP", base: 674, growthType: "per_level", amount: 4 },
+      { label: "MP", base: 31, growthType: "per_level", amount: 1 },
       { label: "Вес", base: 3165, growthType: "per_level", amount: 15 },
+      { label: "Защита", base: 1, growthType: "per_level", amount: 0 },
     ],
     derivedStats(baseStats) {
       const strength = baseStats["Сила"] || 0;
@@ -362,9 +366,10 @@ const CLASS_CONFIGS = {
       { label: "Сила", base: 5, growthType: "interval", interval: 5, amount: 1 },
       { label: "Ловкость", base: 6, growthType: "interval", interval: 3, amount: 1 },
       { label: "Интеллект", base: 1, growthType: "interval", interval: 9, amount: 1 },
-      { label: "HP", base: 153, growthType: "per_level", amount: 3 },
-      { label: "MP", base: 33, growthType: "per_level", amount: 1 },
+      { label: "HP", base: 333, growthType: "per_level", amount: 3 },
+      { label: "MP", base: 31, growthType: "per_level", amount: 1 },
       { label: "Вес", base: 3170, growthType: "per_level", amount: 20 },
+      { label: "Защита", base: 1, growthType: "per_level", amount: 0 },
     ],
     derivedStats(baseStats) {
       const strength = baseStats["Сила"] || 0;

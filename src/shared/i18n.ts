@@ -10,6 +10,7 @@ const UI_MESSAGES: Record<string, { ru: string; en: string }> = {
   "toolbar.renameBuild": { ru: "Переименовать сборку", en: "Rename build" },
   "toolbar.copyBuild": { ru: "Скопировать сборку", en: "Copy build" },
   "toolbar.deleteBuild": { ru: "Удалить сборку", en: "Delete build" },
+  "confirm.deleteBuild": { ru: 'Удалить сборку "{name}"?', en: 'Delete build "{name}"?' },
   "toolbar.buildName": { ru: "Название сборки", en: "Build name" },
   "toolbar.saved": { ru: "Сохранено", en: "Saved" },
   "toolbar.unsaved": { ru: "Не сохранено", en: "Unsaved" },

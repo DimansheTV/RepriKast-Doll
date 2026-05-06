@@ -996,7 +996,7 @@ function toggleTrophyCategory(slotKey) {
 }
 
 function setSphereTypeOneTab(categoryName) {
-  const tab = SPHERE_TYPE_ONE_TABS.find((entry) => entry.category === categoryName);
+  const tab = SPHERE_TYPE_ONE_TABS.find((entry) => entry.category === categoryName || entry.slotKey === categoryName);
   if (!tab) {
     return;
   }
@@ -1147,8 +1147,10 @@ function renderCategoryList() {
         };
 
         if (group.key === "sphere_type_1") {
-          const activeTab = SPHERE_TYPE_ONE_TABS.find((tab) => tab.category === state.activeSphereTypeOneTab) || SPHERE_TYPE_ONE_TABS[0];
-          const categoryItems = group.items.filter((item) => catalogCategory(item) === activeTab.category);
+          const activeTab = SPHERE_TYPE_ONE_TABS.find((tab) =>
+            tab.category === state.activeSphereTypeOneTab || tab.slotKey === state.activeSphereTypeOneTab
+          ) || SPHERE_TYPE_ONE_TABS[0];
+          const categoryItems = group.items.filter((item) => getPrimarySphereSlot(item)?.key === activeTab.slotKey);
           const tabsHtml = `
             <div class="sphere-type-tabs" role="tablist" aria-label="${escapeHtml(localize("Подтипы сфер 1-го типа"))}">
               ${SPHERE_TYPE_ONE_TABS.map((tab) => `
@@ -1157,7 +1159,7 @@ function renderCategoryList() {
                   type="button"
                   role="tab"
                   aria-selected="${tab.category === activeTab.category ? "true" : "false"}"
-                  data-sphere-type-one-tab="${escapeHtml(tab.category)}"
+                  data-sphere-type-one-tab="${escapeHtml(tab.slotKey)}"
                 >
                   ${escapeHtml(localize(tab.label))}
                 </button>

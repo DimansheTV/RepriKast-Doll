@@ -497,14 +497,59 @@ test.skip("class controls recalculate baseline totals from the UI (legacy merged
 test("class controls recalculate baseline totals from the UI", async ({ page }) => {
   await page.goto("/index.html");
 
+  await expect.poll(async () => (await readBoardMainStats(page))["Защита"]).toBe("1");
+
   await page.locator("#class-level-input").fill("10");
   await page.locator("#class-level-input").press("Enter");
 
   await expect.poll(async () => (await readBoardMainStats(page)).HP).toBe("758");
   await expect.poll(async () => (await readBoardMainStats(page)).MP).toBe("44");
+  await expect.poll(async () => (await readBoardMainStats(page))["Защита"]).toBe("1");
+
+  await page.locator("#class-level-input").fill("1");
+  await page.locator("#class-level-input").press("Enter");
+  await page.locator("#class-select").selectOption("ranger");
+  await expect.poll(async () => readBoardMainStats(page)).toMatchObject({
+    HP: "650",
+    MP: "33",
+    "Сила": "3",
+    "Ловкость": "6",
+    "Интеллект": "1",
+    "Защита": "2",
+  });
 
   await page.locator("#class-select").selectOption("mage");
   await expect(page.locator("#class-select")).toHaveValue("mage");
+  await expect.poll(async () => readBoardMainStats(page)).toMatchObject({
+    HP: "756",
+    MP: "44",
+    "Сила": "6",
+    "Ловкость": "2",
+    "Интеллект": "4",
+    "Защита": "1",
+  });
+
+  await page.locator("#class-select").selectOption("assassin");
+  await expect(page.locator("#class-select")).toHaveValue("assassin");
+  await expect.poll(async () => readBoardMainStats(page)).toMatchObject({
+    HP: "343",
+    MP: "33",
+    "Сила": "5",
+    "Ловкость": "6",
+    "Интеллект": "1",
+    "Защита": "2",
+  });
+
+  await page.locator("#class-select").selectOption("summoner");
+  await expect(page.locator("#class-select")).toHaveValue("summoner");
+  await expect.poll(async () => readBoardMainStats(page)).toMatchObject({
+    HP: "684",
+    MP: "37",
+    "Сила": "5",
+    "Ловкость": "5",
+    "Интеллект": "3",
+    "Защита": "2",
+  });
 });
 
 test("equipment description stats contribute while upgrade stats still scale", async ({ page }) => {
@@ -645,6 +690,18 @@ test("main page keeps explicit build save flow and dirty-state controls", async 
   await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
   await expectSavedBuildCount(page, 2);
 
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("Сборка 1");
+    await dialog.dismiss();
+  });
+  await page.locator("[data-build-delete]").click();
+  await expectSavedBuildCount(page, 2);
+  await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Сборка 1");
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("Сборка 1");
+    await dialog.accept();
+  });
   await page.locator("[data-build-delete]").click();
   await expectSavedBuildCount(page, 1);
   await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
@@ -658,6 +715,10 @@ test("main page keeps explicit build save flow and dirty-state controls", async 
   await expect(page.locator("#profile-new-button")).toHaveText("\u041d\u043e\u0432\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430");
   await expectSavedBuildCount(page, 2);
 
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("Main build копия");
+    await dialog.accept();
+  });
   await page.locator("[data-build-delete]").click();
   await expectSavedBuildCount(page, 1);
   await expect(page.locator("[data-build-trigger] .build-picker-trigger-label")).toHaveText("Main build");
@@ -741,6 +802,20 @@ test("language switch localizes the main page, persists after reload, and applie
   await expect(page.locator("#pet-stage")).not.toContainText("Огонь");
   await expect(page.locator("#pet-stage")).not.toContainText("Сила");
   await expectLocatorTextWithoutCyrillic(page.locator("#pet-stage"), "pet workspace");
+  const typeOneSpheres = await openSphereCategory(page, "sphere_type_1");
+  for (const [tabName, itemText] of [
+    ["Destruction", "Destruction Sphere Lv. 1"],
+    ["Life", "Life Sphere Lv. 1"],
+    ["Mastery", "Mastery Sphere Lv. 1"],
+    ["Soul", "Soul Sphere Lv. 1"],
+    ["Protection", "Protection Sphere Lv. 1"],
+  ] as const) {
+    await typeOneSpheres.getByRole("tab", { name: tabName, exact: true }).click();
+    await expect(typeOneSpheres.locator(".sphere-tab-panel .catalog-item-sphere")).toHaveCount(20);
+    await expect(typeOneSpheres.locator(".category-items")).toContainText(itemText);
+  }
+  await expect(typeOneSpheres).not.toContainText("Сфера жизни");
+  await expectLocatorTextWithoutCyrillic(typeOneSpheres, "type I sphere category");
   const typeTwoSpheres = await openSphereCategory(page, "sphere_type_2");
   await expect(typeTwoSpheres.locator(".category-items")).toContainText("Sphere of greed Lv. 2");
   await expect(typeTwoSpheres.locator(".category-items")).toContainText("Sphere of harmony Lv. 1");
@@ -1365,6 +1440,10 @@ test("compare inventory shows equipment upgrade as read-only", async ({ page }) 
   const readonlyBadge = page.locator("#compare-primary-editor .compare-equipment-stage .compare-readonly-upgrade-badge").first();
   await expect(readonlyBadge).toBeVisible();
   await expect(readonlyBadge.locator(".compare-readonly-upgrade-badge-value")).toHaveText("+1");
+
+  const passiveSlot = page.locator("#compare-primary-editor .compare-passive-slot-panel .compare-passive-slot-cell");
+  await expect(passiveSlot).toBeVisible();
+  await expect(passiveSlot).not.toHaveClass(/is-filled/);
 });
 
 test("compare inventory shows item description on hover", async ({ page }) => {

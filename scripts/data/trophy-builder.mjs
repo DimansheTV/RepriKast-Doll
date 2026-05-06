@@ -11,7 +11,7 @@ const TROPHIES = [
   { id: "trophy_mask", pageId: "47511410015", name: "Маска", slotCode: "trophy_top_right", stat: "Защита", base: 1, step: 1, max: 21 },
   { id: "trophy_bracelet", pageId: "47511410016", name: "Браслет", slotCode: "trophy_middle_left", stat: "Сила", base: 1, step: 1, max: 21 },
   { id: "trophy_amulet", pageId: "47511410017", name: "Амулет", slotCode: "trophy_middle_right", stat: "Ловкость", base: 1, step: 1, max: 21 },
-  { id: "trophy_cup", pageId: "47511410018", name: "Чаша", slotCode: "trophy_bottom_left", stat: "Скорость бега", base: 2, step: 2, max: 42 },
+  { id: "trophy_cup", pageId: "47511410018", name: "Чаша", slotCode: "trophy_bottom_left", stat: "Скорость бега", base: 1, step: 1, max: 21 },
   { id: "trophy_horn", pageId: "47511410019", name: "Горн", slotCode: "trophy_bottom_right", stat: "Скорость атаки", base: 1, step: 1, max: 21 },
 ];
 
