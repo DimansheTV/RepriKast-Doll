@@ -12,6 +12,10 @@ html {
 }
 
 :root {
+  --page-frame-inline: 20px;
+  --page-frame-block: 20px;
+  --compare-page-frame-inline: 14px;
+  --compare-page-frame-block: 14px;
   --font-ui: "Exo 2", sans-serif;
   --font-display: "Exo 2", sans-serif;
   --accent-cyan-rgb: 100, 212, 231;
@@ -52,7 +56,7 @@ body {
     linear-gradient(180deg, #102329 0%, var(--bg-mid) 30%, var(--bg-dark) 100%);
   color: var(--text-main);
   min-height: 100vh;
-  padding: 20px;
+  padding: var(--page-frame-block) var(--page-frame-inline);
   overflow-x: hidden;
 }
 
@@ -116,7 +120,7 @@ h2 {
 
 .app-header {
   width: 100%;
-  margin: 0 auto 20px;
+  margin: 0 auto var(--page-frame-block);
   position: relative;
   z-index: 80;
 }
@@ -240,7 +244,7 @@ h2 {
   border-radius: 10px;
   background: var(--button-bg);
   color: var(--text-main);
-  font: 700 13px/1 var(--font-ui);
+  font: 700 0.8125em/1 var(--font-ui);
   letter-spacing: 0.04em;
   cursor: pointer;
   white-space: nowrap;
@@ -381,13 +385,13 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 15px;
+  font-size: 0.9375em;
   font-weight: 700;
 }
 
 .build-picker-trigger-state {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 0.6875em;
 }
 
 .build-picker-shell.is-dirty .build-picker-trigger-state {
@@ -425,7 +429,7 @@ h2 {
 .build-picker-input {
   padding: 0 2px;
   outline: none;
-  font-size: 15px;
+  font-size: 0.9375em;
   font-weight: 700;
 }
 
@@ -573,7 +577,7 @@ h2 {
   background: var(--surface-1);
   color: var(--text-soft);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 0.8125em;
   line-height: 1.25;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -633,13 +637,13 @@ h2 {
 
 .summary-card strong {
   display: block;
-  font-size: 28px;
+  font-size: 1.75em;
   font-family: var(--font-display);
   color: var(--text-warm);
 }
 
 .summary-label {
-  font-size: 11px;
+  font-size: 0.6875em;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-soft);
@@ -657,7 +661,7 @@ h2 {
   background: var(--button-bg);
   color: var(--text-main);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 0.8125em;
   font-weight: 700;
   line-height: 1.25;
   text-align: center;
@@ -710,7 +714,7 @@ h2 {
 
 .catalog-context-item {
   max-width: 100%;
-  font-size: 14px;
+  font-size: 0.875em;
   color: var(--text-muted);
   text-align: right;
   overflow-wrap: anywhere;
@@ -743,7 +747,7 @@ h2 {
   background: rgba(var(--accent-ice-rgb), 0.04);
   color: var(--text-soft);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0.75em;
   font-weight: 700;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -795,7 +799,7 @@ h2 {
   background:
     linear-gradient(180deg, rgba(26, 55, 61, 0.54), rgba(9, 20, 24, 0.82));
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 0.875em;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
@@ -834,7 +838,7 @@ select.class-control {
   border-radius: 10px;
   background: rgba(var(--accent-cyan-rgb), 0.08);
   color: var(--text-bright);
-  font-size: 16px;
+  font-size: 1em;
   line-height: 1;
   font-weight: 800;
   cursor: pointer;
@@ -862,7 +866,7 @@ select.class-control {
   background: transparent;
   text-align: center;
   color: var(--text-bright);
-  font-size: 16px;
+  font-size: 1em;
   font-weight: 700;
   line-height: 1;
   outline: none;
@@ -877,7 +881,7 @@ select.class-control {
 }
 
 .stats-subtitle-row h3 {
-  font-size: 12px;
+  font-size: 0.75em;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-soft);
@@ -915,14 +919,14 @@ select.class-control {
 .stat-name {
   min-width: 0;
   flex: 1;
-  font-size: 14px;
+  font-size: 0.875em;
   color: var(--text-main);
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .stat-value {
-  font-size: 16px;
+  font-size: 1em;
   font-weight: 700;
   color: var(--text-main);
   white-space: nowrap;
@@ -944,7 +948,7 @@ select.class-control {
 
 .set-bonus-title {
   color: var(--text-main);
-  font-size: 13px;
+  font-size: 0.8125em;
   font-weight: 700;
 }
 
@@ -954,7 +958,7 @@ select.class-control {
   background: rgba(var(--accent-cyan-rgb), 0.08);
   border: 1px solid rgba(var(--accent-cyan-rgb), 0.14);
   color: var(--text-warm);
-  font-size: 12px;
+  font-size: 0.75em;
   line-height: 1.25;
 }
 
@@ -970,7 +974,7 @@ select.class-control {
   background: var(--surface-1);
   border: 1px solid rgba(var(--panel-line-rgb), 0.12);
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: 0.8125em;
   line-height: 1.35;
 }
 
@@ -978,7 +982,7 @@ select.class-control {
 .category-empty {
   padding: 16px;
   color: var(--text-soft);
-  font-size: 14px;
+  font-size: 0.875em;
   background: var(--surface-1);
   border: 1px dashed rgba(var(--panel-line-rgb), 0.14);
   border-radius: 12px;
@@ -986,7 +990,7 @@ select.class-control {
 
 .item-name {
   min-width: 0;
-  font-size: 15px;
+  font-size: 0.9375em;
   margin-bottom: 4px;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1058,7 +1062,7 @@ select.class-control {
     linear-gradient(180deg, rgba(25, 54, 62, 0.78), rgba(8, 20, 24, 0.9));
   color: var(--text-soft);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.875em;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.25;
@@ -1212,7 +1216,7 @@ select.class-control {
 .board-stat-name {
   min-width: 0;
   flex: 1;
-  font-size: 10px;
+  font-size: 0.625em;
   line-height: 1.1;
   color: var(--text-main);
   overflow-wrap: anywhere;
@@ -1220,7 +1224,7 @@ select.class-control {
 }
 
 .board-stat-value {
-  font-size: 10px;
+  font-size: 0.625em;
   line-height: 1.1;
   font-weight: 700;
   color: var(--text-warm);
@@ -1236,7 +1240,7 @@ select.class-control {
 
 .board-stat-row-main .board-stat-name,
 .board-stat-row-main .board-stat-value {
-  font-size: 15px;
+  font-size: 0.9375em;
   line-height: 1.2;
 }
 
@@ -1255,7 +1259,7 @@ select.class-control {
   background: rgba(7, 16, 20, 0.18);
   border: 1px dashed rgba(var(--panel-line-rgb), 0.14);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 0.75em;
   line-height: 1.35;
   text-align: left;
 }
@@ -1364,7 +1368,7 @@ select.class-control {
 
 .pet-card-kicker {
   color: var(--text-warm);
-  font-size: 11px;
+  font-size: 0.6875em;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1380,7 +1384,7 @@ select.class-control {
 .pet-card-title-row h3 {
   margin: 0;
   color: var(--text-bright);
-  font-size: clamp(20px, 2vw, 28px);
+  font-size: clamp(1.25em, 2vw, 1.75em);
   line-height: 1.05;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1388,7 +1392,7 @@ select.class-control {
 
 .pet-card-meta {
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: 0.8125em;
   line-height: 1.4;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1407,7 +1411,7 @@ select.class-control {
   background: rgba(216, 137, 115, 0.12);
   color: var(--accent-red);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0.75em;
   font-weight: 700;
   line-height: 1.2;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
@@ -1420,7 +1424,7 @@ select.class-control {
 
 .pet-merge-total-note {
   color: var(--text-warm);
-  font-size: 11px;
+  font-size: 0.6875em;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1428,7 +1432,7 @@ select.class-control {
 
 .pet-merge-note {
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 0.75em;
   line-height: 1.5;
 }
 
@@ -1477,7 +1481,7 @@ select.class-control {
 .pet-merge-bonus {
   color: var(--text-main);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.8125em;
   line-height: 1.2;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1495,7 +1499,7 @@ select.class-control {
   background: rgba(var(--accent-cyan-rgb), 0.08);
   border: 1px solid rgba(var(--accent-cyan-rgb), 0.14);
   color: var(--text-warm);
-  font-size: 11px;
+  font-size: 0.6875em;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1513,7 +1517,7 @@ select.class-control {
   border-radius: 8px;
   background: rgba(var(--accent-cyan-rgb), 0.08);
   color: var(--text-main);
-  font-size: 16px;
+  font-size: 1em;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -1535,7 +1539,7 @@ select.class-control {
   min-width: 14px;
   color: var(--text-bright);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 0.8125em;
   line-height: 1;
   text-align: center;
 }
@@ -1581,7 +1585,7 @@ select.class-control {
 
 .passive-slot-title {
   color: var(--text-main);
-  font-size: 15px;
+  font-size: 0.9375em;
   font-weight: 700;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1589,7 +1593,7 @@ select.class-control {
 
 .passive-slot-note {
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: 0.8125em;
   line-height: 1.4;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1740,7 +1744,7 @@ select.class-control {
   border-radius: 50%;
   background: rgba(var(--accent-cyan-rgb), 0.08);
   color: var(--text-bright);
-  font-size: 12px;
+  font-size: 0.75em;
   line-height: 1;
   font-weight: 800;
   cursor: pointer;
@@ -1763,7 +1767,7 @@ select.class-control {
 .upgrade-stepper-value {
   min-width: 0;
   color: var(--text-warm);
-  font-size: 11px;
+  font-size: 0.6875em;
   line-height: 1.1;
   font-weight: 700;
   text-align: center;
@@ -1945,7 +1949,7 @@ select.class-control {
 .equipment-description-name {
   margin-bottom: 8px;
   color: var(--text-main);
-  font-size: 15px;
+  font-size: 0.9375em;
   font-weight: 700;
   line-height: 1.25;
 }
@@ -1954,7 +1958,7 @@ select.class-control {
   margin: 0;
   padding-left: 16px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 0.75em;
   line-height: 1.35;
 }
 
@@ -2080,7 +2084,7 @@ select.class-control {
   border: none;
   color: var(--text-main);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.875em;
   text-align: left;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -2103,7 +2107,7 @@ select.class-control {
 }
 
 .cat-count {
-  font-size: 12px;
+  font-size: 0.75em;
   color: var(--text-warm);
 }
 
@@ -2114,7 +2118,7 @@ select.class-control {
   place-items: center;
   border-radius: 50%;
   background: rgba(var(--accent-cyan-rgb), 0.08);
-  font-size: 18px;
+  font-size: 1.125em;
   line-height: 1;
   color: var(--text-soft);
   transform: rotate(0deg);
@@ -2207,7 +2211,7 @@ select.class-control {
   background: var(--button-bg);
   color: var(--text-soft);
   cursor: pointer;
-  font-size: clamp(11px, 0.78vw, 12px);
+  font-size: clamp(0.6875em, 0.78vw, 0.75em);
   line-height: 1;
   white-space: nowrap;
   overflow-wrap: normal;
@@ -2238,7 +2242,7 @@ select.class-control {
 .sphere-subgroup-title {
   padding: 8px 12px;
   color: var(--text-warm);
-  font-size: 12px;
+  font-size: 0.75em;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2273,12 +2277,12 @@ select.class-control {
 }
 
 .catalog-item .item-name {
-  font-size: 13px;
+  font-size: 0.8125em;
   line-height: 1.35;
 }
 
 .item-meta {
-  font-size: 11px;
+  font-size: 0.6875em;
   color: var(--text-soft);
   margin-top: 2px;
   overflow-wrap: anywhere;
@@ -2294,7 +2298,7 @@ select.class-control {
   border-radius: 8px;
   color: var(--accent-green);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0.75em;
   font-weight: 700;
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -2416,7 +2420,7 @@ body[data-page="compare"] {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 14px;
+  padding: var(--compare-page-frame-block) var(--compare-page-frame-inline);
   background:
     radial-gradient(circle at 12% 0%, rgba(var(--accent-cyan-rgb), 0.18), transparent 24%),
     radial-gradient(circle at 92% 12%, rgba(26, 119, 137, 0.2), transparent 28%),
@@ -2425,7 +2429,7 @@ body[data-page="compare"] {
 
 body[data-page="compare"] .app-header {
   flex: 0 0 auto;
-  margin-bottom: 14px;
+  margin-bottom: var(--compare-page-frame-block);
 }
 
 body[data-page="compare"] .panel {
@@ -2568,7 +2572,7 @@ body[data-page="compare"] .compare-profile-panel:has(.trophy-slot-cell:focus-wit
 }
 
 .compare-editor-headline h2 {
-  font-size: clamp(20px, 1.4vw, 28px);
+  font-size: clamp(1.25em, 1.4vw, 1.75em);
   line-height: 1.05;
   color: var(--text-bright);
 }
@@ -2583,7 +2587,7 @@ body[data-page="compare"] .compare-profile-panel:has(.trophy-slot-cell:focus-wit
   background: rgba(var(--accent-cyan-rgb), 0.12);
   border: 1px solid rgba(var(--accent-cyan-rgb), 0.24);
   color: var(--text-warm);
-  font-size: 11px;
+  font-size: 0.6875em;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2656,7 +2660,7 @@ body[data-page="compare"] .compare-profile-panel:has(.trophy-slot-cell:focus-wit
 
 .compare-readonly-upgrade-badge-value {
   color: var(--text-bright);
-  font-size: 10px;
+  font-size: 0.625em;
   line-height: 1;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
@@ -2733,7 +2737,7 @@ body[data-page="compare"] .compare-profile-panel:has(.trophy-slot-cell:focus-wit
 
 .compare-equipment-stage .upgrade-stepper-value,
 .compare-passive-slot-panel .upgrade-stepper-value {
-  font-size: 12px;
+  font-size: 0.75em;
 }
 
 body[data-page="compare"] .compare-readonly-upgrade-badge {
@@ -2792,7 +2796,7 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
 .compare-editor-catalog-title h3 {
   margin: 0;
   min-width: 0;
-  font-size: 13px;
+  font-size: 0.8125em;
 }
 
 .compare-category-list {
@@ -2829,7 +2833,7 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
   border: 1px solid rgba(var(--panel-line-rgb), 0.18);
   background: rgba(var(--accent-ice-rgb), 0.04);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 0.75em;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2854,7 +2858,8 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
 .compare-table-wrap {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
 }
 
@@ -2880,7 +2885,7 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
 .compare-table-header {
   background: rgba(var(--accent-cyan-rgb), 0.1);
   color: var(--text-warm);
-  font-size: 12px;
+  font-size: 0.75em;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -2901,13 +2906,13 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
 
 .compare-table-label {
   color: var(--text-main);
-  font-size: 13px;
+  font-size: 0.8125em;
   font-weight: 700;
 }
 
 .compare-table-value,
 .compare-table-delta {
-  font-size: 13px;
+  font-size: 0.8125em;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -2981,12 +2986,12 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
 
   .board-stat-row-main .board-stat-name,
   .board-stat-row-main .board-stat-value {
-    font-size: 12px;
+    font-size: 0.75em;
   }
 
   .board-stat-row-extra .board-stat-name,
   .board-stat-row-extra .board-stat-value {
-    font-size: 10px;
+    font-size: 0.625em;
   }
 
   .summary-card {
@@ -3146,7 +3151,7 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
   .workspace-tab {
     min-height: 38px;
     padding: 9px 10px;
-    font-size: 13px;
+    font-size: 0.8125em;
   }
 
   .class-level-stepper {
@@ -3159,11 +3164,11 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
   .class-level-stepper-btn {
     width: 30px;
     height: 26px;
-    font-size: 14px;
+    font-size: 0.875em;
   }
 
   .class-level-stepper-input {
-    font-size: 14px;
+    font-size: 0.875em;
   }
 
   .catalog-context {
@@ -3182,11 +3187,11 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
   .upgrade-stepper-btn {
     width: 16px;
     height: 16px;
-    font-size: 11px;
+    font-size: 0.6875em;
   }
 
   .upgrade-stepper-value {
-    font-size: 10px;
+    font-size: 0.625em;
   }
 
   .compare-editor-controls {
@@ -3224,7 +3229,7 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
   .compare-table-header,
   .compare-table-cell {
     padding: 8px 8px;
-    font-size: 11px;
+    font-size: 0.6875em;
   }
 }
 
@@ -3507,7 +3512,7 @@ h2 {
 }
 
 .mobile-nav-toggle-text {
-  font-size: 13px;
+  font-size: 0.8125em;
   font-weight: 700;
   letter-spacing: 0.03em;
 }
@@ -3562,7 +3567,7 @@ h2 {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-bright);
-  font-size: 26px;
+  font-size: 1.625em;
   line-height: 1;
 }
 
@@ -3672,7 +3677,7 @@ body.mobile-nav-open .mobile-nav-panel {
 
 .section-title-row h2 {
   color: var(--text-bright);
-  font-size: clamp(18px, 1.35vw, 24px);
+  font-size: clamp(1.125em, 1.35vw, 1.5em);
 }
 
 .summary-label,
@@ -3787,12 +3792,12 @@ body.mobile-nav-open .mobile-nav-panel {
 
 .board-stat-row-main .board-stat-name,
 .board-stat-row-main .board-stat-value {
-  font-size: 14px;
+  font-size: 0.875em;
 }
 
 .board-stat-row-extra .board-stat-name,
 .board-stat-row-extra .board-stat-value {
-  font-size: 11px;
+  font-size: 0.6875em;
 }
 
 .category-block {
@@ -3839,7 +3844,7 @@ body[data-page="compare"] {
   --compare-stage-max-width: 760px;
   height: 100vh;
   overflow: hidden;
-  padding: 14px;
+  padding: var(--compare-page-frame-block) var(--compare-page-frame-inline);
   background:
     radial-gradient(circle at 18% -8%, rgba(var(--accent-cyan-rgb), 0.18), transparent 30%),
     radial-gradient(circle at 86% 4%, rgba(31, 138, 163, 0.18), transparent 28%),
@@ -3886,6 +3891,10 @@ body[data-page="compare"] .compare-equipment-stage,
 body[data-page="compare"] .compare-sphere-stage,
 body[data-page="compare"] .compare-trophy-stage {
   min-height: 1px;
+}
+
+body[data-page="compare"] .compare-profile-panel .equipment-description {
+  display: none;
 }
 
 body[data-page="compare"] .compare-pet-stage {
@@ -4006,6 +4015,18 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
   body[data-page="compare"] .compare-pet-stage .stat-value {
     font-size: clamp(17px, 2.4cqw, 21px);
   }
+}
+
+#compare-floating-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: min(260px, calc(100vw - 24px));
+  max-height: min(240px, calc(100vh - 24px));
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+  transform: none;
 }
 
 .compare-topbar {
@@ -4615,6 +4636,7 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
     min-height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
+    padding: var(--compare-page-frame-block) var(--compare-page-frame-inline);
   }
 
   body[data-page="compare"] .compare-page-shell {
@@ -4706,7 +4728,7 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
   }
 
   body[data-page="compare"] .compare-sphere-stage .sphere-upgrade-select .upgrade-stepper-value {
-    font-size: 10px;
+    font-size: 0.625em;
     line-height: 1;
   }
 
@@ -4752,5 +4774,82 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
   .passive-slot-card {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+.workspace-tab {
+  padding-inline: 12px;
+  font-size: 0.8125em;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+@media (max-width: 960px) {
+  .workspace-tab {
+    padding-inline: 10px;
+    font-size: 0.78125em;
+    letter-spacing: 0.01em;
+  }
+}
+
+@media (max-width: 1600px) {
+  .workspace-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  body[data-page="main"] {
+    --desktop-main-panel-height: calc(100vh - 112px - var(--page-frame-block));
+  }
+
+  .panel-board,
+  .panel-workspace,
+  .panel-sidebar,
+  .panel-right {
+    height: var(--desktop-main-panel-height);
+  }
+}
+
+.pet-stage {
+  container-type: inline-size;
+}
+
+.pet-card-title-row h3,
+.pet-card-meta {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+@container (max-width: 430px) {
+  .pet-card-head {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 14px;
+  }
+
+  .pet-card-portrait {
+    width: min(100%, 180px);
+    min-height: 132px;
+    margin-inline: auto;
+  }
+
+  .pet-card-title-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .pet-card-title-row h3 {
+    font-size: clamp(1.125em, 7cqw, 1.5em);
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  .pet-remove-btn {
+    align-self: flex-start;
   }
 }

@@ -27,6 +27,112 @@ export function createCompareBindingsModule(deps) {
     return LANGUAGE_SEQUENCE[(index + 1) % LANGUAGE_SEQUENCE.length];
   }
 
+  const COMPARE_TOOLTIP_HOST_ID = "compare-floating-tooltip";
+  let activeTooltipAnchor = null;
+  let activeTooltipSource = null;
+
+  function ensureCompareTooltipHost() {
+    let host = document.getElementById(COMPARE_TOOLTIP_HOST_ID);
+    if (host) {
+      return host;
+    }
+
+    host = document.createElement("div");
+    host.id = COMPARE_TOOLTIP_HOST_ID;
+    host.className = "equipment-description compare-floating-tooltip";
+    host.hidden = true;
+    host.setAttribute("aria-hidden", "true");
+    document.body.appendChild(host);
+    return host;
+  }
+
+  function getTooltipData(target, container) {
+    if (!(target instanceof Element)) {
+      return null;
+    }
+
+    const anchor = target.closest(".slot-cell, .sphere-slot-cell, .trophy-slot-cell, .compare-passive-slot-cell");
+    if (!(anchor instanceof HTMLElement) || !container.contains(anchor)) {
+      return null;
+    }
+
+    const source = anchor.querySelector(".equipment-description");
+    if (!(source instanceof HTMLElement)) {
+      return null;
+    }
+
+    return { anchor, source };
+  }
+
+  function positionCompareTooltip(host, anchor) {
+    const gap = 14;
+    const viewportPadding = 12;
+    const anchorRect = anchor.getBoundingClientRect();
+
+    host.style.left = "0px";
+    host.style.top = "0px";
+
+    const hostRect = host.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = anchorRect.right + gap;
+    if (left + hostRect.width > viewportWidth - viewportPadding) {
+      left = anchorRect.left - gap - hostRect.width;
+    }
+    if (left < viewportPadding) {
+      left = Math.min(
+        Math.max(viewportPadding, anchorRect.left),
+        viewportWidth - hostRect.width - viewportPadding,
+      );
+    }
+
+    let top = anchorRect.top + ((anchorRect.height - hostRect.height) / 2);
+    if (top + hostRect.height > viewportHeight - viewportPadding) {
+      top = viewportHeight - hostRect.height - viewportPadding;
+    }
+    if (top < viewportPadding) {
+      top = viewportPadding;
+    }
+
+    host.style.left = `${Math.round(left)}px`;
+    host.style.top = `${Math.round(top)}px`;
+  }
+
+  function showCompareTooltip(anchor, source) {
+    const host = ensureCompareTooltipHost();
+    host.innerHTML = source.innerHTML;
+    host.hidden = false;
+    activeTooltipAnchor = anchor;
+    activeTooltipSource = source;
+    positionCompareTooltip(host, anchor);
+  }
+
+  function hideCompareTooltip() {
+    const host = document.getElementById(COMPARE_TOOLTIP_HOST_ID);
+    if (host) {
+      host.hidden = true;
+      host.innerHTML = "";
+    }
+    activeTooltipAnchor = null;
+    activeTooltipSource = null;
+  }
+
+  function syncCompareTooltip(container, target) {
+    const tooltipData = getTooltipData(target, container);
+    if (!tooltipData) {
+      hideCompareTooltip();
+      return;
+    }
+
+    if (activeTooltipSource === tooltipData.source) {
+      positionCompareTooltip(ensureCompareTooltipHost(), tooltipData.anchor);
+      return;
+    }
+
+    showCompareTooltip(tooltipData.anchor, tooltipData.source);
+  }
+
   function handleEditorClick(editorKey, event) {
     const target = event.target;
     if (!(target instanceof Element)) {
@@ -131,6 +237,35 @@ export function createCompareBindingsModule(deps) {
     container.addEventListener("click", (event) => handleEditorClick(editorKey, event));
     container.addEventListener("change", (event) => handleEditorChange(editorKey, event));
     container.addEventListener("keydown", (event) => handleEditorKeydown(editorKey, event));
+    container.addEventListener("mouseover", (event) => syncCompareTooltip(container, event.target));
+    container.addEventListener("focusin", (event) => syncCompareTooltip(container, event.target));
+    container.addEventListener("mouseout", (event) => {
+      const tooltipData = getTooltipData(event.target, container);
+      if (!tooltipData) {
+        return;
+      }
+
+      const relatedTarget = event.relatedTarget;
+      if (relatedTarget instanceof Element && tooltipData.anchor.contains(relatedTarget)) {
+        return;
+      }
+
+      hideCompareTooltip();
+    });
+    container.addEventListener("focusout", (event) => {
+      const tooltipData = getTooltipData(event.target, container);
+      if (!tooltipData) {
+        return;
+      }
+
+      const relatedTarget = event.relatedTarget;
+      if (relatedTarget instanceof Element && tooltipData.anchor.contains(relatedTarget)) {
+        return;
+      }
+
+      hideCompareTooltip();
+    });
+    container.addEventListener("scroll", hideCompareTooltip, true);
   }
 
   function bindTopbar() {
@@ -202,6 +337,7 @@ export function createCompareBindingsModule(deps) {
     });
 
     window.addEventListener("resize", () => {
+      hideCompareTooltip();
       if (window.innerWidth > 899) {
         closeMobileNav();
       }

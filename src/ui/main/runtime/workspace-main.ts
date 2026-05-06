@@ -79,6 +79,11 @@ function catalogCategory(item) {
   return getLocalizedCatalogField(item, "category", { fallbackToRu: true });
 }
 
+function catalogSourceCategory(item) {
+  const sourceMeta = item?.sourceMeta && typeof item.sourceMeta === "object" ? item.sourceMeta : {};
+  return normalizeText(item?.category ?? sourceMeta?.category ?? "");
+}
+
 function catalogVariant(item) {
   return getLocalizedCatalogField(item, "variant", { fallbackToRu: true });
 }
