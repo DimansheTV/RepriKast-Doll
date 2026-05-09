@@ -11,7 +11,15 @@ import { normalizeText, sanitizeClassLevel, escapeHtml } from "./runtime/utils";
 import { DEFAULT_LANGUAGE, normalizeLanguage, localizeText, t } from "../../shared/i18n";
 
 export function createAppRuntime(context) {
-  const { catalogRepository, profileRepository, uiStateRepository } = context;
+  const {
+    catalogRepository,
+    profileRepository,
+    uiStateRepository,
+    storage = window.localStorage,
+    sessionStorage = window.sessionStorage,
+  } = context;
+
+  const RECOVERY_SESSION_KEY = "r2-doll-render-recovery-v1";
 
   let catalogModule;
   let getCurrentLanguage = () => DEFAULT_LANGUAGE;
@@ -23,6 +31,57 @@ export function createAppRuntime(context) {
     setLastAction: () => {},
     showBuildToast: () => {},
   };
+
+  function clearAppPersistenceForRecovery() {
+    const profileKeys = Object.values(profileRepository?.keys || {});
+    const uiStateKeys = Object.entries(uiStateRepository?.keys || {})
+      .filter(([key]) => key !== "language")
+      .map(([, value]) => value);
+
+    [...profileKeys, ...uiStateKeys].forEach((key) => {
+      try {
+        storage.removeItem(key);
+      } catch {
+        // Ignore storage failures during recovery.
+      }
+    });
+
+    try {
+      sessionStorage.removeItem(uiStateRepository?.keys?.navTransition || "");
+    } catch {
+      // Ignore session storage failures during recovery.
+    }
+  }
+
+  function recoverFromRenderFailure(err) {
+    try {
+      if (sessionStorage.getItem(RECOVERY_SESSION_KEY) !== "1") {
+        sessionStorage.setItem(RECOVERY_SESSION_KEY, "1");
+        clearAppPersistenceForRecovery();
+        window.location.reload();
+        return true;
+      }
+    } catch {
+      // If session storage is unavailable, fall through to fatal UI.
+    }
+
+    return false;
+  }
+
+  function clearRecoveryMarker() {
+    try {
+      sessionStorage.removeItem(RECOVERY_SESSION_KEY);
+    } catch {
+      // Ignore session storage failures after a successful boot.
+    }
+  }
+
+  function renderFatalState(err) {
+    const categoryList = document.getElementById("category-list");
+    if (categoryList) {
+      categoryList.innerHTML = '<div class="error-note">\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u0440\u0438\u0441\u043e\u0432\u0430\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435: ' + escapeHtml(err?.message || String(err)) + '</div>';
+    }
+  }
 
   const stateModule = createRuntimeState({
     profileRepository,
@@ -216,19 +275,27 @@ export function createAppRuntime(context) {
   });
 
   refs.renderAll = () => {
-    renderModule.renderProfileBar();
-    renderModule.renderSidebarTabs();
-    renderModule.renderStatsSourceTabs();
-    renderModule.renderWorkspaceTabs();
-    workspaceModule.renderDollSlots();
-    workspaceModule.renderPassiveMorphRingSlot();
-    workspaceModule.renderPetWorkspace();
-    workspaceModule.renderSphereSlots();
-    workspaceModule.renderTrophySlots();
-    renderModule.renderBoardTotalStats();
-    renderModule.renderStatsPanel();
-    renderModule.renderClassPanel();
-    workspaceModule.renderCategoryList();
+    try {
+      renderModule.renderProfileBar();
+      renderModule.renderSidebarTabs();
+      renderModule.renderStatsSourceTabs();
+      renderModule.renderWorkspaceTabs();
+      workspaceModule.renderDollSlots();
+      workspaceModule.renderPassiveMorphRingSlot();
+      workspaceModule.renderPetWorkspace();
+      workspaceModule.renderSphereSlots();
+      workspaceModule.renderTrophySlots();
+      renderModule.renderBoardTotalStats();
+      renderModule.renderStatsPanel();
+      renderModule.renderClassPanel();
+      workspaceModule.renderCategoryList();
+    } catch (err) {
+      if (recoverFromRenderFailure(err)) {
+        return;
+      }
+      renderFatalState(err);
+      throw err;
+    }
   };
 
   const shared = createSharedRuntimeApi({
@@ -265,7 +332,11 @@ export function createAppRuntime(context) {
       renderModule.bindWorkspaceTabs();
       renderModule.bindMobileNav();
       renderModule.bindClassControls();
+      clearRecoveryMarker();
     } catch (err) {
+      if (recoverFromRenderFailure(err)) {
+        return;
+      }
       const categoryList = document.getElementById("category-list");
       if (categoryList) {
         categoryList.innerHTML = '<div class="error-note">\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435: ' + escapeHtml(err.message) + '</div>';
