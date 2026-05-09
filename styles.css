@@ -3206,21 +3206,30 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
   .slot-upgrade-select,
   .sphere-upgrade-select,
   .trophy-upgrade-select {
-    grid-template-columns: 28px minmax(28px, auto) 28px;
-    min-width: 96px;
-    min-height: 34px;
-    padding: 3px 5px;
-    gap: 4px;
+    grid-template-columns: 22px minmax(26px, 1fr) 22px;
+    min-width: min(92%, 112px);
+    min-height: 28px;
+    padding: 3px 7px;
+    gap: 5px;
+  }
+
+  .slot-upgrade-select {
+    top: 0;
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .upgrade-stepper-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.9375em;
+    width: 22px;
+    height: 22px;
+    font-size: 0.8125em;
+    line-height: 0;
+    padding-bottom: 1px;
   }
 
   .upgrade-stepper-value {
-    font-size: 0.8125em;
+    font-size: 0.75em;
   }
 
   .compare-editor-controls {
