@@ -3,7 +3,7 @@ import sphereCatalog from "./data/sphere-items.json";
 import trophyCatalog from "./data/trophy-items.json";
 import petCatalog from "./data/pet-items.json";
 
-const imageModules = import.meta.glob("./images/**/*.{png,jpg,jpeg,webp,gif}", {
+const imageModules = import.meta.glob(["./images/**/*.{png,jpg,jpeg,webp,gif}", "!./images/favicon*.png"], {
   eager: true,
   import: "default",
   query: "?url",
