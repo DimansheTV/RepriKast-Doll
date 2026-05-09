@@ -58,6 +58,8 @@ export function createMainWorkspaceModule(deps) {
     localizeText,
     t,
   } = deps;
+  const MOBILE_SLOT_DOUBLE_TAP_MS = 420;
+  let lastMobileSlotTap = { slotKey: "", time: 0 };
 
 function localize(value) {
   return localizeText(value);
@@ -92,9 +94,30 @@ function catalogElement(item) {
   return getLocalizedCatalogField(item, "element", { fallbackToRu: true });
 }
 
-function scrollCategoryIntoView(slotKey) {
-  const block = document.querySelector(`.category-block[data-slot="${slotKey}"]`);
-  block?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+function scrollCategoryIntoView(slotKey, { block = "nearest" } = {}) {
+  const categoryBlock = document.querySelector(`.category-block[data-slot="${slotKey}"]`);
+  categoryBlock?.scrollIntoView({ behavior: "smooth", block });
+}
+
+function isMobileTapTarget() {
+  return Boolean(
+    window.matchMedia?.("(hover: none), (pointer: coarse)")?.matches ||
+    navigator.maxTouchPoints > 0,
+  );
+}
+
+function shouldScrollSlotOnDoubleTap(slotKey) {
+  if (!isMobileTapTarget()) {
+    return false;
+  }
+
+  const now = Date.now();
+  const isDoubleTap =
+    lastMobileSlotTap.slotKey === slotKey &&
+    now - lastMobileSlotTap.time <= MOBILE_SLOT_DOUBLE_TAP_MS;
+
+  lastMobileSlotTap = { slotKey, time: now };
+  return isDoubleTap;
 }
 
 
@@ -186,19 +209,20 @@ function handleSlotRemove(event, slotKey) {
 function handleDollSlotClick(slotKey) {
   const slot = getSlotConfig(slotKey);
   const isEquipped = Boolean(state.equipped[slotKey]);
+  const scrollToPicker = shouldScrollSlotOnDoubleTap(slotKey);
 
   if (isEquipped) {
-    selectSlot(slotKey, { scroll: false });
+    selectSlot(slotKey, { scroll: scrollToPicker, scrollBlock: "start" });
     if (slot) {
       setLastAction(`${slot.label}: выберите проточку справа сверху или снимите предмет правой кнопкой.`);
     }
     return;
   }
 
-  selectSlot(slotKey, { scroll: true });
+  selectSlot(slotKey, { scroll: true, scrollBlock: scrollToPicker ? "start" : "nearest" });
 }
 
-function selectSlot(slotKey, { scroll = false } = {}) {
+function selectSlot(slotKey, { scroll = false, scrollBlock = "nearest" } = {}) {
   const slot = getSlotConfig(slotKey);
   if (!slot) return;
 
@@ -207,7 +231,7 @@ function selectSlot(slotKey, { scroll = false } = {}) {
   renderAll();
 
   if (scroll) {
-    scrollCategoryIntoView(slotKey);
+    scrollCategoryIntoView(slotKey, { block: scrollBlock });
   }
 
   const count = getItemsForEquipmentSlot(slot).length;
@@ -355,12 +379,15 @@ function renderPassiveMorphRingSlot() {
   const descriptionHtml = item
     ? `<div class="equipment-description">${renderEquipmentDescription(slot, item, level)}</div>`
     : "";
+  const noteHtml = item
+    ? ""
+    : `<div class="passive-slot-note">${escapeHtml(localize("Наденьте кольцо для пассивного эффекта."))}</div>`;
 
   container.innerHTML = `
     <div class="passive-slot-card ${state.activeSlot === slot.key ? "is-active" : ""}">
       <div class="passive-slot-copy">
         <div class="passive-slot-title">${escapeHtml(localize(slot.label))}</div>
-        <div class="passive-slot-note">${escapeHtml(localize("Наденьте кольцо для пассивного эффекта."))}</div>
+        ${noteHtml}
       </div>
       <div class="${classes.join(" ")}" data-slot="${slot.key}">
         <button

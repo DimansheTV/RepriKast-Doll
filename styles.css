@@ -60,6 +60,14 @@ body {
   overflow-x: hidden;
 }
 
+@supports (-webkit-touch-callout: none) {
+  html,
+  body {
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
 .app-header,
 .app-shell,
 .compare-page-shell {
@@ -1546,6 +1554,11 @@ select.class-control {
 
 .passive-slot-panel {
   width: min(100%, 822px);
+  container-type: inline-size;
+  --passive-slot-size: clamp(80px, 21cqw, 158px);
+  --passive-slot-gap: clamp(12px, 4cqw, 28px);
+  --passive-slot-radius: clamp(12px, 2.8cqw, 24px);
+  --passive-slot-shadow-y: clamp(10px, 2.8cqw, 22px);
 }
 
 .passive-slot-grid {
@@ -1556,23 +1569,17 @@ select.class-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--passive-slot-gap);
   min-width: 0;
-  padding: 16px 18px;
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(26, 55, 61, 0.74), rgba(7, 16, 20, 0.86));
-  border: 1px solid rgba(var(--panel-line-rgb), 0.18);
-  box-shadow:
-    inset 0 1px 0 rgba(var(--accent-ice-rgb), 0.04),
-    0 16px 32px rgba(0, 0, 0, 0.18);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .passive-slot-card.is-active {
-  border-color: rgba(var(--accent-cyan-rgb), 0.34);
-  box-shadow:
-    inset 0 1px 0 rgba(var(--accent-ice-rgb), 0.06),
-    0 18px 36px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
 }
 
 .passive-slot-copy {
@@ -1600,9 +1607,29 @@ select.class-control {
 }
 
 .passive-slot-cell {
-  width: 124px;
-  min-width: 124px;
+  width: var(--passive-slot-size);
+  min-width: var(--passive-slot-size);
+  flex: 0 0 var(--passive-slot-size);
   aspect-ratio: 1;
+  border-radius: var(--passive-slot-radius);
+  background:
+    radial-gradient(circle at 50% 28%, rgba(var(--accent-cyan-rgb), 0.16), transparent 58%),
+    linear-gradient(180deg, rgba(24, 54, 61, 0.84), rgba(5, 13, 16, 0.94));
+  border: 1px solid rgba(var(--panel-line-rgb), 0.28);
+  box-shadow:
+      inset 0 1px 0 rgba(var(--accent-ice-rgb), 0.07),
+      inset 0 0 0 2px rgba(3, 8, 10, 0.42),
+      0 var(--passive-slot-shadow-y) 28px rgba(0, 0, 0, 0.22);
+}
+
+.passive-slot-cell.is-active,
+.passive-slot-card.is-active .passive-slot-cell {
+  border-color: rgba(var(--accent-cyan-rgb), 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--accent-ice-rgb), 0.09),
+    inset 0 0 0 2px rgba(3, 8, 10, 0.42),
+    0 0 0 1px rgba(var(--accent-cyan-rgb), 0.18),
+    0 16px 30px rgba(0, 0, 0, 0.26);
 }
 
 .passive-slot-cell .slot-pin {
@@ -3113,8 +3140,9 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
   }
 
   .passive-slot-cell {
-    width: 112px;
-    min-width: 112px;
+    width: var(--passive-slot-size);
+    min-width: var(--passive-slot-size);
+    flex-basis: var(--passive-slot-size);
     align-self: center;
   }
 
@@ -3178,20 +3206,21 @@ body[data-page="compare"] .compare-readonly-upgrade-badge {
   .slot-upgrade-select,
   .sphere-upgrade-select,
   .trophy-upgrade-select {
-    min-width: 58px;
-    min-height: 21px;
-    padding: 2px 3px;
-    gap: 2px;
+    grid-template-columns: 28px minmax(28px, auto) 28px;
+    min-width: 96px;
+    min-height: 34px;
+    padding: 3px 5px;
+    gap: 4px;
   }
 
   .upgrade-stepper-btn {
-    width: 16px;
-    height: 16px;
-    font-size: 0.6875em;
+    width: 28px;
+    height: 28px;
+    font-size: 0.9375em;
   }
 
   .upgrade-stepper-value {
-    font-size: 0.625em;
+    font-size: 0.8125em;
   }
 
   .compare-editor-controls {
@@ -3727,8 +3756,7 @@ body.mobile-nav-open .mobile-nav-panel {
     drop-shadow(0 0 24px rgba(var(--accent-cyan-rgb), 0.08));
 }
 
-.pet-stage,
-.passive-slot-card {
+.pet-stage {
   background:
     radial-gradient(circle at top, rgba(var(--accent-cyan-rgb), 0.1), transparent 46%),
     linear-gradient(160deg, rgba(14, 32, 38, 0.92), rgba(5, 13, 16, 0.97));
@@ -4098,6 +4126,15 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
     --panel-scrollbar-track-margin: 24px;
     --panel-content-width: calc(100% - (var(--panel-inner-inset) * 2));
     --panel-scroll-safe-width: calc(100% - (var(--panel-inner-inset) * 2) - var(--panel-scrollbar-size));
+    --workspace-stage-max-width: min(var(--panel-scroll-safe-width), 760px);
+    --workspace-equipment-stage-width: max(280px, min(
+      var(--workspace-stage-max-width),
+      calc((var(--desktop-main-panel-height) - 244px) * 822 / 1003)
+    ));
+    --workspace-single-stage-width: max(320px, min(
+      var(--workspace-stage-max-width),
+      calc((var(--desktop-main-panel-height) - 92px) * 822 / 1003)
+    ));
   }
 
   body[data-page="main"] {
@@ -4108,7 +4145,7 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
   .panel-board,
   .panel-workspace {
     height: calc(100vh - 112px);
-    min-height: 720px;
+    min-height: 0;
   }
 
   .panel-sidebar,
@@ -4242,9 +4279,22 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
   .trophy-stage,
   .pet-stage,
   .passive-slot-panel {
-    width: min(var(--panel-scroll-safe-width), 760px);
+    width: var(--workspace-stage-max-width);
     max-width: 760px;
     margin-inline: auto;
+  }
+
+  .equipment-stage,
+  .passive-slot-panel {
+    width: var(--workspace-equipment-stage-width);
+    max-width: var(--workspace-stage-max-width);
+  }
+
+  .sphere-stage,
+  .trophy-stage,
+  .pet-stage {
+    width: var(--workspace-single-stage-width);
+    max-width: var(--workspace-stage-max-width);
   }
 
   .workspace-panel[data-workspace-panel="pet"].is-active {
@@ -4313,6 +4363,11 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
 
   .panel-workspace {
     min-height: auto;
+  }
+
+  .panel-sidebar,
+  .panel-board {
+    padding-bottom: 24px;
   }
 
   .panel-board,
@@ -4801,9 +4856,16 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
   }
 }
 
+@media (min-width: 900px) and (max-width: 1600px) {
+  .panel-sidebar,
+  .panel-board {
+    padding-bottom: 24px;
+  }
+}
+
 @media (min-width: 1280px) {
   body[data-page="main"] {
-    --desktop-main-panel-height: calc(100vh - 112px - var(--page-frame-block));
+    --desktop-main-panel-height: max(0px, calc(100vh - 112px - var(--page-frame-block)));
   }
 
   .panel-board,
@@ -4811,6 +4873,7 @@ body[data-page="compare"] .compare-pet-stage .pet-card-section {
   .panel-sidebar,
   .panel-right {
     height: var(--desktop-main-panel-height);
+    min-height: 0;
   }
 }
 
